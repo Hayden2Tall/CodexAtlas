@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary - deep blue (trust, scholarship) */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #2563eb;
+  --color-primary-600: #1d4ed8;
+  --color-primary-700: #1a365d;
+  --color-primary-800: #15294a;
+  --color-primary-900: #0f172a;
+
+  /* Secondary - warm gold (discovery, antiquity) */
+  --color-secondary-50: #fefce8;
+  --color-secondary-100: #fef9c3;
+  --color-secondary-200: #fef08a;
+  --color-secondary-300: #fde047;
+  --color-secondary-400: #facc15;
+  --color-secondary-500: #b7791f;
+  --color-secondary-600: #a16207;
+  --color-secondary-700: #854d0e;
+  --color-secondary-800: #713f12;
+  --color-secondary-900: #422006;
+
+  /* Confidence scale */
+  --color-confidence-low: #e53e3e;
+  --color-confidence-medium: #dd6b20;
+  --color-confidence-fair: #d69e2e;
+  --color-confidence-good: #38a169;
+  --color-confidence-high: #3182ce;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Literata", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-gray-900 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
