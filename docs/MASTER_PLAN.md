@@ -199,6 +199,7 @@ CodexAtlas/
 │       │   │   ├── admin/        —     Admin dashboard (import, batch, variants, OCR)
 │       │   │   ├── manuscripts/  —     Manuscript browsing, detail, passages, translation
 │       │   │   ├── read/         —     Scripture browser, chapter reading, comparison (Phase 3.1)
+│       │   │   ├── visualize/   —     Timeline, geographic map, stemma visualizations (Phase 3.4)
 │       │   │   ├── search/       —     Public full-text search
 │       │   │   ├── variants/     —     Variant exploration, attestation, book-grouped filters (Phase 3.2)
 │       │   │   └── evidence/     —     Evidence explorer

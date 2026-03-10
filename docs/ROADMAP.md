@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-10
-> **Status:** Phase 2 complete · Phase 3.1 complete · Phase 3.2 complete · Phase 3.3 (AI Research Summaries) complete · Entering Phase 3.4
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Entering Phase 3.5
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -250,11 +250,14 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] ConfidenceExplanation component in translation workspace — derives breakdown from version, evidence, and review data
 - [x] Improvement tips panel suggesting how to raise confidence scores
 
-### 3.4 Interactive Visualizations (Priority: Medium)
+### 3.4 Interactive Visualizations (Priority: Medium) — Complete
 
-- [ ] Manuscript timeline (plot manuscripts by date with interactive detail)
-- [ ] Geographic provenance map (origin + current archive locations)
-- [ ] Textual family tree / stemma visualization (when lineage data available)
+- [x] Leaflet + react-leaflet dependencies installed with @types/leaflet
+- [x] `/visualize` hub page linking to all three visualizations
+- [x] `/visualize/timeline` — horizontal scrollable timeline, manuscripts plotted by date, color-coded by language, click-to-detail
+- [x] `/visualize/map` — Leaflet map with origin (blue) and archive (green) markers, layer toggles, static geocoding lookup for ~80 known locations
+- [x] `/visualize/stemma` — SVG directed graph for manuscript lineage, informative empty state when no lineage data exists, edge styling by relationship type
+- [x] "Visualize" link added to header and mobile navigation
 
 ### 3.5 Performance + Infrastructure (Priority: Medium)
 
@@ -319,7 +322,9 @@ Platform is polished, accessible, and ready for broader public and institutional
 | Variant attestation and bidirectional passage linking | Complete | 3.2 |
 | AI passage and manuscript summaries with caching | Complete | 3.3 |
 | Confidence score explanations with improvement tips | Complete | 3.3 |
-| Interactive manuscript visualizations | Phase 3.4 | 3 |
+| Manuscript timeline visualization | Complete | 3.4 |
+| Geographic provenance map (Leaflet) | Complete | 3.4 |
+| Textual family tree / stemma infrastructure | Complete | 3.4 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |
 

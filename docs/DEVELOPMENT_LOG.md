@@ -39,6 +39,73 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Phase 3.4: Interactive Visualizations
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+With Phases 3.1–3.3 complete (scripture browser, variant system, AI summaries), the platform had rich textual data but no visual exploration tools. Scholars and readers benefit from seeing manuscripts plotted across time, mapped geographically, and connected by textual lineage. Phase 3.4 adds three visualization pages and a hub.
+
+**Key Deliverables:**
+
+1. **Leaflet Dependencies:**
+   - Installed `leaflet`, `react-leaflet`, and `@types/leaflet`
+   - Leaflet CSS imported in the map client component (dynamic import, SSR-safe)
+
+2. **Manuscript Timeline (`/visualize/timeline`):**
+   - Server component queries manuscripts with date estimates, aggregates passage counts
+   - Client `TimelineView` renders horizontal scrollable timeline on desktop, vertical list on mobile
+   - Manuscripts plotted as color-coded dots by language with tick marks for centuries
+   - Click-to-select shows detail card with passage count and link to manuscript page
+   - Language color legend
+
+3. **Geographic Provenance Map (`/visualize/map`):**
+   - Server component queries manuscripts with `origin_location` or `archive_location`
+   - Client `MapView` with dynamically imported Leaflet (avoids SSR `window` errors)
+   - ~80 known locations in static geocoding lookup (cities, libraries, regions, countries)
+   - Two marker layers: origin (blue) and archive (green) with toggle checkboxes
+   - Click marker shows detail card; unmapped manuscripts counted gracefully
+   - OpenStreetMap tiles with attribution
+
+4. **Textual Family Tree (`/visualize/stemma`):**
+   - Server component queries `manuscript_lineage` table (parent/child relationships)
+   - Informative empty state when no lineage data exists (explains what lineage is and how to add it)
+   - Client `StemmaView` renders SVG directed graph with automatic tree layout
+   - Nodes show manuscript title and date; edges styled by relationship type (solid/dashed)
+   - Edge legend: copy, derivative, shared_source, hypothetical
+
+5. **Visualize Hub (`/visualize`):**
+   - Index page with cards for all three visualizations (icon, title, description)
+   - Clean grid layout with hover effects
+
+6. **Navigation Update:**
+   - "Visualize" link added to desktop header and mobile nav between "Manuscripts" and "Search"
+
+**Files Changed:**
+- `app/src/app/(main)/visualize/page.tsx` (hub)
+- `app/src/app/(main)/visualize/timeline/page.tsx` + `timeline-view.tsx`
+- `app/src/app/(main)/visualize/map/page.tsx` + `map-view.tsx` + `leaflet-map.tsx`
+- `app/src/app/(main)/visualize/stemma/page.tsx` + `stemma-view.tsx`
+- `app/src/components/layout/header.tsx` (nav link)
+- `app/src/components/layout/mobile-nav.tsx` (nav link)
+- `app/package.json` (leaflet dependencies)
+
+**Rationale:**
+Visual exploration complements the text-centric interface. A timeline lets researchers see chronological distribution. The map reveals geographic transmission patterns. The stemma prepares infrastructure for future lineage analysis. All use lightweight rendering (CSS/SVG/Leaflet) without heavy charting libraries.
+
+**Consequences:**
+- Leaflet adds ~40KB to the map page bundle (dynamically loaded, does not affect other pages)
+- Static geocoding lookup handles ~80 known manuscript locations; unknown locations are gracefully ignored
+- Stemma page is functional infrastructure — it will display real data once lineage records are created
+- No new database migration needed
+
+**Related Documents:**
+- [ROADMAP.md](./ROADMAP.md) — Phase 3.4 items marked complete
+
+---
+
 ### 2026-03-10 — Phase 3.3: AI Research Summaries
 
 **Type:** milestone

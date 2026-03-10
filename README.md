@@ -31,7 +31,9 @@ Build an open research platform that serves two equally important purposes:
 
 **Phase 3.3: AI Research Summaries — Complete.** AI-generated passage and manuscript summaries (cached, Haiku-powered). Confidence score explanations with improvement tips. "About This Passage" expandable sections in the chapter reading view. "Scholarly Significance" summaries on manuscript detail pages.
 
-**Next: Phase 3.4 (Interactive Visualizations).** Manuscript timeline, geographic provenance map (Leaflet), and textual family tree / stemma infrastructure. See [Roadmap](docs/ROADMAP.md) for details.
+**Phase 3.4: Interactive Visualizations — Complete.** Manuscript timeline, geographic provenance map (Leaflet with ~80 geocoded locations), and textual family tree / stemma (SVG directed graph, infrastructure ready for lineage data). Visualize hub page and navigation link.
+
+**Next: Phase 3.5 (Performance + Infrastructure).** Vercel ISR, database query optimization, image optimization, PWA offline cache. See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 
