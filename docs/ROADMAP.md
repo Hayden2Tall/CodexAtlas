@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-10
-> **Status:** Phase 2 complete (all 11 subsystems operational) · Entering Phase 3 (Polish + Scale)
+> **Status:** Phase 2 complete · Phase 3.1 (Public Exploration Surface) complete · Entering Phase 3.2
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -215,15 +215,20 @@ AI agents can discover manuscripts, transcribe images, translate passages, and d
 
 **Goal:** Transform the platform from a functional research engine into a polished, explorable product that readers and scholars want to use and share.
 
-### 3.1 Public Exploration Surface (Priority: High)
+### 3.1 Public Exploration Surface (Priority: High) — Complete
 
 Build the reader-facing experience that makes manuscript data browsable and discoverable.
 
-- [ ] Scripture browser: navigate by book/chapter across all manuscripts
-- [ ] Manuscript comparison view: side-by-side original text from different manuscripts at same reference
-- [ ] Guided discovery paths (e.g., "Explore the oldest NT manuscripts", "Dead Sea Scrolls overview")
-- [ ] Landing page with content stats, featured manuscripts, recent translations
-- [ ] Passage deep-link sharing (URL → specific passage + translation)
+- [x] Scripture browser: `/read` page with book/chapter grid navigation across all manuscripts
+- [x] Chapter reading view: `/read/[book]/[chapter]` with serif reading layout, transparency indicators, and evidence links
+- [x] Manuscript comparison view: `/read/[book]/[chapter]/compare` with side-by-side panels and translation/original toggle
+- [x] Guided discovery paths on the landing page (Earliest NT, Dead Sea Scrolls, Septuagint)
+- [x] Landing page with dynamic content stats, featured manuscripts, recent translations
+- [x] Passage deep-link sharing with OG metadata and share button (native share on mobile, clipboard on desktop)
+- [x] Public API endpoints: `/api/scripture/books`, `/api/scripture/[book]/[chapter]`, `/api/stats`
+- [x] Shared `BOOK_ORDER` utility extracted to `lib/utils/book-order.ts`
+- [x] PassageNavigator component (desktop dropdowns, mobile bottom sheet)
+- [x] "Read" link added to header and mobile navigation
 
 ### 3.2 Variant System Enhancement (Priority: High)
 
@@ -301,8 +306,11 @@ Platform is polished, accessible, and ready for broader public and institutional
 | Test infrastructure with text source chain coverage | Complete | 2 |
 | Pipeline hardening with comprehensive logging | Complete | 2 |
 | Text provenance transparency for readers | Complete | 2 |
-| Public scripture browser | Phase 3 | 3 |
-| Variant versioning and cross-source comparison | Phase 3 | 3 |
+| Public scripture browser with chapter reading view | Complete | 3.1 |
+| Manuscript comparison view (side-by-side) | Complete | 3.1 |
+| Dynamic landing page with stats and discovery paths | Complete | 3.1 |
+| Deep-link sharing with OG metadata | Complete | 3.1 |
+| Variant versioning and cross-source comparison | Phase 3.2 | 3 |
 | Interactive manuscript visualizations | Phase 3 | 3 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |

@@ -39,6 +39,86 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Phase 3.1: Public Exploration Surface
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Phase 2 completed all content pipelines. The platform had manuscript-centric navigation only — readers had to find a manuscript first, then browse its passages. There was no way to navigate by scripture reference across manuscripts, no dynamic landing page, and no comparison view. Phase 3.1 addresses this as the highest-priority Phase 3 deliverable.
+
+**Key Deliverables:**
+
+1. **Scripture Browser (`/read`):**
+   - New index page showing all available books grouped by testament (OT, NT, Deuterocanonical, Other)
+   - Each book displays a chapter grid with clickable links and manuscript count badges
+   - Data sourced from all passages with non-empty `original_text`, aggregated by reference
+
+2. **Chapter Reading View (`/read/[book]/[chapter]`):**
+   - Clean serif reading layout per UX_GUIDELINES Section 6.1
+   - Shows each manuscript's highest-confidence published translation as primary content
+   - Transparency indicators: ConfidenceBadge, MethodBadge, version number
+   - Collapsible original text with RTL support for Hebrew/Arabic/Syriac
+   - "View full evidence chain" links to existing translation workspace
+   - Prev/Next chapter navigation, chapter dropdown selector
+   - Share button (native share API on mobile, clipboard copy on desktop)
+
+3. **Manuscript Comparison View (`/read/[book]/[chapter]/compare`):**
+   - Side-by-side panels on desktop, tabbed view on mobile
+   - Manuscript selectors on each panel (dropdown with date labels)
+   - Toggle between translation view and original text view
+   - Links to full evidence chain per manuscript
+
+4. **Dynamic Landing Page:**
+   - Live platform statistics bar (manuscripts, passages, translations, languages)
+   - Featured Manuscripts section (3 most recent, with descriptions)
+   - Recent Translations section (5 latest published translations with snippets)
+   - Curated Discovery Paths (Earliest NT Manuscripts, Dead Sea Scrolls, Septuagint)
+   - Updated CTAs: "Browse Scripture" → `/read`, "Explore Manuscripts" → `/manuscripts`
+
+5. **Public API Endpoints:**
+   - `/api/scripture/books` — Aggregates passages by book/chapter with manuscript counts (5-min ISR cache)
+   - `/api/scripture/[book]/[chapter]` — Passages + best published translations for a chapter
+   - `/api/stats` — Platform statistics (1-hour ISR cache)
+
+6. **Deep-Link Sharing:**
+   - OG metadata (title, description, siteName) on chapter reading view and translate page
+   - Twitter card metadata
+   - ShareButton component with native Web Share API fallback to clipboard
+
+7. **Shared Utilities:**
+   - Extracted `BOOK_ORDER`, `BOOK_DISPLAY_NAMES`, `parseReference`, `getBookDisplayName`, `getTestamentSection` into `lib/utils/book-order.ts`
+   - Manuscript detail page refactored to import from shared utility
+
+8. **Navigation Updates:**
+   - "Read" link added to desktop header and mobile slide-over navigation
+   - PassageNavigator component: desktop dual-dropdown, mobile bottom sheet with chapter grid
+
+**Rationale:**
+The platform had rich content pipelines but no reader-friendly way to explore the data. This milestone transforms CodexAtlas from a research tool into a browsable product. Scripture-based navigation is the most natural entry point for readers interested in biblical manuscripts.
+
+**Consequences:**
+- Readers can now browse by book/chapter without knowing which manuscripts exist
+- Every chapter view is a shareable deep link with OG metadata for social previews
+- Comparison view enables visual manuscript comparison without using the variant detection system
+- Landing page now shows live content, making the platform feel active and populated
+- ISR caching on scripture and stats APIs ensures fast loads without stale data
+- All new pages are public — no authentication required for reading
+
+**Related Documents:**
+- app/src/app/(main)/read/page.tsx (scripture browser index)
+- app/src/app/(main)/read/[book]/[chapter]/page.tsx (chapter reading view)
+- app/src/app/(main)/read/[book]/[chapter]/compare/ (comparison view)
+- app/src/app/api/scripture/ (books and chapter endpoints)
+- app/src/app/api/stats/route.ts (platform statistics)
+- app/src/lib/utils/book-order.ts (shared book ordering utility)
+- app/src/components/scripture/passage-navigator.tsx
+- app/src/components/ui/share-button.tsx
+- app/src/app/page.tsx (dynamic landing page)
+
+---
+
 ### 2026-03-10 — Pipeline Hardening for Diverse Manuscripts + Variant Detection Optimization
 
 **Type:** milestone

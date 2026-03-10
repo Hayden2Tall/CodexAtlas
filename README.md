@@ -23,9 +23,11 @@ Build an open research platform that serves two equally important purposes:
 
 ## Current Status
 
-**Phase 2: Research Tools + Agent Engine — Complete.** The full AI agent framework and research toolkit are operational. Manuscript discovery, OCR, batch translation, variant detection, advanced search, evidence explorer, and scholarly export (JSON, CSV, TEI XML) all work end-to-end. Six-step text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI. Admin dashboard provides cost monitoring and task management. Comprehensive structured logging across all pipelines.
+**Phase 2: Research Tools + Agent Engine — Complete.** The full AI agent framework and research toolkit are operational. Manuscript discovery, OCR, batch translation, variant detection, advanced search, evidence explorer, and scholarly export (JSON, CSV, TEI XML) all work end-to-end. Six-step text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI. Comprehensive structured logging across all pipelines.
 
-**Next: Phase 3 (Polish + Scale).** Public exploration surfaces, variant versioning, interactive visualizations, and accessibility. See [Roadmap](docs/ROADMAP.md) for details.
+**Phase 3.1: Public Exploration Surface — Complete.** Scripture browser (`/read`) lets readers navigate by book and chapter across all manuscripts. Chapter reading view with clean serif layout, transparency indicators, and evidence chain links. Side-by-side manuscript comparison view. Dynamic landing page with live stats, featured manuscripts, and recent translations. Deep-link sharing with OG metadata. Public API endpoints for scripture browsing and platform statistics.
+
+**Next: Phase 3.2 (Variant System Enhancement).** Variant versioning, cross-source comparison, and variant exploration UI. See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 

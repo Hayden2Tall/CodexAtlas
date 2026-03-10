@@ -198,20 +198,27 @@ CodexAtlas/
 │       │   ├── (main)/           —   Authenticated and public pages
 │       │   │   ├── admin/        —     Admin dashboard (import, batch, variants, OCR)
 │       │   │   ├── manuscripts/  —     Manuscript browsing, detail, passages, translation
+│       │   │   ├── read/         —     Scripture browser, chapter reading, comparison (Phase 3.1)
 │       │   │   ├── search/       —     Public full-text search
 │       │   │   ├── variants/     —     Variant exploration
 │       │   │   └── evidence/     —     Evidence explorer
 │       │   ├── api/
 │       │   │   ├── agent/        —     AI agent endpoints (discover, import, translate, detect, OCR)
+│       │   │   ├── scripture/    —     Scripture browsing API (books index, chapter data)
+│       │   │   ├── stats/        —     Platform statistics API
 │       │   │   ├── search/       —     Search API
 │       │   │   ├── evidence/     —     Evidence API
 │       │   │   ├── export/       —     Scholarly export (JSON, CSV, TEI XML)
 │       │   │   ├── translate/    —     Translation API
 │       │   │   └── passages/     —     Passage CRUD
 │       │   └── auth/             —   Auth pages (login, signup, callback)
-│       ├── components/           —   Shared UI components
+│       ├── components/
+│       │   ├── brand/            —   Logo components
+│       │   ├── layout/           —   Header, mobile nav
+│       │   ├── scripture/        —   PassageNavigator (Phase 3.1)
+│       │   └── ui/               —   Shared UI (badges, share button, cards)
 │       └── lib/                  —   Supabase clients, types, utilities
-│           └── utils/            —     Text source chain, AI cost, helpers
+│           └── utils/            —     Text sources, book ordering, AI cost, helpers
 ├── agents/                       — Agent registry and definitions
 ├── docs/                         — Project documentation (8 documents)
 ├── prompts/                      — Agent task packet templates
