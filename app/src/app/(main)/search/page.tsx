@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SearchInterface } from "./search-interface";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function SearchPage() {
-  return <SearchInterface />;
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading search...</div>}>
+      <SearchInterface />
+    </Suspense>
+  );
 }
