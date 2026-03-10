@@ -39,6 +39,45 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Fix Variant Detection for Identical Texts and Mark Standard Edition Sources
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+During testing, comparing Psalms 23 passages from Codex Vaticanus and Codex Sinaiticus produced a misleading result: the variant detection labeled it as a "major" variant, yet the analysis text stated "No textual variants detected." Investigation revealed two problems:
+
+1. Claude sometimes returns a variant entry with `significance: "major"` even when the texts are identical, instead of returning an empty array as instructed.
+2. Both manuscripts' Psalms 23 passages were sourced from the same bolls.life LXX API endpoint, making them character-identical. Comparing them is meaningless because the source is the same standardized critical edition text, not manuscript-specific transcriptions. This violates Constitution Principle 2 (Evidence Over Authority) if presented as manuscript evidence.
+
+**Decision:**
+Three changes implemented:
+
+1. **Variant detection pre-check**: Before calling Claude, compare all selected passages' text. If character-identical (after whitespace normalization), return immediately with zero cost, a clear explanation message, and a `same_source` flag if all passages came from the Bible API. Post-validation also filters out any AI-returned "variant" where all readings have identical text.
+
+2. **New `standard_edition` transcription method**: Text imported from bolls.life is now tagged as `transcription_method: "standard_edition"` (not `"ai_imported"`), with `edition_source` in metadata (e.g., "LXX", "TR", "WLC"). This makes clear the text is from a standardized critical edition, not a manuscript-specific transcription. Database migration 021 adds this to the CHECK constraint.
+
+3. **UI transparency**: Manuscript detail page shows a distinct blue "Std. Edition (LXX)" badge for standard edition passages instead of the generic gray method badge. Variant detection panel displays a warning when comparing identical/same-source passages, explaining why comparison is not meaningful.
+
+**Rationale:**
+The platform's mission is evidence-based manuscript research. Presenting standardized edition text as if it were manuscript-specific reading is misleading. Users need to understand what their data actually represents, and the system should prevent wasteful AI calls when comparison is impossible.
+
+**Consequences:**
+- Variant detection no longer wastes AI tokens comparing identical texts
+- Users see clear "Std. Edition" labels on API-sourced passages
+- Future imports from manuscript-specific sources (OCR, scholarly transcriptions) will be distinguishable from edition text
+- Existing passages with `ai_imported` from the Bible API are not retroactively updated; they remain valid under the prior rules
+
+**Related Documents:**
+- app/src/app/api/agent/detect-variants/route.ts (pre-check, post-filter)
+- app/src/app/(main)/admin/variant-panel.tsx (warning display)
+- app/src/app/api/agent/discover/section-text/route.ts (standard_edition method, edition_source metadata)
+- app/src/app/(main)/manuscripts/[id]/manuscript-detail.tsx (badge display)
+- scripts/migrations/021_add_standard_edition_transcription_method.sql
+
+---
+
 ### 2026-03-10 — Expand Book Mappings for Deuterocanonical, Ethiopian, and Apocryphal Texts
 
 **Type:** decision

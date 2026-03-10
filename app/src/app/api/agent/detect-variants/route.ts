@@ -120,6 +120,38 @@ export async function POST(request: NextRequest) {
       }));
     }
 
+    // Pre-check: if all passages have identical text, skip the AI call entirely
+    const normalizedTexts = passages.map((p) =>
+      (p.original_text ?? "").replace(/\s+/g, " ").trim()
+    );
+    const allIdentical = normalizedTexts.every((t) => t === normalizedTexts[0]);
+
+    if (allIdentical) {
+      const sameSource = passages.every(
+        (p) =>
+          (p.metadata as Record<string, unknown> | null)?.ingested_by === "bible_api" ||
+          p.transcription_method === "standard_edition"
+      );
+
+      const message = sameSource
+        ? "These passages were all imported from the same standard edition text source (e.g., LXX, TR, or WLC). They are identical because they share the same origin — not because the manuscripts agree. For meaningful variant detection, passages need manuscript-specific transcriptions (OCR or scholarly edition)."
+        : "All selected passages have identical text. No variants to detect.";
+
+      return NextResponse.json({
+        variants: [],
+        passages_compared: passages.length,
+        identical: true,
+        same_source: sameSource,
+        message,
+        usage: {
+          tokens_input: 0,
+          tokens_output: 0,
+          estimated_cost_usd: 0,
+          ai_model: "none",
+        },
+      });
+    }
+
     const aiModel = "claude-sonnet-4-20250514";
     const prompt = buildVariantPrompt(passages);
 
@@ -405,5 +437,10 @@ function validateVariants(
         ? String(v.significance)
         : "minor") as "major" | "minor" | "orthographic",
       analysis: typeof v.analysis === "string" ? v.analysis : "",
-    }));
+    }))
+    .filter((v) => {
+      // Filter out entries where all readings have identical text
+      const texts = v.readings.map((r) => r.reading_text.replace(/\s+/g, " ").trim());
+      return texts.length < 2 || !texts.every((t) => t === texts[0]);
+    });
 }

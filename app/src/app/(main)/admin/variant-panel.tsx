@@ -49,6 +49,7 @@ export function VariantPanel({ passages }: Props) {
     estimated_cost_usd: number;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
 
   const uniqueRefs = [...new Set(passages.map((p) => p.reference))].sort();
 
@@ -64,6 +65,7 @@ export function VariantPanel({ passages }: Props) {
     setCostInfo(null);
     setSaveResult(null);
     setErrorMessage("");
+    setInfoMessage("");
 
     const body: Record<string, unknown> = {};
     if (mode === "reference") {
@@ -86,6 +88,7 @@ export function VariantPanel({ passages }: Props) {
       } else {
         setVariants(data.variants ?? []);
         setCostInfo(data.usage ?? null);
+        if (data.message) setInfoMessage(data.message);
       }
     } catch (err) {
       setErrorMessage(
@@ -349,7 +352,13 @@ export function VariantPanel({ passages }: Props) {
         </div>
       )}
 
-      {!isDetecting && variants.length === 0 && costInfo && (
+      {!isDetecting && infoMessage && (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {infoMessage}
+        </div>
+      )}
+
+      {!isDetecting && variants.length === 0 && costInfo && !infoMessage && (
         <p className="mt-4 text-sm text-gray-500">
           No textual variants detected between the compared passages.
         </p>

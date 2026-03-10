@@ -50,7 +50,7 @@ function parseBookAndChapter(reference: string): { bookNum: number; chapter: num
 async function fetchFromBibleApi(
   language: string,
   reference: string
-): Promise<string | null> {
+): Promise<{ text: string; edition: string } | null> {
   const parsed = parseBookAndChapter(reference);
   if (!parsed) return null;
 
@@ -79,7 +79,7 @@ async function fetchFromBibleApi(
       .filter(Boolean)
       .join("\n");
 
-    return text.length > 50 ? text : null;
+    return text.length > 50 ? { text, edition: translation } : null;
   } catch {
     return null;
   }
@@ -179,18 +179,20 @@ export async function POST(request: NextRequest) {
     }
 
     // STEP 1: Try free Bible text API first (free, instant, no content filters)
-    const apiText = await fetchFromBibleApi(original_language ?? "grc", reference);
+    const apiResult = await fetchFromBibleApi(original_language ?? "grc", reference);
     let originalText = "";
     let aiModel = "bible-api";
+    let editionSource = "";
     let tokensInput = 0;
     let tokensOutput = 0;
     let costUsd = 0;
 
-    if (apiText && textHasCorrectScript(apiText)) {
-      console.log(`[section-text] ${reference}: fetched from Bible API (${apiText.length} chars)`);
-      originalText = apiText;
+    if (apiResult && textHasCorrectScript(apiResult.text)) {
+      console.log(`[section-text] ${reference}: fetched from Bible API ${apiResult.edition} (${apiResult.text.length} chars)`);
+      originalText = apiResult.text;
+      editionSource = apiResult.edition;
     } else {
-      if (apiText) {
+      if (apiResult) {
         console.log(`[section-text] ${reference}: Bible API returned text but wrong script, trying AI`);
       } else {
         console.log(`[section-text] ${reference}: Bible API unavailable, trying AI`);
@@ -366,9 +368,10 @@ export async function POST(request: NextRequest) {
           .from("passages")
           .update({
             original_text: originalText,
-            transcription_method: isFromApi ? "ai_imported" : "ai_reconstructed",
+            transcription_method: isFromApi ? "standard_edition" : "ai_reconstructed",
             metadata: {
               ingested_by: isFromApi ? "bible_api" : "full_import_agent",
+              ...(isFromApi && editionSource ? { edition_source: editionSource } : {}),
               passage_description: description || null,
               ai_model: aiModel,
               tokens_used: tokensInput + tokensOutput,
@@ -392,10 +395,11 @@ export async function POST(request: NextRequest) {
             reference: reference.trim(),
             sequence_order: sequence_order ?? null,
             original_text: originalText,
-            transcription_method: isFromApi ? "ai_imported" : "ai_reconstructed",
+            transcription_method: isFromApi ? "standard_edition" : "ai_reconstructed",
             created_by: user.id,
             metadata: {
               ingested_by: isFromApi ? "bible_api" : "full_import_agent",
+              ...(isFromApi && editionSource ? { edition_source: editionSource } : {}),
               passage_description: description || null,
               ai_model: aiModel,
               tokens_used: tokensInput + tokensOutput,

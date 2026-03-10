@@ -315,8 +315,21 @@ function PassagesTab({
                   {passage.reference}
                 </span>
                 {passage.transcription_method && (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                    {passage.transcription_method}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      passage.transcription_method === "standard_edition"
+                        ? "bg-blue-50 text-blue-600"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                    title={
+                      passage.transcription_method === "standard_edition"
+                        ? `Standard edition text${(passage.metadata as Record<string, unknown> | null)?.edition_source ? ` (${(passage.metadata as Record<string, unknown>).edition_source})` : ""} — not a manuscript-specific transcription`
+                        : passage.transcription_method
+                    }
+                  >
+                    {passage.transcription_method === "standard_edition"
+                      ? `Std. Edition${(passage.metadata as Record<string, unknown> | null)?.edition_source ? ` (${(passage.metadata as Record<string, unknown>).edition_source})` : ""}`
+                      : passage.transcription_method}
                   </span>
                 )}
                 {!passage.original_text && (
