@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI)/i;
 
     let originalText = "";
-    let aiModel = MODELS[0];
+    let aiModel: string = MODELS[0];
     let tokensInput = 0;
     let tokensOutput = 0;
     let costUsd = 0;
