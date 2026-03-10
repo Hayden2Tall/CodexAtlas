@@ -459,8 +459,8 @@ function TranscriptionBadge({
   metadata: Record<string, unknown> | null;
 }) {
   if (method === "scholarly_transcription") {
-    const source = metadata?.transcription_source ?? "INTF";
-    const ga = metadata?.ga_number ? ` (GA ${metadata.ga_number})` : "";
+    const source = String(metadata?.transcription_source ?? "INTF");
+    const ga = metadata?.ga_number ? ` (GA ${String(metadata.ga_number)})` : "";
     return (
       <span
         className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
@@ -472,7 +472,7 @@ function TranscriptionBadge({
   }
 
   if (method === "standard_edition") {
-    const edition = metadata?.edition_source ?? "";
+    const edition = String(metadata?.edition_source ?? "");
     return (
       <span
         className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600"

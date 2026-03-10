@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-10
-> **Status:** Phase 2 (Research Tools + Agent Engine) complete · Phase 3 (Polish + Scale) when ready
+> **Status:** Phase 2 (Research Tools + Agent Engine) complete, including 2.10 Manuscript Source Integration · Phase 3 (Polish + Scale) when ready
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -154,9 +154,34 @@ The plan is structured around a **builder-first philosophy**: build the content 
 - [x] Task history with status, progress, tokens, cost, date
 - [x] Tabbed layout (Agent Operations / Task History)
 
+### 2.10 Manuscript Text Source Integration
+
+- [x] bolls.life Bible API as primary text source (LXX, TR, WLC — standard editions)
+- [x] AI model escalation fallback (Haiku → Sonnet) when API unavailable
+- [x] Content filter bypass: API-first architecture avoids AI refusal for biblical text
+- [x] `standard_edition` transcription method and metadata (`edition_source`)
+- [x] Variant detection pre-check: skip identical/same-source passages, warn users
+- [x] Blue "Std. Edition" badge with tooltip for API-sourced text
+- [x] Migration 021: `standard_edition` transcription method
+- [x] INTF NTVMR API integration (manuscript-specific NT transcriptions, ~5,800 manuscripts)
+- [x] Gregory-Aland docID mapping for major uncials and papyri
+- [x] NTVMR HTML parser (strips correction apparatus, extracts original-hand text)
+- [x] `scholarly_transcription` transcription method and metadata
+- [x] Green "INTF Transcription (GA nn)" badge for manuscript-specific text
+- [x] Migration 022: `scholarly_transcription` transcription method
+- [x] SBLGNT integration (CC BY 4.0, replaces Textus Receptus as NT Greek standard edition)
+- [x] Leningrad Codex recognition (WLC labeled `scholarly_transcription` when manuscript IS the Leningrad Codex)
+- [x] Six-step fallback chain: Sinaiticus Project → NTVMR → DSS → SBLGNT → bolls.life → AI
+- [x] `manuscript_source_texts` Supabase table for preprocessed data (Migration 023)
+- [x] Codex Sinaiticus Project XML preprocessing script (CC BY-NC-SA 3.0, OT+NT)
+- [x] ETCBC Dead Sea Scrolls preprocessing script (MIT, OT Hebrew fragments)
+- [ ] Run Sinaiticus preprocessing to populate data (pending)
+- [ ] Run DSS preprocessing to populate data (pending)
+- [ ] Expanded book order lists (deuterocanonical, Ethiopian canon, apocryphal texts)
+
 ### Exit Criteria — Met
 
-AI agents can discover manuscripts, transcribe images, translate passages, and detect variants. Admin dashboard provides cost monitoring and task management. Research tools (search, evidence explorer, export) make content accessible.
+AI agents can discover manuscripts, transcribe images, translate passages, and detect variants. Admin dashboard provides cost monitoring and task management. Research tools (search, evidence explorer, export) make content accessible. Text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI generation.
 
 ---
 
@@ -200,6 +225,8 @@ Platform is ready for broader public and institutional use if desired.
 | Evidence explorer operational | Complete | 2 |
 | Scholarly export (JSON, CSV, TEI XML) operational | Complete | 2 |
 | Admin dashboard with cost monitoring | Complete | 2 |
+| Manuscript-specific text sources (NTVMR, Sinaiticus, DSS) | Complete | 2 |
+| Six-step text source fallback chain operational | Complete | 2 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |
 
@@ -215,6 +242,8 @@ Platform is ready for broader public and institutional use if desired.
 | Technical debt from rapid Phase 2 development | Medium | Architecture already sound from Phase 0/1; maintain test coverage and code review |
 | Anthropic API changes or pricing shifts | Medium | Abstraction layer over AI calls; prompt templates separate from application logic |
 | AI model retirement (experienced: Haiku 3.5 retired Feb 2026) | Medium | Use dated model IDs, monitor Anthropic deprecation notices, quick swap to successor |
+| AI content filtering blocks biblical text | Medium | Addressed: API-first architecture (bolls.life, NTVMR, SBLGNT) bypasses AI entirely; AI is last resort |
+| Third-party data license restrictions | Medium | NTVMR CC BY 4.0, SBLGNT CC BY 4.0, ETCBC/dss MIT; Sinaiticus Project CC BY-NC-SA 3.0 (non-commercial only) |
 
 ---
 
