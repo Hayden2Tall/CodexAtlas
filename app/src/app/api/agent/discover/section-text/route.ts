@@ -60,17 +60,24 @@ export async function POST(request: NextRequest) {
     // Check if passage already exists
     const { data: existing } = await admin
       .from("passages")
-      .select("id, reference")
+      .select("id, reference, original_text")
       .eq("manuscript_id", manuscript_id)
       .ilike("reference", reference.trim());
 
-    if (existing && existing.length > 0) {
+    const existingWithText = existing?.find(
+      (p) => p.original_text && p.original_text.trim().length > 0
+    );
+
+    if (existingWithText) {
       return NextResponse.json({
-        passage_id: existing[0].id,
+        passage_id: existingWithText.id,
         skipped: true,
         reason: "Passage already exists",
       });
     }
+
+    // If passage record exists but has no text, we'll update it after getting the text
+    const emptyPassage = existing?.[0] ?? null;
 
     const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildSectionTextPrompt(
@@ -187,37 +194,65 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Save passage — wrap in try/catch for better error info
+    // Save passage — update existing empty record or insert new one
     try {
-      const { data: passage, error: pErr } = await admin
-        .from("passages")
-        .insert({
-          manuscript_id,
-          reference: reference.trim(),
-          sequence_order: sequence_order ?? null,
-          original_text: originalText,
-          transcription_method: "ai_reconstructed",
-          created_by: user.id,
-          metadata: {
-            ingested_by: "full_import_agent",
-            passage_description: description || null,
-            ai_model: aiModel,
-            tokens_used: tokensInput + tokensOutput,
-          },
-        } as Record<string, unknown>)
-        .select("id")
-        .single<Pick<Passage, "id">>();
+      let passageId: string;
 
-      if (pErr || !passage) {
-        console.error("Passage creation failed:", pErr);
-        return NextResponse.json(
-          { error: `DB error: ${pErr?.message ?? "unknown"}` },
-          { status: 500 }
-        );
+      if (emptyPassage) {
+        const { error: uErr } = await admin
+          .from("passages")
+          .update({
+            original_text: originalText,
+            transcription_method: "ai_reconstructed",
+            metadata: {
+              ingested_by: "full_import_agent",
+              passage_description: description || null,
+              ai_model: aiModel,
+              tokens_used: tokensInput + tokensOutput,
+            },
+          } as Record<string, unknown>)
+          .eq("id", emptyPassage.id);
+
+        if (uErr) {
+          console.error("Passage update failed:", uErr);
+          return NextResponse.json(
+            { error: `DB update error: ${uErr.message}` },
+            { status: 500 }
+          );
+        }
+        passageId = emptyPassage.id;
+      } else {
+        const { data: passage, error: pErr } = await admin
+          .from("passages")
+          .insert({
+            manuscript_id,
+            reference: reference.trim(),
+            sequence_order: sequence_order ?? null,
+            original_text: originalText,
+            transcription_method: "ai_reconstructed",
+            created_by: user.id,
+            metadata: {
+              ingested_by: "full_import_agent",
+              passage_description: description || null,
+              ai_model: aiModel,
+              tokens_used: tokensInput + tokensOutput,
+            },
+          } as Record<string, unknown>)
+          .select("id")
+          .single<Pick<Passage, "id">>();
+
+        if (pErr || !passage) {
+          console.error("Passage creation failed:", pErr);
+          return NextResponse.json(
+            { error: `DB error: ${pErr?.message ?? "unknown"}` },
+            { status: 500 }
+          );
+        }
+        passageId = passage.id;
       }
 
       return NextResponse.json({
-        passage_id: passage.id,
+        passage_id: passageId,
         skipped: false,
         text_length: originalText.length,
         usage: {
