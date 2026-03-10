@@ -65,9 +65,9 @@ export default async function AdminPage() {
       .returns<AgentTask[]>(),
     admin
       .from("manuscripts")
-      .select("id, title")
+      .select("id, title, original_language")
       .order("title")
-      .returns<Pick<Manuscript, "id" | "title">[]>(),
+      .returns<Pick<Manuscript, "id" | "title" | "original_language">[]>(),
     admin
       .from("passages")
       .select("id, reference, manuscript_id, manuscripts!inner(title)")

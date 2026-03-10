@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BatchTranslatePanel } from "./batch-translate-panel";
 import { DiscoveryPanel } from "./discovery-panel";
+import { FullImportPanel } from "./full-import-panel";
 import { OcrPanel } from "./ocr-panel";
 import { VariantPanel } from "./variant-panel";
 import { TaskList } from "./task-list";
@@ -11,6 +12,7 @@ import type { AgentTask } from "@/lib/types";
 interface ManuscriptOption {
   id: string;
   title: string;
+  original_language: string;
 }
 
 interface PassageOption {
@@ -161,6 +163,7 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
       {activeTab === "operations" && (
         <div className="space-y-8">
           <DiscoveryPanel />
+          <FullImportPanel manuscripts={manuscripts} />
           <BatchTranslatePanel
             onTaskCreated={handleTaskCreated}
             onTaskUpdated={handleTaskUpdated}
