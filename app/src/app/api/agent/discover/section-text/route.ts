@@ -37,6 +37,120 @@ const BOOK_NUMBERS: Record<string, number> = {
   "psalms of solomon": 85, odes: 86, "odæs": 86, ode: 86,
 };
 
+// Gregory-Aland manuscript name → NTVMR docID
+// Uncials: 20000 + GA number. Papyri: 10000 + number.
+const NTVMR_MANUSCRIPTS: Record<string, number> = {
+  "codex sinaiticus": 20001,
+  "sinaiticus": 20001,
+  "codex vaticanus": 20003,
+  "vaticanus": 20003,
+  "codex alexandrinus": 20002,
+  "alexandrinus": 20002,
+  "codex ephraemi": 20004,
+  "codex ephraemi rescriptus": 20004,
+  "ephraemi": 20004,
+  "codex bezae": 20005,
+  "bezae": 20005,
+  "codex claromontanus": 20006,
+  "claromontanus": 20006,
+  "codex washingtonianus": 20032,
+  "washingtonianus": 20032,
+  "codex regius": 20019,
+  "p46": 10046,
+  "p66": 10066,
+  "p75": 10075,
+  "p45": 10045,
+  "p47": 10047,
+  "p72": 10072,
+};
+
+// Book name → NTVMR SBL abbreviation (NT books only)
+const NTVMR_BOOKS: Record<string, string> = {
+  matthew: "Matt", mark: "Mark", luke: "Luke", john: "John",
+  acts: "Acts", romans: "Rom",
+  "1 corinthians": "1Cor", "2 corinthians": "2Cor",
+  galatians: "Gal", ephesians: "Eph", philippians: "Phil",
+  colossians: "Col", "1 thessalonians": "1Thess", "2 thessalonians": "2Thess",
+  "1 timothy": "1Tim", "2 timothy": "2Tim", titus: "Titus",
+  philemon: "Phlm", hebrews: "Heb", james: "Jas",
+  "1 peter": "1Pet", "2 peter": "2Pet",
+  "1 john": "1John", "2 john": "2John", "3 john": "3John",
+  jude: "Jude", revelation: "Rev",
+};
+
+function parseNtvmrHtml(html: string): string {
+  let text = html;
+  // Remove <table> blocks (correction apparatus)
+  text = text.replace(/<table[\s\S]*?<\/table>/gi, " ");
+  // Remove <h1>-<h6> (page/folio/column headers)
+  text = text.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ");
+  // Remove all remaining HTML tags
+  text = text.replace(/<[^>]+>/g, " ");
+  // Decode common HTML entities
+  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ").replace(/&#\d+;/g, " ");
+  // Remove NTVMR structural markers
+  text = text.replace(/\b(Folio|Page|Col)\s+\d+\w?\b/gi, " ");
+  // Remove the insertion marker ⸆
+  text = text.replace(/⸆/g, " ");
+  // Remove bare line numbers at word boundaries (1-3 digit numbers surrounded by spaces)
+  text = text.replace(/(?<=\s)\d{1,3}(?=\s)/g, " ");
+  // Remove leading line numbers at the start
+  text = text.replace(/^\d{1,3}\s+/gm, "");
+  // Remove verse reference markers like "Matt inscriptio", "1:1", chapter markers
+  text = text.replace(/\b\w+\s+inscriptio\b/gi, " ");
+  // Remove standalone "Korrektor" notes (German correction notes)
+  text = text.replace(/Korrektor[^.]*\./gi, " ");
+  // Remove copyright footer
+  text = text.replace(/\(C\)\s*\d{4}[\s\S]*/i, "");
+  // Normalize whitespace
+  text = text.replace(/\s+/g, " ").trim();
+  return text;
+}
+
+async function fetchFromNtvmr(
+  manuscriptTitle: string,
+  reference: string
+): Promise<{ text: string; docId: number; gaNumber: string } | null> {
+  const titleLower = manuscriptTitle.toLowerCase().trim();
+  const docId = NTVMR_MANUSCRIPTS[titleLower];
+  if (!docId) return null;
+
+  const match = reference.match(/^(.+?)\s+(\d+)$/);
+  if (!match) return null;
+  const bookName = match[1].toLowerCase().trim();
+  const chapter = match[2];
+  const ntvmrBook = NTVMR_BOOKS[bookName];
+  if (!ntvmrBook) return null;
+
+  const gaNumber = docId >= 20000 ? String(docId - 20000).padStart(2, "0") : `P${docId - 10000}`;
+  const indexContent = `${ntvmrBook}.${chapter}`;
+  const url = `https://ntvmr.uni-muenster.de/community/vmr/api/transcript/get/?docID=${docId}&format=html&indexContent=${indexContent}&pageID=ALL`;
+
+  console.log(`[section-text] NTVMR: fetching ${url}`);
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) {
+      console.log(`[section-text] NTVMR: HTTP ${res.status}`);
+      return null;
+    }
+
+    const html = await res.text();
+    if (!html || html.length < 100) return null;
+
+    const text = parseNtvmrHtml(html);
+    if (text.length < 50) {
+      console.log(`[section-text] NTVMR: parsed text too short (${text.length} chars)`);
+      return null;
+    }
+
+    return { text, docId, gaNumber };
+  } catch (err) {
+    console.log(`[section-text] NTVMR: fetch error:`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 function parseBookAndChapter(reference: string): { bookNum: number; chapter: number } | null {
   const match = reference.match(/^(.+?)\s+(\d+)$/);
   if (!match) return null;
@@ -178,204 +292,107 @@ export async function POST(request: NextRequest) {
       console.log(`[section-text] ${reference}: no existing passage found — will create new`);
     }
 
-    // STEP 1: Try free Bible text API first (free, instant, no content filters)
-    const apiResult = await fetchFromBibleApi(original_language ?? "grc", reference);
+    // === TEXT SOURCE CHAIN: NTVMR → bolls.life → AI ===
     let originalText = "";
-    let aiModel = "bible-api";
-    let editionSource = "";
+    let sourceType: "ntvmr" | "bible-api" | "ai" = "ai";
+    let sourceDetail = "";
     let tokensInput = 0;
     let tokensOutput = 0;
     let costUsd = 0;
 
-    if (apiResult && textHasCorrectScript(apiResult.text)) {
-      console.log(`[section-text] ${reference}: fetched from Bible API ${apiResult.edition} (${apiResult.text.length} chars)`);
-      originalText = apiResult.text;
-      editionSource = apiResult.edition;
-    } else {
-      if (apiResult) {
-        console.log(`[section-text] ${reference}: Bible API returned text but wrong script, trying AI`);
+    // STEP 1: Try NTVMR (manuscript-specific scholarly transcription, NT only)
+    const ntvmrResult = await fetchFromNtvmr(manuscript_title, reference);
+    if (ntvmrResult && textHasCorrectScript(ntvmrResult.text)) {
+      console.log(`[section-text] ${reference}: NTVMR success (GA ${ntvmrResult.gaNumber}, ${ntvmrResult.text.length} chars)`);
+      originalText = ntvmrResult.text;
+      sourceType = "ntvmr";
+      sourceDetail = JSON.stringify({ ga_number: ntvmrResult.gaNumber, doc_id: ntvmrResult.docId });
+    }
+
+    // STEP 2: Try bolls.life standard edition (free, instant, no content filters)
+    if (!originalText) {
+      const apiResult = await fetchFromBibleApi(original_language ?? "grc", reference);
+      if (apiResult && textHasCorrectScript(apiResult.text)) {
+        console.log(`[section-text] ${reference}: Bible API ${apiResult.edition} (${apiResult.text.length} chars)`);
+        originalText = apiResult.text;
+        sourceType = "bible-api";
+        sourceDetail = apiResult.edition;
+      } else if (apiResult) {
+        console.log(`[section-text] ${reference}: Bible API returned text but wrong script`);
       } else {
-        console.log(`[section-text] ${reference}: Bible API unavailable, trying AI`);
+        console.log(`[section-text] ${reference}: Bible API unavailable`);
       }
+    }
 
-    // STEP 2: Fall back to AI models
-    const MODELS = [
-      "claude-haiku-4-5-20251001",
-      "claude-sonnet-4-20250514",
-    ] as const;
-
-    const { system, user: userMsg, prefill } = buildSectionTextPrompt(
-      manuscript_title,
-      original_language ?? "grc",
-      reference
-    );
-
-    const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|I understand|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI|Here'?s? |Let me)/i;
-
-    for (const model of MODELS) {
-      aiModel = model;
-      console.log(`[section-text] ${reference}: trying ${model}`);
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 50000);
-
-      let anthropicRes: Response;
-      try {
-        anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.ANTHROPIC_API_KEY!,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model,
-            max_tokens: 8192,
-            system,
-            messages: prefill
-              ? [
-                  { role: "user", content: userMsg },
-                  { role: "assistant", content: prefill },
-                ]
-              : [{ role: "user", content: userMsg }],
-          }),
-          signal: controller.signal,
-        });
-      } catch (fetchErr) {
-        clearTimeout(timeout);
-        const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
-        if (model !== MODELS[MODELS.length - 1]) {
-          console.log(`[section-text] ${reference}: ${model} ${isTimeout ? "timed out" : "unreachable"}, escalating`);
-          continue;
-        }
-        return NextResponse.json(
-          { error: isTimeout ? "Claude API timed out" : "Claude API unreachable" },
-          { status: 502 }
-        );
-      }
-      clearTimeout(timeout);
-
-      if (!anthropicRes.ok) {
-        const detail = await anthropicRes.text();
-        console.error(`[section-text] ${reference}: ${model} API error ${anthropicRes.status}:`, detail);
-        if (model !== MODELS[MODELS.length - 1]) {
-          console.log(`[section-text] ${reference}: escalating to next model`);
-          continue;
-        }
-        const isContentFilter = detail.includes("content filtering policy");
-        return NextResponse.json(
-          {
-            error: isContentFilter
-              ? `Content filter blocked (${anthropicRes.status})`
-              : `Claude API error: ${anthropicRes.status}`,
-          },
-          { status: 502 }
-        );
-      }
-
-      let aiResult;
-      try {
-        aiResult = await anthropicRes.json();
-      } catch {
-        if (model !== MODELS[MODELS.length - 1]) continue;
-        return NextResponse.json(
-          { error: "Malformed response from Claude API" },
-          { status: 502 }
-        );
-      }
-
-      const rawContent: string | undefined = aiResult.content?.[0]?.text;
-      tokensInput += aiResult.usage?.input_tokens ?? 0;
-      tokensOutput += aiResult.usage?.output_tokens ?? 0;
-      costUsd += estimateCostUsd(model, aiResult.usage?.input_tokens ?? 0, aiResult.usage?.output_tokens ?? 0);
-
-      if (!rawContent || rawContent.trim().length === 0) {
-        if (model !== MODELS[MODELS.length - 1]) continue;
-        return NextResponse.json(
-          { error: `Empty response (stop_reason: ${aiResult.stop_reason ?? "unknown"})` },
-          { status: 502 }
-        );
-      }
-
-      let text = (prefill + rawContent).trim();
-      text = text
-        .replace(/^```(?:[\w-]*)?\s*\n?/i, "")
-        .replace(/\n?\s*```\s*$/, "")
-        .trim();
-
-      try {
-        const parsed = JSON.parse(text);
-        if (typeof parsed === "string") text = parsed;
-        else if (parsed.text) text = parsed.text;
-        else if (parsed.original_text) text = parsed.original_text;
-      } catch { /* raw text */ }
-
-      console.log(
-        `[section-text] ${reference} (${model}): ${text.length} chars, starts: "${text.slice(0, 150).replace(/\n/g, " ")}"`
+    // STEP 3: Fall back to AI models
+    if (!originalText) {
+      console.log(`[section-text] ${reference}: trying AI models`);
+      const aiText = await fetchFromAiModels(
+        manuscript_title, original_language ?? "grc", reference, textHasCorrectScript
       );
 
-      if (text.includes("[UNAVAILABLE]")) {
-        console.log(`[section-text] ${reference}: ${model} returned [UNAVAILABLE], escalating`);
-        if (model !== MODELS[MODELS.length - 1]) continue;
-        return NextResponse.json({
-          passage_id: null,
-          skipped: true,
-          reason: "Unavailable: section does not exist in this manuscript",
-        });
+      if (aiText.error) {
+        if (aiText.skipped) {
+          return NextResponse.json({
+            passage_id: null,
+            skipped: true,
+            reason: aiText.error,
+          });
+        }
+        return NextResponse.json({ error: aiText.error }, { status: 502 });
       }
 
-      if (refusalPattern.test(text)) {
-        console.log(`[section-text] ${reference}: ${model} refused, escalating`);
-        if (model !== MODELS[MODELS.length - 1]) continue;
-        return NextResponse.json({
-          passage_id: null,
-          skipped: true,
-          reason: `AI refused on all models: "${text.slice(0, 80)}..."`,
-        });
-      }
-
-      if (!textHasCorrectScript(text)) {
-        console.log(`[section-text] ${reference}: ${model} wrong script, escalating`);
-        if (model !== MODELS[MODELS.length - 1]) continue;
-        return NextResponse.json({
-          passage_id: null,
-          skipped: true,
-          reason: `Wrong script on all models`,
-        });
-      }
-
-      originalText = text;
-      break;
+      originalText = aiText.text;
+      sourceType = "ai";
+      sourceDetail = aiText.model;
+      tokensInput = aiText.tokensInput;
+      tokensOutput = aiText.tokensOutput;
+      costUsd = aiText.costUsd;
     }
 
     if (!originalText) {
       return NextResponse.json(
-        { error: "All models failed to produce valid text" },
+        { error: "All sources failed to produce valid text" },
         { status: 502 }
       );
     }
-
-    } // end of else (Bible API unavailable, using AI fallback)
 
     // Save passage — update existing empty record or insert new one
     try {
       let passageId: string;
 
-      const isFromApi = aiModel === "bible-api";
+      const transcriptionMethod =
+        sourceType === "ntvmr" ? "scholarly_transcription"
+        : sourceType === "bible-api" ? "standard_edition"
+        : "ai_reconstructed";
+
+      const metadata: Record<string, unknown> = {
+        passage_description: description || null,
+        tokens_used: tokensInput + tokensOutput,
+      };
+
+      if (sourceType === "ntvmr") {
+        const detail = JSON.parse(sourceDetail);
+        metadata.ingested_by = "ntvmr";
+        metadata.transcription_source = "INTF NTVMR";
+        metadata.ga_number = detail.ga_number;
+        metadata.doc_id = detail.doc_id;
+      } else if (sourceType === "bible-api") {
+        metadata.ingested_by = "bible_api";
+        metadata.edition_source = sourceDetail;
+        metadata.ai_model = "bible-api";
+      } else {
+        metadata.ingested_by = "full_import_agent";
+        metadata.ai_model = sourceDetail;
+      }
 
       if (existingToUpdate) {
         const { error: uErr } = await admin
           .from("passages")
           .update({
             original_text: originalText,
-            transcription_method: isFromApi ? "standard_edition" : "ai_reconstructed",
-            metadata: {
-              ingested_by: isFromApi ? "bible_api" : "full_import_agent",
-              ...(isFromApi && editionSource ? { edition_source: editionSource } : {}),
-              passage_description: description || null,
-              ai_model: aiModel,
-              tokens_used: tokensInput + tokensOutput,
-            },
+            transcription_method: transcriptionMethod,
+            metadata,
           } as Record<string, unknown>)
           .eq("id", existingToUpdate.id);
 
@@ -395,15 +412,9 @@ export async function POST(request: NextRequest) {
             reference: reference.trim(),
             sequence_order: sequence_order ?? null,
             original_text: originalText,
-            transcription_method: isFromApi ? "standard_edition" : "ai_reconstructed",
+            transcription_method: transcriptionMethod,
             created_by: user.id,
-            metadata: {
-              ingested_by: isFromApi ? "bible_api" : "full_import_agent",
-              ...(isFromApi && editionSource ? { edition_source: editionSource } : {}),
-              passage_description: description || null,
-              ai_model: aiModel,
-              tokens_used: tokensInput + tokensOutput,
-            },
+            metadata,
           } as Record<string, unknown>)
           .select("id")
           .single<Pick<Passage, "id">>();
@@ -426,7 +437,7 @@ export async function POST(request: NextRequest) {
           tokens_input: tokensInput,
           tokens_output: tokensOutput,
           estimated_cost_usd: costUsd,
-          ai_model: aiModel,
+          ai_model: sourceType === "ntvmr" ? "ntvmr" : sourceType === "bible-api" ? "bible-api" : sourceDetail,
         },
       });
     } catch (dbErr) {
@@ -444,6 +455,145 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+interface AiTextResult {
+  text: string;
+  model: string;
+  tokensInput: number;
+  tokensOutput: number;
+  costUsd: number;
+  error?: undefined;
+  skipped?: undefined;
+}
+
+interface AiTextError {
+  text: "";
+  model: string;
+  tokensInput: number;
+  tokensOutput: number;
+  costUsd: number;
+  error: string;
+  skipped: boolean;
+}
+
+async function fetchFromAiModels(
+  manuscriptTitle: string,
+  language: string,
+  reference: string,
+  textHasCorrectScript: (text: string) => boolean
+): Promise<AiTextResult | AiTextError> {
+  const MODELS = [
+    "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-20250514",
+  ] as const;
+
+  const { system, user: userMsg, prefill } = buildSectionTextPrompt(
+    manuscriptTitle, language, reference
+  );
+
+  const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|I understand|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI|Here'?s? |Let me)/i;
+
+  let totalInput = 0, totalOutput = 0, totalCost = 0;
+
+  for (const model of MODELS) {
+    console.log(`[section-text] ${reference}: trying ${model}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 50000);
+
+    let anthropicRes: Response;
+    try {
+      anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 8192,
+          system,
+          messages: prefill
+            ? [
+                { role: "user", content: userMsg },
+                { role: "assistant", content: prefill },
+              ]
+            : [{ role: "user", content: userMsg }],
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+      if (model !== MODELS[MODELS.length - 1]) {
+        console.log(`[section-text] ${reference}: ${model} ${isTimeout ? "timed out" : "unreachable"}, escalating`);
+        continue;
+      }
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: isTimeout ? "Claude API timed out" : "Claude API unreachable", skipped: false };
+    }
+    clearTimeout(timeout);
+
+    if (!anthropicRes.ok) {
+      const detail = await anthropicRes.text();
+      console.error(`[section-text] ${reference}: ${model} API error ${anthropicRes.status}:`, detail);
+      if (model !== MODELS[MODELS.length - 1]) continue;
+      const isContentFilter = detail.includes("content filtering policy");
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: isContentFilter ? `Content filter blocked (${anthropicRes.status})` : `Claude API error: ${anthropicRes.status}`, skipped: false };
+    }
+
+    let aiResult;
+    try {
+      aiResult = await anthropicRes.json();
+    } catch {
+      if (model !== MODELS[MODELS.length - 1]) continue;
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: "Malformed response from Claude API", skipped: false };
+    }
+
+    const rawContent: string | undefined = aiResult.content?.[0]?.text;
+    totalInput += aiResult.usage?.input_tokens ?? 0;
+    totalOutput += aiResult.usage?.output_tokens ?? 0;
+    totalCost += estimateCostUsd(model, aiResult.usage?.input_tokens ?? 0, aiResult.usage?.output_tokens ?? 0);
+
+    if (!rawContent || rawContent.trim().length === 0) {
+      if (model !== MODELS[MODELS.length - 1]) continue;
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: `Empty response (stop_reason: ${aiResult.stop_reason ?? "unknown"})`, skipped: false };
+    }
+
+    let text = (prefill + rawContent).trim();
+    text = text.replace(/^```(?:[\w-]*)?\s*\n?/i, "").replace(/\n?\s*```\s*$/, "").trim();
+
+    try {
+      const parsed = JSON.parse(text);
+      if (typeof parsed === "string") text = parsed;
+      else if (parsed.text) text = parsed.text;
+      else if (parsed.original_text) text = parsed.original_text;
+    } catch { /* raw text */ }
+
+    console.log(`[section-text] ${reference} (${model}): ${text.length} chars, starts: "${text.slice(0, 150).replace(/\n/g, " ")}"`);
+
+    if (text.includes("[UNAVAILABLE]")) {
+      console.log(`[section-text] ${reference}: ${model} returned [UNAVAILABLE], escalating`);
+      if (model !== MODELS[MODELS.length - 1]) continue;
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: "Unavailable: section does not exist in this manuscript", skipped: true };
+    }
+
+    if (refusalPattern.test(text)) {
+      console.log(`[section-text] ${reference}: ${model} refused, escalating`);
+      if (model !== MODELS[MODELS.length - 1]) continue;
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: `AI refused on all models: "${text.slice(0, 80)}..."`, skipped: true };
+    }
+
+    if (!textHasCorrectScript(text)) {
+      console.log(`[section-text] ${reference}: ${model} wrong script, escalating`);
+      if (model !== MODELS[MODELS.length - 1]) continue;
+      return { text: "", model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: "Wrong script on all models", skipped: true };
+    }
+
+    return { text, model, tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost };
+  }
+
+  return { text: "", model: "none", tokensInput: totalInput, tokensOutput: totalOutput, costUsd: totalCost, error: "All AI models failed", skipped: false };
 }
 
 function buildSectionTextPrompt(

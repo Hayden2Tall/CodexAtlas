@@ -315,22 +315,10 @@ function PassagesTab({
                   {passage.reference}
                 </span>
                 {passage.transcription_method && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      passage.transcription_method === "standard_edition"
-                        ? "bg-blue-50 text-blue-600"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                    title={
-                      passage.transcription_method === "standard_edition"
-                        ? `Standard edition text${(passage.metadata as Record<string, unknown> | null)?.edition_source ? ` (${(passage.metadata as Record<string, unknown>).edition_source})` : ""} — not a manuscript-specific transcription`
-                        : passage.transcription_method
-                    }
-                  >
-                    {passage.transcription_method === "standard_edition"
-                      ? `Std. Edition${(passage.metadata as Record<string, unknown> | null)?.edition_source ? ` (${(passage.metadata as Record<string, unknown>).edition_source})` : ""}`
-                      : passage.transcription_method}
-                  </span>
+                  <TranscriptionBadge
+                    method={passage.transcription_method}
+                    metadata={passage.metadata as Record<string, unknown> | null}
+                  />
                 )}
                 {!passage.original_text && (
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-600">
@@ -460,6 +448,48 @@ function PassagesTab({
         );
       })}
     </div>
+  );
+}
+
+function TranscriptionBadge({
+  method,
+  metadata,
+}: {
+  method: string;
+  metadata: Record<string, unknown> | null;
+}) {
+  if (method === "scholarly_transcription") {
+    const source = metadata?.transcription_source ?? "INTF";
+    const ga = metadata?.ga_number ? ` (GA ${metadata.ga_number})` : "";
+    return (
+      <span
+        className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
+        title={`Manuscript-specific scholarly transcription from ${source}${ga} — reflects this manuscript's actual readings`}
+      >
+        {source} Transcription{ga}
+      </span>
+    );
+  }
+
+  if (method === "standard_edition") {
+    const edition = metadata?.edition_source ?? "";
+    return (
+      <span
+        className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600"
+        title={`Standard edition text${edition ? ` (${edition})` : ""} — not a manuscript-specific transcription`}
+      >
+        Std. Edition{edition ? ` (${edition})` : ""}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500"
+      title={method}
+    >
+      {method}
+    </span>
   );
 }
 

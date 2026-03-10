@@ -39,6 +39,47 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Integrate NTVMR API for Manuscript-Specific Transcriptions
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+All manuscript imports were using the bolls.life API, which provides standardized critical edition text (LXX, TR, WLC) — the same text regardless of which manuscript is selected. This made variant detection between manuscripts of the same book meaningless, violating Constitution Principle 2 (Evidence Over Authority). The user requested integrating actual manuscript-specific text sources rather than adding more AI models.
+
+**Decision:**
+Integrated the INTF New Testament Virtual Manuscript Room (NTVMR) free API as the primary text source for NT manuscripts with known Gregory-Aland (GA) numbers. The text source fallback chain is now:
+
+1. **NTVMR** (manuscript-specific scholarly transcription, NT only) — for known GA manuscripts
+2. **bolls.life** (standard edition: LXX/TR/WLC) — for books without NTVMR coverage
+3. **AI models** (Haiku → Sonnet) — last resort fallback
+
+Implementation details:
+- Added `fetchFromNtvmr()` function with GA docID mapping (Sinaiticus=20001, Vaticanus=20003, Alexandrinus=20002, Bezae=20005, plus papyri and other uncials)
+- Added NTVMR SBL book abbreviation mapping for all 27 NT books
+- HTML parser strips correction apparatus tables, page/folio/column headers, line numbers, and normalizes whitespace to extract clean original-hand Greek text
+- New `scholarly_transcription` transcription method distinguishes NTVMR-sourced text from standard editions and AI
+- Green "INTF Transcription (GA 01)" badge in the UI for scholarly transcriptions
+- Database migration 022 adds `scholarly_transcription` to the CHECK constraint
+
+**Rationale:**
+The NTVMR API is free, CC-BY 4.0 licensed, covers ~5,800 NT manuscripts, and returns genuinely different text readings per manuscript (e.g., Sinaiticus has "δαδ" where Vaticanus has "δαυειδ" for David in Matt 1:1). This makes variant detection meaningful and aligns with the platform's mission of evidence-based manuscript research. The three-tier fallback ensures coverage: NTVMR for NT manuscripts with known GA numbers, bolls.life for OT and uncovered books, and AI as a last resort.
+
+**Consequences:**
+- Variant detection between NT manuscripts now compares genuinely different text readings
+- Users can distinguish manuscript-specific transcriptions (green badge) from standard editions (blue badge)
+- OT portions of manuscripts still use bolls.life standard editions (NTVMR is NT-only)
+- Corrector readings are not extracted (original hand only); correctors could be a future feature
+- User must run migration 022 against Supabase before deploying
+
+**Related Documents:**
+- app/src/app/api/agent/discover/section-text/route.ts (NTVMR fetch, fallback chain)
+- app/src/app/(main)/manuscripts/[id]/manuscript-detail.tsx (green badge)
+- scripts/migrations/022_add_scholarly_transcription_method.sql
+
+---
+
 ### 2026-03-10 — Fix Variant Detection for Identical Texts and Mark Standard Edition Sources
 
 **Type:** decision
