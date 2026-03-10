@@ -49,6 +49,9 @@ coverage/
 sw.js
 workbox-*.js
 
+# Preprocessing data (large downloaded files)
+scripts/*.xml
+
 # Misc
 *.tsbuildinfo
 next-env.d.ts

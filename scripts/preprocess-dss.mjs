@@ -16,7 +16,13 @@
  * License: The ETCBC/dss data is CC BY-NC 4.0.
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(join(__dirname, "../app/package.json"));
+const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -75,10 +81,11 @@ function translitToHebrew(etcbc) {
 }
 
 const BOOK_DISPLAY = {
-  Gen: "Genesis", Exod: "Exodus", Lev: "Leviticus", Num: "Numbers",
-  Deut: "Deuteronomy", Josh: "Joshua", Judg: "Judges", Ruth: "Ruth",
-  "1Sam": "1 Samuel", "2Sam": "2 Samuel", "1Kgs": "1 Kings",
-  "2Kgs": "2 Kings", Isa: "Isaiah", Jer: "Jeremiah", Ezek: "Ezekiel",
+  Gen: "Genesis", Ex: "Exodus", Exod: "Exodus", Lev: "Leviticus",
+  Num: "Numbers", Deut: "Deuteronomy", Josh: "Joshua", Judg: "Judges",
+  Ruth: "Ruth", "1Sam": "1 Samuel", "2Sam": "2 Samuel",
+  "1Kgs": "1 Kings", "2Kgs": "2 Kings",
+  Is: "Isaiah", Isa: "Isaiah", Jer: "Jeremiah", Ezek: "Ezekiel",
   Hos: "Hosea", Joel: "Joel", Amos: "Amos", Obad: "Obadiah",
   Jonah: "Jonah", Mic: "Micah", Nah: "Nahum", Hab: "Habakkuk",
   Zeph: "Zephaniah", Hag: "Haggai", Zech: "Zechariah", Mal: "Malachi",
@@ -86,7 +93,6 @@ const BOOK_DISPLAY = {
   Qoh: "Ecclesiastes", Eccl: "Ecclesiastes", Lam: "Lamentations",
   Dan: "Daniel", Esth: "Esther", Ezra: "Ezra", Neh: "Nehemiah",
   "1Chr": "1 Chronicles", "2Chr": "2 Chronicles",
-  // Alternate abbreviations found in ETCBC data
   Genesis: "Genesis", Exodus: "Exodus", Leviticus: "Leviticus",
   Numbers: "Numbers", Deuteronomy: "Deuteronomy", Joshua: "Joshua",
   Judges: "Judges", Isaiah: "Isaiah", Jeremiah: "Jeremiah",
@@ -191,8 +197,11 @@ async function main() {
     const hebrewText = translitToHebrew(rawText);
     if (hebrewText.replace(/\s/g, "").length < 5) continue;
 
-    const bookDisplay =
-      BOOK_DISPLAY[bookAbbrev] || bookAbbrev.replace(/_/g, " ");
+    const bookDisplay = BOOK_DISPLAY[bookAbbrev];
+    if (!bookDisplay) {
+      // Skip scroll-specific identifiers (e.g. "1Q8") that aren't biblical books
+      continue;
+    }
 
     rows.push({
       source: "etcbc_dss",
