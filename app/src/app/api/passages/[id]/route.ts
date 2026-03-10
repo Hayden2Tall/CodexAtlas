@@ -107,6 +107,69 @@ export async function DELETE(
       return NextResponse.json({ error: "Passage not found" }, { status: 404 });
     }
 
+    // Must delete the full dependency chain:
+    // reviews -> translation_versions -> translations -> passage
+    // Also: evidence_records (polymorphic, no FK but should clean up)
+
+    const { data: translations } = await admin
+      .from("translations")
+      .select("id")
+      .eq("passage_id", id);
+
+    const translationIds = (translations ?? []).map((t: { id: string }) => t.id);
+
+    if (translationIds.length > 0) {
+      const { data: versions } = await admin
+        .from("translation_versions")
+        .select("id")
+        .in("translation_id", translationIds);
+
+      const versionIds = (versions ?? []).map((v: { id: string }) => v.id);
+
+      if (versionIds.length > 0) {
+        // Delete reviews referencing these versions
+        await admin
+          .from("reviews")
+          .delete()
+          .in("translation_version_id", versionIds);
+
+        // Clean up evidence_records for these versions
+        for (const vid of versionIds) {
+          await admin
+            .from("evidence_records")
+            .delete()
+            .eq("entity_id", vid);
+        }
+      }
+
+      // Break circular FK: null out current_version_id before deleting versions
+      await admin
+        .from("translations")
+        .update({ current_version_id: null } as Record<string, unknown>)
+        .in("id", translationIds);
+
+      // Delete translation versions
+      if (versionIds.length > 0) {
+        await admin
+          .from("translation_versions")
+          .delete()
+          .in("id", versionIds);
+      }
+
+      // Delete translations
+      await admin
+        .from("translations")
+        .delete()
+        .in("id", translationIds);
+    }
+
+    // Clean up any evidence_records referencing the passage itself
+    await admin
+      .from("evidence_records")
+      .delete()
+      .eq("entity_id", id);
+
+    // Finally delete the passage
     const { error: err } = await admin
       .from("passages")
       .delete()
