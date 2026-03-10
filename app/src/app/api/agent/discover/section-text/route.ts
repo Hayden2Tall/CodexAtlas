@@ -152,7 +152,6 @@ async function fetchFromSinaiticusProject(
 
 async function fetchFromDss(
   admin: AdminClient,
-  manuscriptTitle: string,
   reference: string
 ): Promise<{ text: string; scrollId: string } | null> {
   const match = reference.match(/^(.+?)\s+(\d+)$/);
@@ -165,7 +164,6 @@ async function fetchFromDss(
       .from("manuscript_source_texts")
       .select("text, manuscript_name")
       .eq("source", "etcbc_dss")
-      .ilike("manuscript_name", `%${manuscriptTitle}%`)
       .ilike("book", bookName)
       .eq("chapter", chapter)
       .single();
@@ -328,20 +326,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // STEP 3: Dead Sea Scrolls
+    // STEP 3: Dead Sea Scrolls (Hebrew OT only)
     if (!originalText) {
-      const t0 = Date.now();
-      const dssResult = await fetchFromDss(admin, manuscript_title, reference);
-      const ms = Date.now() - t0;
-      if (dssResult && textHasCorrectScript(dssResult.text)) {
-        chain.push({ step: 3, source: "dss", attempted: true, result: "success", reason: `${dssResult.scrollId}: ${dssResult.text.length} chars`, durationMs: ms });
-        originalText = dssResult.text;
-        sourceType = "dss";
-        sourceDetail = dssResult.scrollId;
-      } else if (dssResult) {
-        chain.push({ step: 3, source: "dss", attempted: true, result: "wrong_script", reason: "DSS data found but text is in wrong script", durationMs: ms });
+      if (lang === "grc" || lang === "lat") {
+        chain.push({ step: 3, source: "dss", attempted: false, result: "not_applicable", reason: `Language "${lang}" is not Hebrew — DSS corpus is Hebrew OT only`, durationMs: 0 });
+      } else if (isNtBook) {
+        chain.push({ step: 3, source: "dss", attempted: false, result: "not_applicable", reason: `"${bookMatch?.[1] ?? reference}" is NT — DSS corpus is OT only`, durationMs: 0 });
       } else {
-        chain.push({ step: 3, source: "dss", attempted: true, result: "no_data", reason: "No matching DSS scroll data — run scripts/preprocess-dss.mjs to populate, or this book/chapter is not in the DSS corpus", durationMs: ms });
+        const t0 = Date.now();
+        const dssResult = await fetchFromDss(admin, reference);
+        const ms = Date.now() - t0;
+        if (dssResult && textHasCorrectScript(dssResult.text)) {
+          chain.push({ step: 3, source: "dss", attempted: true, result: "success", reason: `${dssResult.scrollId}: ${dssResult.text.length} chars`, durationMs: ms });
+          originalText = dssResult.text;
+          sourceType = "dss";
+          sourceDetail = dssResult.scrollId;
+        } else if (dssResult) {
+          chain.push({ step: 3, source: "dss", attempted: true, result: "wrong_script", reason: "DSS data found but text is in wrong script", durationMs: ms });
+        } else {
+          chain.push({ step: 3, source: "dss", attempted: true, result: "no_data", reason: "Book/chapter not in DSS corpus", durationMs: ms });
+        }
       }
     }
 
