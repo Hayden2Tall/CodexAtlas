@@ -3,8 +3,22 @@
 import { useState } from "react";
 import { BatchTranslatePanel } from "./batch-translate-panel";
 import { DiscoveryPanel } from "./discovery-panel";
+import { OcrPanel } from "./ocr-panel";
+import { VariantPanel } from "./variant-panel";
 import { TaskList } from "./task-list";
 import type { AgentTask } from "@/lib/types";
+
+interface ManuscriptOption {
+  id: string;
+  title: string;
+}
+
+interface PassageOption {
+  id: string;
+  reference: string;
+  manuscript_id: string;
+  manuscript_title: string;
+}
 
 interface Props {
   stats: {
@@ -14,11 +28,13 @@ interface Props {
     reviews: number;
   };
   initialTasks: AgentTask[];
+  manuscripts: ManuscriptOption[];
+  passagesForVariants: PassageOption[];
 }
 
 type Tab = "operations" | "tasks";
 
-export function AdminDashboard({ stats, initialTasks }: Props) {
+export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVariants }: Props) {
   const [tasks, setTasks] = useState<AgentTask[]>(initialTasks);
   const [activeTab, setActiveTab] = useState<Tab>("operations");
 
@@ -149,6 +165,8 @@ export function AdminDashboard({ stats, initialTasks }: Props) {
             onTaskCreated={handleTaskCreated}
             onTaskUpdated={handleTaskUpdated}
           />
+          <OcrPanel manuscripts={manuscripts} />
+          <VariantPanel passages={passagesForVariants} />
         </div>
       )}
 

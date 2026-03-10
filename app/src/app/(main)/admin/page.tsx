@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminDashboard } from "./admin-dashboard";
-import type { User, AgentTask } from "@/lib/types";
+import type { User, AgentTask, Manuscript, Passage } from "@/lib/types";
 
 export const metadata = {
   title: "Admin Dashboard — CodexAtlas",
@@ -50,6 +50,8 @@ export default async function AdminPage() {
     { count: translationCount },
     { count: reviewCount },
     { data: recentTasks },
+    { data: manuscriptList },
+    { data: passageList },
   ] = await Promise.all([
     admin.from("manuscripts").select("*", { count: "exact", head: true }),
     admin.from("passages").select("*", { count: "exact", head: true }),
@@ -61,6 +63,17 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false })
       .limit(20)
       .returns<AgentTask[]>(),
+    admin
+      .from("manuscripts")
+      .select("id, title")
+      .order("title")
+      .returns<Pick<Manuscript, "id" | "title">[]>(),
+    admin
+      .from("passages")
+      .select("id, reference, manuscript_id, manuscripts!inner(title)")
+      .not("original_text", "is", null)
+      .order("reference")
+      .returns<(Pick<Passage, "id" | "reference" | "manuscript_id"> & { manuscripts: { title: string } })[]>(),
   ]);
 
   const stats = {
@@ -70,5 +83,19 @@ export default async function AdminPage() {
     reviews: reviewCount ?? 0,
   };
 
-  return <AdminDashboard stats={stats} initialTasks={recentTasks ?? []} />;
+  const passagesForVariants = (passageList ?? []).map((p) => ({
+    id: p.id,
+    reference: p.reference,
+    manuscript_id: p.manuscript_id,
+    manuscript_title: p.manuscripts.title,
+  }));
+
+  return (
+    <AdminDashboard
+      stats={stats}
+      initialTasks={recentTasks ?? []}
+      manuscripts={manuscriptList ?? []}
+      passagesForVariants={passagesForVariants}
+    />
+  );
 }
