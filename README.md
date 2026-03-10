@@ -21,53 +21,111 @@ Build an open research platform that serves two equally important purposes:
 | Human review over hidden automation | AI assists; humans validate |
 | Modularity over speed | Clean component boundaries; no coupling shortcuts |
 
+## Current Status
+
+**Phase 1: MVP — Complete.** The core research pipeline works end-to-end:
+
+- Manuscript ingestion with full metadata (language, date, provenance, archive)
+- Passage creation with original-language text
+- AI translation via Claude with confidence scores and evidence records
+- Translation version history with full provenance
+- Human review system (star rating, structured feedback, critique)
+- Variant comparison with word-level diff highlighting
+- Transparency indicators on every translation (confidence, method, model, source)
+- Public read access — anyone can browse manuscripts, translations, and reviews without an account
+- PWA-ready with icons and manifest
+
+**Next:** Vercel deployment, then Phase 2 (Research Platform).
+
 ## Tech Stack
 
-- **Frontend:** Next.js Progressive Web App
-- **Hosting:** Vercel
-- **Database:** Supabase (Postgres)
-- **Storage:** Supabase Storage
-- **Notifications:** Firebase Cloud Messaging
-- **AI Models:** Claude (Anthropic)
+| Component | Technology |
+|-----------|-----------|
+| Frontend | Next.js 15 (App Router, TypeScript, Tailwind CSS) |
+| Hosting | Vercel |
+| Database | Supabase (PostgreSQL with Row-Level Security) |
+| Storage | Supabase Storage |
+| Auth | Supabase Auth (email, Google OAuth, GitHub OAuth) |
+| Notifications | Firebase Cloud Messaging |
+| AI Models | Claude (Anthropic) |
 
 ## Repository Structure
 
 ```
 CodexAtlas/
-├── agents/              # Agent definitions and registry
-├── app/                 # Next.js application source
-├── data/                # Seed data and fixtures
+├── app/                 # Next.js application
+│   ├── public/          #   Static assets and PWA icons
+│   └── src/
+│       ├── app/         #   Pages and API routes (App Router)
+│       ├── components/  #   Shared UI components
+│       └── lib/         #   Supabase clients, types, utilities
 ├── docs/                # Project documentation
-├── pipelines/           # AI processing pipelines
-├── prompts/             # Agent task templates and prompts
-├── public/              # Static assets
-├── scripts/             # Build and utility scripts
-├── services/            # Backend service modules
+├── scripts/
+│   └── migrations/      # SQL migration files (001-018)
+├── agents/              # Agent definitions and registry
+├── prompts/             # Agent task templates
 ├── summaries/           # Compressed architecture summaries for agents
-├── tests/               # Test suites
-├── .gitignore           # Git ignore rules
+├── .gitignore
 ├── LICENSE              # MIT License
-└── README.md            # This file
+└── README.md
 ```
-
-## Documentation
-
-All project documentation lives in `/docs`:
-
-- [Project Constitution](docs/PROJECT_CONSTITUTION.md) — Governing rules and principles
-- [Master Plan](docs/MASTER_PLAN.md) — System architecture and technical design
-- [Product Strategy](docs/PRODUCT_STRATEGY.md) — Product vision and user strategy
-- [Roadmap](docs/ROADMAP.md) — Phased development plan
-- [Data Model](docs/DATA_MODEL.md) — Database schema and entity design
-- [Security Model](docs/SECURITY_MODEL.md) — Security architecture
-- [UX Guidelines](docs/UX_GUIDELINES.md) — Design system and patterns
-- [Development Log](docs/DEVELOPMENT_LOG.md) — Architectural decision log
 
 ## Getting Started
 
-> **Placeholder** — to be filled in Phase 1.
+### Prerequisites
 
-Prerequisites, setup instructions, and development commands will be added when the application is initialized.
+- Node.js 18+
+- A [Supabase](https://supabase.com) project
+- An [Anthropic](https://console.anthropic.com) API key
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Hayden2Tall/CodexAtlas.git
+   cd CodexAtlas
+   ```
+
+2. Install dependencies:
+   ```bash
+   cd app
+   npm install
+   ```
+
+3. Create your environment file:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Fill in your Supabase URL, anon key, service role key, and Anthropic API key.
+
+4. Run the database migrations:
+   Execute each SQL file in `scripts/migrations/` (001 through 018) in order via the Supabase SQL Editor.
+
+5. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+6. Open http://localhost:3000
+
+### First-time Setup
+
+After signing up, promote yourself to admin in the Supabase Table Editor:
+- Go to the `users` table
+- Change your `role` from `reader` to `admin`
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [Project Constitution](docs/PROJECT_CONSTITUTION.md) | Governing rules and principles |
+| [Master Plan](docs/MASTER_PLAN.md) | System architecture and technical design |
+| [Product Strategy](docs/PRODUCT_STRATEGY.md) | Product vision and user strategy |
+| [Roadmap](docs/ROADMAP.md) | Phased development plan |
+| [Data Model](docs/DATA_MODEL.md) | Database schema and entity design |
+| [Security Model](docs/SECURITY_MODEL.md) | Security architecture |
+| [UX Guidelines](docs/UX_GUIDELINES.md) | Design system and patterns |
+| [Development Log](docs/DEVELOPMENT_LOG.md) | Architectural decision log |
 
 ## Contributing
 
@@ -83,7 +141,3 @@ All changes must comply with the Project Constitution and be reviewed by maintai
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
-
-## Status
-
-**Phase 0: Foundation** — Documentation and architecture complete. Application development begins in Phase 1.

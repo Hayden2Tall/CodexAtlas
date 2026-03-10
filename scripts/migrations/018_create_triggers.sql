@@ -63,7 +63,9 @@ BEGIN
     RETURN NEW;
 
   ELSIF TG_OP = 'UPDATE' THEN
-    IF NEW.archived_at IS DISTINCT FROM OLD.archived_at AND NEW.archived_at IS NOT NULL THEN
+    IF to_jsonb(NEW) ? 'archived_at'
+       AND (to_jsonb(NEW))->>'archived_at' IS DISTINCT FROM (to_jsonb(OLD))->>'archived_at'
+       AND (to_jsonb(NEW))->>'archived_at' IS NOT NULL THEN
       _action := 'archive';
     ELSE
       _action := 'update';

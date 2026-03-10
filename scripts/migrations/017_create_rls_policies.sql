@@ -15,6 +15,10 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 -- manuscripts
 -- ============================================================================
 
+CREATE POLICY manuscripts_public_select ON public.manuscripts
+  FOR SELECT
+  USING (archived_at IS NULL);
+
 CREATE POLICY manuscripts_reader_select ON public.manuscripts
   FOR SELECT
   USING (
@@ -41,6 +45,10 @@ CREATE POLICY manuscripts_admin_all ON public.manuscripts
 -- manuscript_images
 -- ============================================================================
 
+CREATE POLICY manuscript_images_public_select ON public.manuscript_images
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY manuscript_images_select ON public.manuscript_images
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -64,6 +72,10 @@ CREATE POLICY manuscript_images_admin_all ON public.manuscript_images
 -- passages
 -- ============================================================================
 
+CREATE POLICY passages_public_select ON public.passages
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY passages_select ON public.passages
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -86,6 +98,10 @@ CREATE POLICY passages_admin_all ON public.passages
 -- ============================================================================
 -- translations
 -- ============================================================================
+
+CREATE POLICY translations_public_select ON public.translations
+  FOR SELECT
+  USING (current_version_id IS NOT NULL);
 
 CREATE POLICY translations_reader_select ON public.translations
   FOR SELECT
@@ -116,6 +132,10 @@ CREATE POLICY translations_admin_all ON public.translations
 -- translation_versions
 -- ============================================================================
 
+CREATE POLICY translation_versions_public_select ON public.translation_versions
+  FOR SELECT
+  USING (status = 'published');
+
 CREATE POLICY translation_versions_reader_select ON public.translation_versions
   FOR SELECT
   USING (
@@ -145,6 +165,10 @@ CREATE POLICY translation_versions_admin_all ON public.translation_versions
 -- variants
 -- ============================================================================
 
+CREATE POLICY variants_public_select ON public.variants
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY variants_select ON public.variants
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -167,6 +191,10 @@ CREATE POLICY variants_admin_all ON public.variants
 -- ============================================================================
 -- variant_readings
 -- ============================================================================
+
+CREATE POLICY variant_readings_public_select ON public.variant_readings
+  FOR SELECT
+  USING (true);
 
 CREATE POLICY variant_readings_select ON public.variant_readings
   FOR SELECT
@@ -191,6 +219,10 @@ CREATE POLICY variant_readings_admin_all ON public.variant_readings
 -- variant_comparisons
 -- ============================================================================
 
+CREATE POLICY variant_comparisons_public_select ON public.variant_comparisons
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY variant_comparisons_select ON public.variant_comparisons
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -210,6 +242,10 @@ CREATE POLICY variant_comparisons_admin_all ON public.variant_comparisons
 -- ============================================================================
 -- manuscript_lineage
 -- ============================================================================
+
+CREATE POLICY manuscript_lineage_public_select ON public.manuscript_lineage
+  FOR SELECT
+  USING (true);
 
 CREATE POLICY manuscript_lineage_select ON public.manuscript_lineage
   FOR SELECT
@@ -234,6 +270,10 @@ CREATE POLICY manuscript_lineage_admin_all ON public.manuscript_lineage
 -- reviews
 -- ============================================================================
 
+CREATE POLICY reviews_public_select ON public.reviews
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY reviews_select ON public.reviews
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -257,6 +297,10 @@ CREATE POLICY reviews_admin_all ON public.reviews
 -- review_clusters
 -- ============================================================================
 
+CREATE POLICY review_clusters_public_select ON public.review_clusters
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY review_clusters_select ON public.review_clusters
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -277,6 +321,10 @@ CREATE POLICY review_clusters_admin_all ON public.review_clusters
 -- evidence_records
 -- ============================================================================
 
+CREATE POLICY evidence_records_public_select ON public.evidence_records
+  FOR SELECT
+  USING (true);
+
 CREATE POLICY evidence_records_select ON public.evidence_records
   FOR SELECT
   USING (current_user_role() IN ('reader', 'reviewer', 'scholar', 'editor', 'admin'));
@@ -296,6 +344,10 @@ CREATE POLICY evidence_records_admin_all ON public.evidence_records
 -- ============================================================================
 -- users
 -- ============================================================================
+
+CREATE POLICY users_public_select ON public.users
+  FOR SELECT
+  USING (true);
 
 CREATE POLICY users_reader_select_own ON public.users
   FOR SELECT
@@ -324,6 +376,10 @@ CREATE POLICY users_admin_all ON public.users
 -- ============================================================================
 -- research_packages
 -- ============================================================================
+
+CREATE POLICY research_packages_public_select ON public.research_packages
+  FOR SELECT
+  USING (true);
 
 CREATE POLICY research_packages_select ON public.research_packages
   FOR SELECT

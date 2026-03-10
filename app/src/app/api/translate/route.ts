@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
         ai_model: aiModel,
         confidence_score: parsed.confidence_score,
         source_manuscript_ids: [manuscript.id],
-        status: "draft",
+        status: "published",
         evidence_record_id: evidenceRecord.id,
         created_by: user.id,
       } as Record<string, unknown>)

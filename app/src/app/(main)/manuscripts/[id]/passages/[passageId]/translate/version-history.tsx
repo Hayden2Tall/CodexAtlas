@@ -54,9 +54,17 @@ export function VersionHistory({
                 isActive ? "bg-primary-50/50" : "hover:bg-gray-50"
               }`}
             >
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectVersion(version.id)}
-                className="flex w-full items-start gap-4 px-5 py-3 text-left"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectVersion(version.id);
+                  }
+                }}
+                className="flex w-full cursor-pointer items-start gap-4 px-5 py-3 text-left"
               >
                 {/* Timeline dot + line */}
                 <div className="flex flex-col items-center pt-1">
@@ -116,7 +124,7 @@ export function VersionHistory({
                     />
                   </svg>
                 </button>
-              </button>
+              </div>
 
               {isExpanded && (
                 <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-4 pl-14">

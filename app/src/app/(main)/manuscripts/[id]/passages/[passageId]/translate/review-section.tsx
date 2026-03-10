@@ -14,11 +14,13 @@ interface ReviewWithReviewer extends Review {
 interface ReviewSectionProps {
   translationVersionId: string;
   existingReviews: ReviewWithReviewer[];
+  isAuthenticated: boolean;
 }
 
 export function ReviewSection({
   translationVersionId,
   existingReviews,
+  isAuthenticated,
 }: ReviewSectionProps) {
   const router = useRouter();
   const [reviews, setReviews] = useState(existingReviews);
@@ -125,98 +127,104 @@ export function ReviewSection({
       </div>
 
       {/* Submit Review Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4"
-      >
-        <h3 className="mb-3 text-sm font-semibold text-gray-800">
-          Submit Review
-        </h3>
+      {isAuthenticated ? (
+        <form
+          onSubmit={handleSubmit}
+          className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4"
+        >
+          <h3 className="mb-3 text-sm font-semibold text-gray-800">
+            Submit Review
+          </h3>
 
-        <div className="mb-3">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Rating <span className="text-red-500">*</span>
-          </label>
-          <StarRating value={rating} onChange={setRating} size="md" />
-        </div>
+          <div className="mb-3">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Rating <span className="text-red-500">*</span>
+            </label>
+            <StarRating value={rating} onChange={setRating} size="md" />
+          </div>
 
-        <div className="mb-3">
-          <button
-            type="button"
-            onClick={() => setShowStructured(!showStructured)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:text-primary-800"
-          >
-            <svg
-              className={`h-3 w-3 transition-transform ${showStructured ? "rotate-90" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setShowStructured(!showStructured)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:text-primary-800"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m8.25 4.5 7.5 7.5-7.5 7.5"
-              />
-            </svg>
-            Structured Feedback
-          </button>
+              <svg
+                className={`h-3 w-3 transition-transform ${showStructured ? "rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                />
+              </svg>
+              Structured Feedback
+            </button>
 
-          {showStructured && (
-            <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-white p-3">
-              <FeedbackRow
-                label="Accuracy"
-                value={accuracy}
-                onChange={setAccuracy}
-              />
-              <FeedbackRow
-                label="Fluency"
-                value={fluency}
-                onChange={setFluency}
-              />
-              <FeedbackRow
-                label="Terminology"
-                value={terminology}
-                onChange={setTerminology}
-              />
-            </div>
+            {showStructured && (
+              <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-white p-3">
+                <FeedbackRow
+                  label="Accuracy"
+                  value={accuracy}
+                  onChange={setAccuracy}
+                />
+                <FeedbackRow
+                  label="Fluency"
+                  value={fluency}
+                  onChange={setFluency}
+                />
+                <FeedbackRow
+                  label="Terminology"
+                  value={terminology}
+                  onChange={setTerminology}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mb-3">
+            <label
+              htmlFor="critique"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Critique <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="critique"
+              required
+              rows={3}
+              value={critique}
+              onChange={(e) => setCritique(e.target.value)}
+              placeholder="Provide your review of this translation…"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+            />
+          </div>
+
+          {error && (
+            <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
           )}
-        </div>
 
-        <div className="mb-3">
-          <label
-            htmlFor="critique"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Critique <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            id="critique"
-            required
-            rows={3}
-            value={critique}
-            onChange={(e) => setCritique(e.target.value)}
-            placeholder="Provide your review of this translation…"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
-          />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-primary-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-800 disabled:opacity-50"
+            >
+              {submitting ? "Submitting…" : "Submit Review"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          <a href="/auth/login" className="font-medium text-primary-700 hover:text-primary-800">Sign in</a> to submit a review of this translation.
         </div>
-
-        {error && (
-          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        )}
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-primary-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-800 disabled:opacity-50"
-          >
-            {submitting ? "Submitting…" : "Submit Review"}
-          </button>
-        </div>
-      </form>
+      )}
 
       {/* Reviews List */}
       {reviews.length === 0 ? (

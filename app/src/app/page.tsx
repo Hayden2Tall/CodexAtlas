@@ -1,34 +1,10 @@
 import Link from "next/link";
+import { Header } from "@/components/layout/header";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-primary-700 font-serif">
-              CodexAtlas
-            </span>
-            <span className="text-xs bg-secondary-100 text-secondary-700 px-2 py-0.5 rounded-full font-medium">
-              Alpha
-            </span>
-          </div>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/manuscripts"
-              className="text-sm text-gray-600 hover:text-primary-700 transition-colors"
-            >
-              Manuscripts
-            </Link>
-            <Link
-              href="/auth/login"
-              className="text-sm bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 transition-colors"
-            >
-              Sign In
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header />
 
       <main className="flex-1">
         <section className="mx-auto max-w-4xl px-4 py-24 text-center">

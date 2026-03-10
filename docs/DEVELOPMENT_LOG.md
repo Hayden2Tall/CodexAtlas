@@ -39,6 +39,45 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-09 — Phase 1 MVP Complete
+
+**Type:** milestone
+**Author:** Founding Architect
+**Status:** accepted
+
+**Context:**
+Phase 1 implementation completed all core features: manuscript ingestion, AI translation with evidence records, variant comparison, human review, and the transparency layer. Several architectural decisions were made during implementation to align the code with the project's Open Research Model philosophy.
+
+**Key Deliverables:**
+- 18 database migration files implementing the full DATA_MODEL.md schema
+- Next.js application with App Router, TypeScript, Tailwind CSS
+- Supabase integration (Auth, Postgres with RLS, Storage)
+- Claude AI translation pipeline with structured evidence output
+- PWA icons and manifest
+- Public read access for all research data
+
+**Key Decisions Made During Implementation:**
+
+1. **Supabase type workaround:** The full 15-table `Database` generic type exceeded TypeScript's inference depth limits with `@supabase/ssr`. Workaround: cast clients as `SupabaseClient<Database>` and annotate query return types explicitly at the call site. Type safety is maintained where it matters (data consumption) without relying on deep generic inference.
+
+2. **Translations default to "published":** The original schema had translations starting as "draft" requiring editorial promotion. This was changed to default to "published" because it conflicted with the Open Research Model — transparency indicators (confidence score, method badge, evidence chain, reviews) are the legitimacy signals, not an editorial status gate. Remaining statuses: "superseded" (replaced by newer version), "disputed" (flagged by reviewers).
+
+3. **Public read access via RLS:** Original RLS policies required authentication for all SELECT operations. Added `*_public_select` policies to all research-facing tables so anonymous visitors can browse manuscripts, translations, evidence, and reviews. Write operations remain auth-gated.
+
+4. **Audit log trigger fix:** The `write_audit_log()` trigger function referenced `NEW.archived_at` which doesn't exist on all tables. Fixed by checking `to_jsonb(NEW) ? 'archived_at'` before accessing the field.
+
+**Consequences:**
+- MVP is functional and testable end-to-end
+- Ready for Vercel deployment
+- Phase 2 (Research Platform) can begin
+- Manual manuscript entry is the current workflow; agent-driven ingestion comes in Phase 4
+
+**Related Documents:**
+- docs/ROADMAP.md (Phase 1 checkboxes updated)
+- scripts/migrations/ (018 files)
+
+---
+
 ### 2026-03-09 — Technology Stack Selection
 
 **Type:** decision

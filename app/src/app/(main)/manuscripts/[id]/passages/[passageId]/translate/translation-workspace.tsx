@@ -7,12 +7,18 @@ import type {
   Translation,
   TranslationVersion,
   EvidenceRecord,
+  Review,
 } from "@/lib/types";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
 import { VersionIndicator } from "@/components/ui/version-indicator";
 import { VersionHistory } from "./version-history";
 import { EvidencePanel } from "./evidence-panel";
+import { ReviewSection } from "./review-section";
+
+interface ReviewWithReviewer extends Review {
+  users?: { display_name: string | null } | null;
+}
 
 interface TranslationWorkspaceProps {
   passage: Passage;
@@ -20,6 +26,8 @@ interface TranslationWorkspaceProps {
   translations: Translation[];
   versions: TranslationVersion[];
   evidenceRecords: EvidenceRecord[];
+  reviews: ReviewWithReviewer[];
+  isAuthenticated: boolean;
 }
 
 const TARGET_LANGUAGES = [
@@ -38,10 +46,13 @@ export function TranslationWorkspace({
   translations: initialTranslations,
   versions: initialVersions,
   evidenceRecords: initialEvidence,
+  reviews: initialReviews,
+  isAuthenticated,
 }: TranslationWorkspaceProps) {
   const [translations, setTranslations] = useState(initialTranslations);
   const [versions, setVersions] = useState(initialVersions);
   const [evidenceRecords, setEvidenceRecords] = useState(initialEvidence);
+  const [reviews] = useState(initialReviews);
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +125,7 @@ export function TranslationWorkspace({
           htmlFor="target-lang"
           className="text-sm font-medium text-gray-700"
         >
-          Target Language
+          {translations.length > 0 ? "Language" : "Target Language"}
         </label>
         <select
           id="target-lang"
@@ -132,20 +143,22 @@ export function TranslationWorkspace({
           ))}
         </select>
 
-        <button
-          onClick={handleTranslate}
-          disabled={isTranslating}
-          className="ml-auto rounded-lg bg-primary-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isTranslating ? (
-            <span className="flex items-center gap-2">
-              <Spinner />
-              Translating&hellip;
-            </span>
-          ) : (
-            "Generate AI Translation"
-          )}
-        </button>
+        {isAuthenticated && (
+          <button
+            onClick={handleTranslate}
+            disabled={isTranslating}
+            className="ml-auto rounded-lg bg-primary-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isTranslating ? (
+              <span className="flex items-center gap-2">
+                <Spinner />
+                Translating&hellip;
+              </span>
+            ) : (
+              "Generate AI Translation"
+            )}
+          </button>
+        )}
       </div>
 
       {error && (
@@ -236,6 +249,17 @@ export function TranslationWorkspace({
           activeVersionId={activeVersionId}
           onSelectVersion={setActiveVersionId}
           evidenceRecords={evidenceRecords}
+        />
+      )}
+
+      {/* ── Reviews ────────────────────────────────────────────────── */}
+      {activeVersion && (
+        <ReviewSection
+          translationVersionId={activeVersion.id}
+          existingReviews={reviews.filter(
+            (r) => r.translation_version_id === activeVersion.id
+          )}
+          isAuthenticated={isAuthenticated}
         />
       )}
     </div>

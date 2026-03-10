@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-09
-> **Status:** Phase 0 — Foundation (Active)
+> **Status:** Phase 1 — MVP (Complete) · Phase 2 next
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -21,7 +21,7 @@ This roadmap defines the phased development plan for CodexAtlas — an open-sour
 
 ---
 
-## 2. Phase 0 — Foundation (Current Phase)
+## 2. Phase 0 — Foundation (Complete)
 
 **Timeline:** Weeks 1–2
 **Goal:** Establish the architectural and documentation foundation that every future phase depends on.
@@ -37,11 +37,11 @@ This roadmap defines the phased development plan for CodexAtlas — an open-sour
 - [x] SECURITY_MODEL.md
 - [x] UX_GUIDELINES.md
 - [x] DEVELOPMENT_LOG.md
-- [ ] Architecture summaries for agent context
-- [ ] Git repository initialized
-- [ ] README.md with project overview
-- [ ] `.gitignore` configured
-- [ ] Initial `package.json`
+- [x] Architecture summaries for agent context
+- [x] Git repository initialized
+- [x] README.md with project overview
+- [x] `.gitignore` configured
+- [x] Initial `package.json`
 
 ### Exit Criteria
 
@@ -49,55 +49,61 @@ All documentation complete and reviewed. Repository initialized with proper igno
 
 ---
 
-## 3. Phase 1 — Minimal Viable Prototype (MVP)
+## 3. Phase 1 — Minimal Viable Prototype (MVP) (Complete)
 
 **Timeline:** Weeks 3–8
 **Goal:** Build the core research pipeline end-to-end — from manuscript ingestion through AI translation to human review — with full transparency at every step.
 
 ### 1.1 Project Setup
 
-- [ ] Next.js project initialization (App Router, TypeScript, Tailwind CSS)
-- [ ] Supabase project setup (database, auth, storage buckets)
-- [ ] Database schema migration (core tables from DATA_MODEL.md)
-- [ ] Authentication setup (Supabase Auth — email, OAuth)
-- [ ] Row-Level Security (RLS) policies for all tables
-- [ ] PWA configuration (web manifest, service worker registration)
+- [x] Next.js project initialization (App Router, TypeScript, Tailwind CSS)
+- [x] Supabase project setup (database, auth, storage buckets)
+- [x] Database schema migration (core tables from DATA_MODEL.md — 18 migration files)
+- [x] Authentication setup (Supabase Auth — email, OAuth)
+- [x] Row-Level Security (RLS) policies for all tables (including public read access)
+- [x] PWA configuration (web manifest, icons, service worker registration)
 - [ ] CI/CD pipeline (GitHub Actions → Vercel preview + production deploys)
 
 ### 1.2 Manuscript Ingestion
 
-- [ ] Manuscript creation form (manual entry with metadata fields)
-- [ ] Manuscript metadata storage (language, date range, archive, condition)
-- [ ] Manuscript image upload to Supabase Storage
-- [ ] Passage creation and original-language text storage
-- [ ] Basic manuscript browser (list, filter by language/date)
+- [x] Manuscript creation form (manual entry with metadata fields)
+- [x] Manuscript metadata storage (language, date range, archive, condition)
+- [x] Manuscript image upload to Supabase Storage
+- [x] Passage creation and original-language text storage
+- [x] Basic manuscript browser (list, filter by language/date)
 
 ### 1.3 Translation Pipeline
 
-- [ ] AI translation endpoint (Claude API integration via server action)
-- [ ] Translation version creation and storage with full provenance
-- [ ] Evidence record generation for each translation decision
-- [ ] Confidence score calculation (per-passage, per-phrase)
-- [ ] Translation viewer with version history navigation
+- [x] AI translation endpoint (Claude API integration via API route)
+- [x] Translation version creation and storage with full provenance
+- [x] Evidence record generation for each translation decision
+- [x] Confidence score calculation (per-passage)
+- [x] Translation viewer with version history navigation
 
 ### 1.4 Variant Comparison
 
-- [ ] Variant reading entry (manual and AI-assisted)
-- [ ] Side-by-side passage comparison view
-- [ ] Basic diff visualization (word-level highlighting)
+- [x] Variant reading entry (manual)
+- [x] Side-by-side passage comparison view
+- [x] Basic diff visualization (word-level highlighting)
 - [ ] Similarity scoring between variant readings
 
 ### 1.5 Review System
 
-- [ ] Review submission form (structured rating, critique categories, free text)
-- [ ] Review display on translation versions
+- [x] Review submission form (structured rating, critique categories, free text)
+- [x] Review display on translation versions
 - [ ] Basic review listing with filters
 
 ### 1.6 Transparency Layer
 
-- [ ] Transparency indicators on all translations (confidence %, method, model version, source manuscripts)
-- [ ] Version history viewer (who changed what, when, why)
-- [ ] Evidence record viewer (reasoning chain for every AI decision)
+- [x] Transparency indicators on all translations (confidence %, method, model version, source manuscripts)
+- [x] Version history viewer (who changed what, when, why)
+- [x] Evidence record viewer (reasoning chain for every AI decision)
+
+### 1.7 Open Research Model
+
+- [x] Public read access for all research data (no sign-in required to browse)
+- [x] Auth-gated write actions (create, translate, review require sign-in)
+- [x] Translations default to "published" — transparency indicators are the legitimacy signals
 
 ### Exit Criteria
 

@@ -286,16 +286,14 @@ function PassagesTab({
                     No original text transcribed.
                   </p>
                 )}
-                {isAuthenticated && (
-                  <div className="mt-4 flex gap-2">
-                    <Link
-                      href={`/manuscripts/${manuscriptId}/passages/${passage.id}/translate`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-50"
-                    >
-                      Translate
-                    </Link>
-                  </div>
-                )}
+                <div className="mt-4 flex gap-2">
+                  <Link
+                    href={`/manuscripts/${manuscriptId}/passages/${passage.id}/translate`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-50"
+                  >
+                    View Translation
+                  </Link>
+                </div>
               </div>
             )}
           </div>
