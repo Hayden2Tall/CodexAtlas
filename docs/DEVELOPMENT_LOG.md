@@ -39,6 +39,66 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Expand Manuscript Text Sources Across All Seven Evaluated Sources
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+After integrating NTVMR for NT manuscripts, a comprehensive evaluation revealed that the platform still had no manuscript-specific text for OT books, was using the outdated Textus Receptus as its NT standard edition, and was mislabeling the Westminster Leningrad Codex text as a generic "standard edition" even when importing the Leningrad Codex itself. Seven external text sources were evaluated for integration.
+
+**Decision:**
+Implemented a six-step text source chain and evaluated all seven candidate sources:
+
+### Sources integrated (Phases 1-3):
+
+1. **Codex Sinaiticus Project** (Phase 2) — Full OT+NT transcription of Codex Sinaiticus from the itsee-birmingham GitHub repo. TEI XML (51.9 MB), CC BY-NC-SA 3.0. Requires offline preprocessing script to extract chapter-level text into a `manuscript_source_texts` Supabase table. Fetch function queries this table when manuscript is Sinaiticus.
+
+2. **INTF NTVMR** (already integrated) — Manuscript-specific NT transcriptions. CC BY 4.0.
+
+3. **ETCBC Dead Sea Scrolls** (Phase 3) — OT manuscript-specific readings from DSS corpus (MIT license). Requires Python preprocessing via Text-Fabric. Includes Great Isaiah Scroll, various Qumran fragments.
+
+4. **WLC / Leningrad Codex Recognition** (Phase 1) — bolls.life WLC text is now labeled `scholarly_transcription` (not `standard_edition`) when the manuscript title matches "Leningrad Codex" or "Codex Leningradensis". Zero-cost change, correct labeling.
+
+5. **SBLGNT** (Phase 1) — Replaced Textus Receptus with the SBL Greek New Testament (CC BY 4.0) as the NT Greek standard edition. Fetches per-book text files from GitHub at runtime.
+
+### Sources evaluated and deferred:
+
+6. **morphgnt** — Morphological parsing of SBLGNT + Tischendorf 8th. MIT license. Low value for primary text (we already have SBLGNT). Morphological data is a future feature.
+
+7. **Perseus Digital Library / Scaife** — 1,200+ Greek/Latin texts. Not biblical manuscripts. Useful later for patristic citations.
+
+### New fallback chain:
+
+```
+Step 1: Codex Sinaiticus Project (if manuscript = Sinaiticus, OT+NT)
+Step 2: NTVMR API (if GA number + NT book)
+Step 3: Dead Sea Scrolls (if DSS scroll + matched book)
+Step 4: SBLGNT (NT Greek standard edition)
+Step 5: bolls.life (LXX/TR/WLC, with Leningrad Codex recognition)
+Step 6: AI Models (Haiku → Sonnet)
+```
+
+**Rationale:**
+The platform's mission requires manuscript-specific text for meaningful variant detection. Each source fills a distinct gap: Sinaiticus Project covers OT Greek, NTVMR covers NT manuscripts, DSS covers OT Hebrew alternatives, SBLGNT improves edition quality, and Leningrad recognition correctly labels existing data. Sources were prioritized by impact (manuscript-specific > improved edition > future features) and complexity.
+
+**Consequences:**
+- Variant detection between OT manuscripts becomes possible once Sinaiticus and DSS data are preprocessed
+- NT standard edition text is now SBLGNT (CC BY 4.0) instead of Textus Receptus
+- Leningrad Codex imports are correctly labeled as manuscript-specific
+- Phase 2 (Sinaiticus) requires license decision: CC BY-NC-SA 3.0 restricts commercial use
+- Phase 2 and 3 require user to run preprocessing scripts and migration 023
+- The `manuscript_source_texts` Supabase table serves as a shared data store for all preprocessed sources
+
+**Related Documents:**
+- app/src/app/api/agent/discover/section-text/route.ts (full fallback chain, all fetch functions)
+- scripts/preprocess-sinaiticus.mjs (Sinaiticus XML preprocessing)
+- scripts/preprocess-dss.py (Dead Sea Scrolls preprocessing)
+- scripts/migrations/023_create_manuscript_source_texts.sql (shared data table)
+
+---
+
 ### 2026-03-10 — Integrate NTVMR API for Manuscript-Specific Transcriptions
 
 **Type:** decision

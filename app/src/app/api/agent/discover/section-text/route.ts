@@ -64,8 +64,8 @@ const NTVMR_MANUSCRIPTS: Record<string, number> = {
   "p72": 10072,
 };
 
-// Book name → NTVMR SBL abbreviation (NT books only)
-const NTVMR_BOOKS: Record<string, string> = {
+// Book name → SBL abbreviation (NT books only; shared by NTVMR + SBLGNT)
+const NT_SBL_BOOKS: Record<string, string> = {
   matthew: "Matt", mark: "Mark", luke: "Luke", john: "John",
   acts: "Acts", romans: "Rom",
   "1 corinthians": "1Cor", "2 corinthians": "2Cor",
@@ -77,6 +77,12 @@ const NTVMR_BOOKS: Record<string, string> = {
   "1 john": "1John", "2 john": "2John", "3 john": "3John",
   jude: "Jude", revelation: "Rev",
 };
+
+// Manuscript titles that map to the Leningrad Codex (WLC source)
+const LENINGRAD_TITLES = new Set([
+  "leningrad codex", "codex leningradensis",
+  "firkovich b 19a", "leningradensis",
+]);
 
 function parseNtvmrHtml(html: string): string {
   let text = html;
@@ -120,7 +126,7 @@ async function fetchFromNtvmr(
   if (!match) return null;
   const bookName = match[1].toLowerCase().trim();
   const chapter = match[2];
-  const ntvmrBook = NTVMR_BOOKS[bookName];
+  const ntvmrBook = NT_SBL_BOOKS[bookName];
   if (!ntvmrBook) return null;
 
   const gaNumber = docId >= 20000 ? String(docId - 20000).padStart(2, "0") : `P${docId - 10000}`;
@@ -194,6 +200,91 @@ async function fetchFromBibleApi(
       .join("\n");
 
     return text.length > 50 ? { text, edition: translation } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFromSblgnt(
+  reference: string
+): Promise<{ text: string; edition: string } | null> {
+  const match = reference.match(/^(.+?)\s+(\d+)$/);
+  if (!match) return null;
+  const bookName = match[1].toLowerCase().trim();
+  const chapter = match[2];
+  const sblBook = NT_SBL_BOOKS[bookName];
+  if (!sblBook) return null;
+
+  const url = `https://raw.githubusercontent.com/LogosBible/SBLGNT/master/data/sblgnt/text/${sblBook}.txt`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+
+    const fullText = await res.text();
+    const chapterPrefix = `${sblBook} ${chapter}:`;
+    const verses = fullText
+      .split("\n")
+      .filter(line => line.startsWith(chapterPrefix))
+      .map(line => line.replace(/^\S+\s+\d+:\d+\s+/, "").trim())
+      .filter(Boolean);
+
+    if (verses.length === 0) return null;
+    const text = verses.join("\n");
+    return text.length > 50 ? { text, edition: "SBLGNT" } : null;
+  } catch {
+    return null;
+  }
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+async function fetchFromSinaiticusProject(
+  admin: AdminClient,
+  reference: string
+): Promise<{ text: string } | null> {
+  const match = reference.match(/^(.+?)\s+(\d+)$/);
+  if (!match) return null;
+  const bookName = match[1].trim();
+  const chapter = parseInt(match[2], 10);
+
+  try {
+    const { data } = await admin
+      .from("manuscript_source_texts")
+      .select("text")
+      .eq("source", "sinaiticus_project")
+      .ilike("book", bookName)
+      .eq("chapter", chapter)
+      .single();
+
+    if (!data?.text || data.text.length < 50) return null;
+    return { text: data.text };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFromDss(
+  admin: AdminClient,
+  manuscriptTitle: string,
+  reference: string
+): Promise<{ text: string; scrollId: string } | null> {
+  const match = reference.match(/^(.+?)\s+(\d+)$/);
+  if (!match) return null;
+  const bookName = match[1].trim();
+  const chapter = parseInt(match[2], 10);
+
+  try {
+    const { data } = await admin
+      .from("manuscript_source_texts")
+      .select("text, manuscript_name")
+      .eq("source", "etcbc_dss")
+      .ilike("manuscript_name", `%${manuscriptTitle}%`)
+      .ilike("book", bookName)
+      .eq("chapter", chapter)
+      .single();
+
+    if (!data?.text || data.text.length < 50) return null;
+    return { text: data.text, scrollId: data.manuscript_name };
   } catch {
     return null;
   }
@@ -292,31 +383,79 @@ export async function POST(request: NextRequest) {
       console.log(`[section-text] ${reference}: no existing passage found — will create new`);
     }
 
-    // === TEXT SOURCE CHAIN: NTVMR → bolls.life → AI ===
+    // === TEXT SOURCE CHAIN ===
+    // Sinaiticus Project → NTVMR → DSS → SBLGNT → bolls.life (+ Leningrad recognition) → AI
+    type TextSource = "sinaiticus-project" | "ntvmr" | "dss" | "leningrad-wlc" | "sblgnt" | "bible-api" | "ai";
     let originalText = "";
-    let sourceType: "ntvmr" | "bible-api" | "ai" = "ai";
+    let sourceType: TextSource = "ai";
     let sourceDetail = "";
     let tokensInput = 0;
     let tokensOutput = 0;
     let costUsd = 0;
 
-    // STEP 1: Try NTVMR (manuscript-specific scholarly transcription, NT only)
-    const ntvmrResult = await fetchFromNtvmr(manuscript_title, reference);
-    if (ntvmrResult && textHasCorrectScript(ntvmrResult.text)) {
-      console.log(`[section-text] ${reference}: NTVMR success (GA ${ntvmrResult.gaNumber}, ${ntvmrResult.text.length} chars)`);
-      originalText = ntvmrResult.text;
-      sourceType = "ntvmr";
-      sourceDetail = JSON.stringify({ ga_number: ntvmrResult.gaNumber, doc_id: ntvmrResult.docId });
+    const titleLower = manuscript_title.toLowerCase().trim();
+    const isSinaiticus = titleLower.includes("sinaiticus");
+    const isLeningrad = LENINGRAD_TITLES.has(titleLower);
+
+    // STEP 1: Codex Sinaiticus Project (manuscript-specific, OT+NT, from preprocessed data)
+    if (!originalText && isSinaiticus) {
+      const sinResult = await fetchFromSinaiticusProject(admin, reference);
+      if (sinResult && textHasCorrectScript(sinResult.text)) {
+        console.log(`[section-text] ${reference}: Sinaiticus Project (${sinResult.text.length} chars)`);
+        originalText = sinResult.text;
+        sourceType = "sinaiticus-project";
+      } else {
+        console.log(`[section-text] ${reference}: Sinaiticus Project unavailable, continuing chain`);
+      }
     }
 
-    // STEP 2: Try bolls.life standard edition (free, instant, no content filters)
+    // STEP 2: NTVMR (manuscript-specific scholarly transcription, NT only)
+    if (!originalText) {
+      const ntvmrResult = await fetchFromNtvmr(manuscript_title, reference);
+      if (ntvmrResult && textHasCorrectScript(ntvmrResult.text)) {
+        console.log(`[section-text] ${reference}: NTVMR success (GA ${ntvmrResult.gaNumber}, ${ntvmrResult.text.length} chars)`);
+        originalText = ntvmrResult.text;
+        sourceType = "ntvmr";
+        sourceDetail = JSON.stringify({ ga_number: ntvmrResult.gaNumber, doc_id: ntvmrResult.docId });
+      }
+    }
+
+    // STEP 3: Dead Sea Scrolls (manuscript-specific, OT fragments, from preprocessed data)
+    if (!originalText) {
+      const dssResult = await fetchFromDss(admin, manuscript_title, reference);
+      if (dssResult && textHasCorrectScript(dssResult.text)) {
+        console.log(`[section-text] ${reference}: DSS (${dssResult.scrollId}, ${dssResult.text.length} chars)`);
+        originalText = dssResult.text;
+        sourceType = "dss";
+        sourceDetail = dssResult.scrollId;
+      }
+    }
+
+    // STEP 4: SBLGNT (improved NT Greek critical edition, from GitHub)
+    if (!originalText && (original_language ?? "grc") === "grc") {
+      const sblResult = await fetchFromSblgnt(reference);
+      if (sblResult && textHasCorrectScript(sblResult.text)) {
+        console.log(`[section-text] ${reference}: SBLGNT (${sblResult.text.length} chars)`);
+        originalText = sblResult.text;
+        sourceType = "sblgnt";
+        sourceDetail = "SBLGNT";
+      }
+    }
+
+    // STEP 5: bolls.life standard edition (LXX/TR/WLC) with Leningrad Codex recognition
     if (!originalText) {
       const apiResult = await fetchFromBibleApi(original_language ?? "grc", reference);
       if (apiResult && textHasCorrectScript(apiResult.text)) {
-        console.log(`[section-text] ${reference}: Bible API ${apiResult.edition} (${apiResult.text.length} chars)`);
         originalText = apiResult.text;
-        sourceType = "bible-api";
-        sourceDetail = apiResult.edition;
+        if (isLeningrad && apiResult.edition === "WLC") {
+          console.log(`[section-text] ${reference}: WLC as Leningrad Codex (${apiResult.text.length} chars)`);
+          sourceType = "leningrad-wlc";
+          sourceDetail = "WLC";
+        } else {
+          console.log(`[section-text] ${reference}: Bible API ${apiResult.edition} (${apiResult.text.length} chars)`);
+          sourceType = "bible-api";
+          sourceDetail = apiResult.edition;
+        }
       } else if (apiResult) {
         console.log(`[section-text] ${reference}: Bible API returned text but wrong script`);
       } else {
@@ -324,7 +463,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // STEP 3: Fall back to AI models
+    // STEP 6: Fall back to AI models
     if (!originalText) {
       console.log(`[section-text] ${reference}: trying AI models`);
       const aiText = await fetchFromAiModels(
@@ -361,26 +500,39 @@ export async function POST(request: NextRequest) {
     try {
       let passageId: string;
 
-      const transcriptionMethod =
-        sourceType === "ntvmr" ? "scholarly_transcription"
-        : sourceType === "bible-api" ? "standard_edition"
-        : "ai_reconstructed";
+      const isManuscriptSpecific = ["sinaiticus-project", "ntvmr", "dss", "leningrad-wlc"].includes(sourceType);
+      const transcriptionMethod = isManuscriptSpecific
+        ? "scholarly_transcription"
+        : sourceType === "ai" ? "ai_reconstructed" : "standard_edition";
 
       const metadata: Record<string, unknown> = {
         passage_description: description || null,
         tokens_used: tokensInput + tokensOutput,
       };
 
-      if (sourceType === "ntvmr") {
+      if (sourceType === "sinaiticus-project") {
+        metadata.ingested_by = "sinaiticus_project";
+        metadata.transcription_source = "Codex Sinaiticus Project";
+      } else if (sourceType === "ntvmr") {
         const detail = JSON.parse(sourceDetail);
         metadata.ingested_by = "ntvmr";
         metadata.transcription_source = "INTF NTVMR";
         metadata.ga_number = detail.ga_number;
         metadata.doc_id = detail.doc_id;
+      } else if (sourceType === "dss") {
+        metadata.ingested_by = "etcbc_dss";
+        metadata.transcription_source = "ETCBC Dead Sea Scrolls";
+        metadata.scroll_id = sourceDetail;
+      } else if (sourceType === "leningrad-wlc") {
+        metadata.ingested_by = "bible_api";
+        metadata.transcription_source = "Westminster Leningrad Codex";
+        metadata.edition_source = "WLC";
+      } else if (sourceType === "sblgnt") {
+        metadata.ingested_by = "sblgnt";
+        metadata.edition_source = "SBLGNT";
       } else if (sourceType === "bible-api") {
         metadata.ingested_by = "bible_api";
         metadata.edition_source = sourceDetail;
-        metadata.ai_model = "bible-api";
       } else {
         metadata.ingested_by = "full_import_agent";
         metadata.ai_model = sourceDetail;
@@ -437,7 +589,7 @@ export async function POST(request: NextRequest) {
           tokens_input: tokensInput,
           tokens_output: tokensOutput,
           estimated_cost_usd: costUsd,
-          ai_model: sourceType === "ntvmr" ? "ntvmr" : sourceType === "bible-api" ? "bible-api" : sourceDetail,
+          ai_model: sourceType === "ai" ? sourceDetail : sourceType,
         },
       });
     } catch (dbErr) {
