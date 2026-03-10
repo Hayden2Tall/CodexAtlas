@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       reference
     );
 
-    const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI)/i;
+    const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|I understand|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI|Here'?s? |Let me)/i;
 
     let originalText = "";
     let aiModel: string = MODELS[0];
@@ -218,6 +218,8 @@ export async function POST(request: NextRequest) {
       );
 
       if (text.includes("[UNAVAILABLE]")) {
+        console.log(`[section-text] ${reference}: ${model} returned [UNAVAILABLE], escalating`);
+        if (model !== MODELS[MODELS.length - 1]) continue;
         return NextResponse.json({
           passage_id: null,
           skipped: true,
