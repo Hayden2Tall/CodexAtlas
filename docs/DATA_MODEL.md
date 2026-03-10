@@ -74,7 +74,7 @@ A discrete textual unit within a manuscript, identified by a canonical reference
 | `reference` | `TEXT` | `NOT NULL` | Canonical reference string (e.g., `"Genesis 1:1"`, `"P.Oxy. 5101 col. ii.3-7"`). |
 | `sequence_order` | `INTEGER` | | Ordering index within the manuscript for sequential reading. |
 | `original_text` | `TEXT` | | Transcribed text in the original language. |
-| `transcription_method` | `TEXT` | | How the text was transcribed: `'manual'`, `'ocr_auto'`, `'ocr_reviewed'`. |
+| `transcription_method` | `TEXT` | | How the text was obtained: `'manual'`, `'ocr_auto'`, `'ocr_reviewed'`, `'ai_reconstructed'`, `'ai_imported'`, `'standard_edition'`, `'scholarly_transcription'`. |
 | `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Extensible metadata (paleographic notes, lacunae descriptions). |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Row creation time. |
 | `updated_at` | `TIMESTAMPTZ` | | Last modification time. |
@@ -269,6 +269,49 @@ Immutable, append-only log of every state-changing operation in the system.
 | `diff_data` | `JSONB` | | Before/after diff for update operations (e.g., `{"before": {...}, "after": {...}}`). |
 | `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Contextual metadata (IP address, user agent, pipeline run ID). |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Time the event occurred. |
+
+### 2.16 `agent_tasks`
+
+Tracks all AI agent-initiated tasks: batch translations, manuscript discovery, OCR jobs, variant detection, etc.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Unique identifier. |
+| `task_type` | `TEXT` | `NOT NULL CHECK (...)` | Task category: `'batch_translate'`, `'discover_manuscript'`, `'ocr_process'`, `'detect_variants'`, `'custom'`. |
+| `status` | `TEXT` | `NOT NULL DEFAULT 'queued'` | Lifecycle state: `'queued'`, `'running'`, `'completed'`, `'failed'`, `'cancelled'`. |
+| `priority` | `INTEGER` | `NOT NULL DEFAULT 0` | Scheduling priority (higher = sooner). |
+| `config` | `JSONB` | `NOT NULL DEFAULT '{}'::jsonb` | Task-specific configuration (target language, source filters, etc.). |
+| `result` | `JSONB` | | Task output data. |
+| `error_message` | `TEXT` | | Error details if the task failed. |
+| `tokens_input` | `INTEGER` | `NOT NULL DEFAULT 0` | Total input tokens consumed. |
+| `tokens_output` | `INTEGER` | `NOT NULL DEFAULT 0` | Total output tokens produced. |
+| `estimated_cost_usd` | `NUMERIC(10,6)` | `NOT NULL DEFAULT 0` | Estimated API cost in USD. |
+| `ai_model` | `TEXT` | | AI model identifier used. |
+| `total_items` | `INTEGER` | | Total items in the batch. |
+| `completed_items` | `INTEGER` | `NOT NULL DEFAULT 0` | Items processed successfully. |
+| `failed_items` | `INTEGER` | `NOT NULL DEFAULT 0` | Items that failed. |
+| `created_by` | `UUID` | `REFERENCES users(id)` | User who initiated the task. |
+| `started_at` | `TIMESTAMPTZ` | | When processing began. |
+| `completed_at` | `TIMESTAMPTZ` | | When processing finished. |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Row creation time. |
+| `updated_at` | `TIMESTAMPTZ` | | Last modification time. |
+
+### 2.17 `manuscript_source_texts`
+
+Preprocessed manuscript transcription data from external scholarly sources (Codex Sinaiticus Project, ETCBC Dead Sea Scrolls). Populated by one-time offline preprocessing scripts, not by the application at runtime.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Unique identifier. |
+| `source` | `TEXT` | `NOT NULL` | Data source identifier: `'sinaiticus_project'`, `'etcbc_dss'`. |
+| `manuscript_name` | `TEXT` | `NOT NULL` | Display name of the manuscript or scroll. |
+| `book` | `TEXT` | `NOT NULL` | Biblical book name (e.g., "Genesis", "Isaiah"). |
+| `chapter` | `INTEGER` | `NOT NULL` | Chapter number within the book. |
+| `text` | `TEXT` | `NOT NULL` | The transcribed text content in original language (Hebrew or Greek). |
+| `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Source-specific metadata (license, scroll ID, corpus version). |
+| `created_at` | `TIMESTAMPTZ` | `DEFAULT now()` | Row creation time. |
+
+**Unique constraint:** `UNIQUE(source, manuscript_name, book, chapter)` — prevents duplicate entries for the same text unit.
 
 ---
 
@@ -669,7 +712,11 @@ scripts/migrations/
 ├── 016_create_indexes.sql
 ├── 017_create_rls_policies.sql
 ├── 018_create_triggers.sql
-└── ...
+├── 019_create_agent_tasks.sql
+├── 020_add_ai_transcription_methods.sql
+├── 021_add_standard_edition_transcription_method.sql
+├── 022_add_scholarly_transcription_method.sql
+└── 023_create_manuscript_source_texts.sql
 ```
 
 ### Principles

@@ -2,117 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import {
+  NTVMR_MANUSCRIPTS,
+  NT_SBL_BOOKS,
+  LENINGRAD_TITLES,
+  parseBookAndChapter,
+  textHasCorrectScript as textHasCorrectScriptBase,
+  parseNtvmrHtml,
+  parseSblgntChapter,
+} from "@/lib/utils/text-sources";
 import type { UserRole, User, Passage } from "@/lib/types";
 
 export const maxDuration = 60;
 
 const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
-
-// Standard Bible book name → number mapping (1-66 Protestant, 67+ LXX apocrypha)
-// Numbers for LXX apocrypha must match bolls.life API bookid values exactly
-const BOOK_NUMBERS: Record<string, number> = {
-  genesis: 1, exodus: 2, leviticus: 3, numbers: 4, deuteronomy: 5,
-  joshua: 6, judges: 7, ruth: 8, "1 samuel": 9, "2 samuel": 10,
-  "1 kings": 11, "2 kings": 12, "1 chronicles": 13, "2 chronicles": 14,
-  ezra: 15, nehemiah: 16, esther: 17, job: 18, psalms: 19, psalm: 19,
-  proverbs: 20, ecclesiastes: 21, "song of solomon": 22, "song of songs": 22, canticles: 22, isaiah: 23,
-  jeremiah: 24, lamentations: 25, ezekiel: 26, daniel: 27, hosea: 28,
-  joel: 29, amos: 30, obadiah: 31, jonah: 32, micah: 33, nahum: 34,
-  habakkuk: 35, zephaniah: 36, haggai: 37, zechariah: 38, malachi: 39,
-  matthew: 40, mark: 41, luke: 42, john: 43, acts: 44, romans: 45,
-  "1 corinthians": 46, "2 corinthians": 47, galatians: 48, ephesians: 49,
-  philippians: 50, colossians: 51, "1 thessalonians": 52, "2 thessalonians": 53,
-  "1 timothy": 54, "2 timothy": 55, titus: 56, philemon: 57, hebrews: 58,
-  james: 59, "1 peter": 60, "2 peter": 61, "1 john": 62, "2 john": 63,
-  "3 john": 64, jude: 65, revelation: 66,
-  // LXX deuterocanonical (bolls.life bookids)
-  "1 esdras": 67, "3 ezra": 67, "esdras a": 67,
-  tobit: 68,
-  judith: 69,
-  wisdom: 70, "wisdom of solomon": 70,
-  sirach: 71, ecclesiasticus: 71, "wisdom of sirach": 71, "ben sira": 71,
-  baruch: 73, "letter of jeremiah": 73, "epistle of jeremiah": 73,
-  "1 maccabees": 74, "2 maccabees": 75, "3 maccabees": 76, "4 maccabees": 80,
-  susanna: 78, "bel and the dragon": 79,
-  "psalms of solomon": 85, odes: 86, "odæs": 86, ode: 86,
-};
-
-// Gregory-Aland manuscript name → NTVMR docID
-// Uncials: 20000 + GA number. Papyri: 10000 + number.
-const NTVMR_MANUSCRIPTS: Record<string, number> = {
-  "codex sinaiticus": 20001,
-  "sinaiticus": 20001,
-  "codex vaticanus": 20003,
-  "vaticanus": 20003,
-  "codex alexandrinus": 20002,
-  "alexandrinus": 20002,
-  "codex ephraemi": 20004,
-  "codex ephraemi rescriptus": 20004,
-  "ephraemi": 20004,
-  "codex bezae": 20005,
-  "bezae": 20005,
-  "codex claromontanus": 20006,
-  "claromontanus": 20006,
-  "codex washingtonianus": 20032,
-  "washingtonianus": 20032,
-  "codex regius": 20019,
-  "p46": 10046,
-  "p66": 10066,
-  "p75": 10075,
-  "p45": 10045,
-  "p47": 10047,
-  "p72": 10072,
-};
-
-// Book name → SBL abbreviation (NT books only; shared by NTVMR + SBLGNT)
-const NT_SBL_BOOKS: Record<string, string> = {
-  matthew: "Matt", mark: "Mark", luke: "Luke", john: "John",
-  acts: "Acts", romans: "Rom",
-  "1 corinthians": "1Cor", "2 corinthians": "2Cor",
-  galatians: "Gal", ephesians: "Eph", philippians: "Phil",
-  colossians: "Col", "1 thessalonians": "1Thess", "2 thessalonians": "2Thess",
-  "1 timothy": "1Tim", "2 timothy": "2Tim", titus: "Titus",
-  philemon: "Phlm", hebrews: "Heb", james: "Jas",
-  "1 peter": "1Pet", "2 peter": "2Pet",
-  "1 john": "1John", "2 john": "2John", "3 john": "3John",
-  jude: "Jude", revelation: "Rev",
-};
-
-// Manuscript titles that map to the Leningrad Codex (WLC source)
-const LENINGRAD_TITLES = new Set([
-  "leningrad codex", "codex leningradensis",
-  "firkovich b 19a", "leningradensis",
-]);
-
-function parseNtvmrHtml(html: string): string {
-  let text = html;
-  // Remove <table> blocks (correction apparatus)
-  text = text.replace(/<table[\s\S]*?<\/table>/gi, " ");
-  // Remove <h1>-<h6> (page/folio/column headers)
-  text = text.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ");
-  // Remove all remaining HTML tags
-  text = text.replace(/<[^>]+>/g, " ");
-  // Decode common HTML entities
-  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ").replace(/&#\d+;/g, " ");
-  // Remove NTVMR structural markers
-  text = text.replace(/\b(Folio|Page|Col)\s+\d+\w?\b/gi, " ");
-  // Remove the insertion marker ⸆
-  text = text.replace(/⸆/g, " ");
-  // Remove bare line numbers at word boundaries (1-3 digit numbers surrounded by spaces)
-  text = text.replace(/(?<=\s)\d{1,3}(?=\s)/g, " ");
-  // Remove leading line numbers at the start
-  text = text.replace(/^\d{1,3}\s+/gm, "");
-  // Remove verse reference markers like "Matt inscriptio", "1:1", chapter markers
-  text = text.replace(/\b\w+\s+inscriptio\b/gi, " ");
-  // Remove standalone "Korrektor" notes (German correction notes)
-  text = text.replace(/Korrektor[^.]*\./gi, " ");
-  // Remove copyright footer
-  text = text.replace(/\(C\)\s*\d{4}[\s\S]*/i, "");
-  // Normalize whitespace
-  text = text.replace(/\s+/g, " ").trim();
-  return text;
-}
 
 async function fetchFromNtvmr(
   manuscriptTitle: string,
@@ -157,16 +60,6 @@ async function fetchFromNtvmr(
   }
 }
 
-function parseBookAndChapter(reference: string): { bookNum: number; chapter: number } | null {
-  const match = reference.match(/^(.+?)\s+(\d+)$/);
-  if (!match) return null;
-  const bookName = match[1].toLowerCase().trim();
-  const chapter = parseInt(match[2], 10);
-  const bookNum = BOOK_NUMBERS[bookName];
-  if (!bookNum || isNaN(chapter)) return null;
-  return { bookNum, chapter };
-}
-
 async function fetchFromBibleApi(
   language: string,
   reference: string
@@ -174,8 +67,6 @@ async function fetchFromBibleApi(
   const parsed = parseBookAndChapter(reference);
   if (!parsed) return null;
 
-  // Pick translation based on language and testament
-  // LXX has OT (1-39) and apocrypha (67+); TR has NT only (40-66)
   let translation: string;
   if (language === "grc") {
     translation = parsed.bookNum >= 40 && parsed.bookNum <= 66 ? "TR" : "LXX";
@@ -221,13 +112,7 @@ async function fetchFromSblgnt(
     if (!res.ok) return null;
 
     const fullText = await res.text();
-    const chapterPrefix = `${sblBook} ${chapter}:`;
-    const verses = fullText
-      .split("\n")
-      .filter(line => line.startsWith(chapterPrefix))
-      .map(line => line.replace(/^\S+\s+\d+:\d+\s+/, "").trim())
-      .filter(Boolean);
-
+    const verses = parseSblgntChapter(fullText, sblBook, chapter);
     if (verses.length === 0) return null;
     const text = verses.join("\n");
     return text.length > 50 ? { text, edition: "SBLGNT" } : null;
@@ -351,11 +236,7 @@ export async function POST(request: NextRequest) {
     const lang = (original_language ?? "grc").toLowerCase();
 
     function textHasCorrectScript(text: string): boolean {
-      const grc = (text.match(/[\u0370-\u03FF\u1F00-\u1FFF]/g) || []).length;
-      const heb = (text.match(/[\u0590-\u05FF]/g) || []).length;
-      if (lang === "grc") return grc > text.length * 0.15;
-      if (lang === "heb") return heb > text.length * 0.15;
-      return true;
+      return textHasCorrectScriptBase(text, lang);
     }
 
     const existingComplete = existing?.find(

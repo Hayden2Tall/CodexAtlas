@@ -236,6 +236,35 @@ CREATE POLICY "audit_log_select_authenticated" ON public.audit_log
 -- SECURITY DEFINER triggers and service role only
 ```
 
+#### `agent_tasks`
+
+```sql
+-- Admins and editors have full access
+CREATE POLICY "agent_tasks_admin_all" ON public.agent_tasks
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'editor'))
+  );
+
+-- All authenticated users can read agent tasks
+CREATE POLICY "agent_tasks_authenticated_select" ON public.agent_tasks
+  FOR SELECT USING (auth.role() = 'authenticated');
+```
+
+#### `manuscript_source_texts`
+
+This table stores preprocessed manuscript transcription data populated by one-time offline scripts using the service role key. It is read-only reference data — no end user or application API ever writes to it.
+
+```sql
+-- Public read access (no authentication required)
+CREATE POLICY "manuscript_source_texts_public_read" ON public.manuscript_source_texts
+  FOR SELECT USING (true);
+
+-- No INSERT/UPDATE/DELETE policies: writes happen exclusively via the
+-- service role key in preprocessing scripts. This is a deliberate design
+-- choice — the data is reference material from external scholarly sources,
+-- not user-generated content.
+```
+
 ### Service Role and RLS
 
 The Supabase service role key bypasses all RLS policies. This is used exclusively for:

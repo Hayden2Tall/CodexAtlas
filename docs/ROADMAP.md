@@ -179,6 +179,17 @@ The plan is structured around a **builder-first philosophy**: build the content 
 - [ ] Run DSS preprocessing to populate data (pending)
 - [ ] Expanded book order lists (deuterocanonical, Ethiopian canon, apocryphal texts)
 
+### 2.11 Test Infrastructure and Process Compliance
+
+- [x] Vitest test framework installed and configured
+- [x] Pure text-source functions extracted into `app/src/lib/utils/text-sources.ts`
+- [x] 37 unit tests for text source chain (parsing, script detection, SBL mappings, NTVMR, Leningrad)
+- [x] `test`, `test:watch`, `test:ci` scripts in package.json
+- [x] DSS preprocessing script rewritten from Python to Node.js (no Python dependency)
+- [x] DATA_MODEL.md updated (agent_tasks, manuscript_source_texts, migrations 019-023)
+- [x] SECURITY_MODEL.md updated (agent_tasks, manuscript_source_texts RLS policies)
+- [x] DEVELOPMENT_LOG.md entry recorded
+
 ### Exit Criteria — Met
 
 AI agents can discover manuscripts, transcribe images, translate passages, and detect variants. Admin dashboard provides cost monitoring and task management. Research tools (search, evidence explorer, export) make content accessible. Text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI generation.
@@ -227,6 +238,7 @@ Platform is ready for broader public and institutional use if desired.
 | Admin dashboard with cost monitoring | Complete | 2 |
 | Manuscript-specific text sources (NTVMR, Sinaiticus, DSS) | Complete | 2 |
 | Six-step text source fallback chain operational | Complete | 2 |
+| Test infrastructure with text source chain coverage | Complete | 2 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |
 

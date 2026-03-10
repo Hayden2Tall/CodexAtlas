@@ -39,6 +39,50 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Test Infrastructure and Development Process Compliance
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+After completing the six-step text source chain and manuscript source integrations, the project had zero test infrastructure and several documentation gaps. The development process (OBSERVE → ANALYZE → PROPOSE → IMPLEMENT → TEST → REVIEW → DEPLOY → MONITOR) required test coverage for the core text pipeline, updated data model documentation reflecting migrations 019-023, security documentation for the new `manuscript_source_texts` table, and elimination of the Python dependency in preprocessing scripts.
+
+**Key Deliverables:**
+
+1. **Test infrastructure established:** Installed Vitest 4.x with `@testing-library/react` and `@testing-library/jest-dom`. Created `vitest.config.ts` with path aliases matching `tsconfig.json`. Added `test`, `test:watch`, and `test:ci` scripts to `package.json`.
+
+2. **37 unit tests for the text source chain:** Extracted pure functions and constants from `section-text/route.ts` into `app/src/lib/utils/text-sources.ts` for testability. Tests cover: `parseBookAndChapter` (simple books, numbered books, case insensitivity, deuterocanonical, alternate names, invalid input), `textHasCorrectScript` (Greek, Hebrew, English, unknown languages), `parseNtvmrHtml` (HTML stripping, table removal, entity decoding, structural markers, line numbers, inscriptio, Korrektor, copyright, whitespace), `parseSblgntChapter` (chapter extraction, wrong chapter/book), `BOOK_NUMBERS` (66-book coverage, LXX entries, alternate names), `NTVMR_MANUSCRIPTS` (uncials, aliases, papyri), `NT_SBL_BOOKS` (27 books, SBL abbreviations), `LENINGRAD_TITLES` (matching, non-matching).
+
+3. **DSS preprocessing rewritten from Python to Node.js:** Eliminated the Python/pip dependency. New `scripts/preprocess-dss.mjs` fetches ETCBC/dss Text-Fabric feature files (`book.tf`, `chapter.tf`, `g_cons.tf`) directly from GitHub, parses the TF format, converts ETCBC transliteration to Hebrew Unicode, and upserts into Supabase. Both preprocessing scripts are now pure Node.js.
+
+4. **Env var fix in preprocessing scripts:** Both scripts now check `SUPABASE_URL` with `NEXT_PUBLIC_SUPABASE_URL` fallback, matching `.env.local` conventions.
+
+5. **DATA_MODEL.md updated:** Added `agent_tasks` (§2.16) and `manuscript_source_texts` (§2.17) table definitions. Updated `passages.transcription_method` to include all seven values. Added migrations 019-023 to the migration list.
+
+6. **SECURITY_MODEL.md updated:** Documented RLS policies for `agent_tasks` (admin/editor full access, authenticated read) and `manuscript_source_texts` (public read, service-role-only write with design rationale).
+
+**Rationale:**
+The development process defined in the Project Constitution requires testing and documentation as integral steps, not afterthoughts. Extracting pure functions into a testable utility module improves code quality and catches regressions early. Eliminating the Python dependency simplifies the user experience for running preprocessing scripts.
+
+**Consequences:**
+- All 37 tests pass on first run
+- Pure text-source functions are now importable by both the API route and tests
+- User needs only Node.js (no Python) to run both preprocessing scripts
+- DATA_MODEL.md and SECURITY_MODEL.md are current through migration 023
+- ROADMAP.md updated with test infrastructure deliverable
+
+**Related Documents:**
+- app/src/lib/utils/text-sources.ts (extracted pure functions)
+- app/src/__tests__/text-source-chain.test.ts (37 unit tests)
+- app/vitest.config.ts (test configuration)
+- scripts/preprocess-dss.mjs (rewritten from Python)
+- scripts/preprocess-sinaiticus.mjs (env var fix)
+- docs/DATA_MODEL.md (§2.16, §2.17, §7 updated)
+- docs/SECURITY_MODEL.md (agent_tasks, manuscript_source_texts policies)
+
+---
+
 ### 2026-03-10 — Expand Manuscript Text Sources Across All Seven Evaluated Sources
 
 **Type:** decision
@@ -94,7 +138,7 @@ The platform's mission requires manuscript-specific text for meaningful variant 
 **Related Documents:**
 - app/src/app/api/agent/discover/section-text/route.ts (full fallback chain, all fetch functions)
 - scripts/preprocess-sinaiticus.mjs (Sinaiticus XML preprocessing)
-- scripts/preprocess-dss.py (Dead Sea Scrolls preprocessing)
+- scripts/preprocess-dss.mjs (Dead Sea Scrolls preprocessing, rewritten from Python to Node.js)
 - scripts/migrations/023_create_manuscript_source_texts.sql (shared data table)
 
 ---
