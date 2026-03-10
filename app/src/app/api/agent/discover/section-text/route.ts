@@ -130,8 +130,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Claude may wrap the text in JSON or return raw text — handle both
+    // Claude may wrap the text in JSON, markdown fences, or return raw text
     let originalText = rawContent.trim();
+
+    // Strip markdown code fences if present
+    originalText = originalText
+      .replace(/^```(?:[\w-]*)?\s*\n?/i, "")
+      .replace(/\n?\s*```\s*$/, "")
+      .trim();
+
     try {
       const parsed = JSON.parse(originalText);
       if (typeof parsed === "string") {
@@ -145,12 +152,27 @@ export async function POST(request: NextRequest) {
       // Raw text response — use as-is
     }
 
-    // Handle [UNAVAILABLE] — text not available for this section
-    if (originalText === "[UNAVAILABLE]" || originalText.startsWith("[UNAVAILABLE")) {
+    // Handle [UNAVAILABLE] — section truly doesn't exist
+    if (
+      originalText === "[UNAVAILABLE]" ||
+      originalText.startsWith("[UNAVAILABLE]") ||
+      originalText.includes("[UNAVAILABLE]")
+    ) {
       return NextResponse.json({
         passage_id: null,
         skipped: true,
-        reason: "Text not available for this section",
+        reason: "Section does not exist in this manuscript",
+      });
+    }
+
+    // Reject responses that are clearly English refusal text, not scripture
+    if (
+      /^(I |Sorry|Unfortunately|I'm |This |The text|I cannot|I don't)/i.test(originalText)
+    ) {
+      return NextResponse.json({
+        passage_id: null,
+        skipped: true,
+        reason: "AI could not reproduce this text",
       });
     }
 
@@ -215,15 +237,24 @@ function buildSectionTextPrompt(
   language: string,
   reference: string
 ): string {
-  return `You are a manuscript text specialist. Provide the COMPLETE original-language text for the following section of a well-known manuscript.
+  const langGuide = language === "heb"
+    ? "Provide the text in Biblical Hebrew (BHS/Westminster Leningrad Codex)."
+    : language === "grc"
+      ? "Provide the text in Koine Greek. For Old Testament / Septuagint books use the LXX (Rahlfs-Hanhart). For New Testament books use the standard critical text (NA28/UBS5)."
+      : `Provide the text in the original language (code: ${language}).`;
 
-Manuscript: "${manuscriptTitle}"
+  return `You are a biblical text specialist. Your task is to reproduce the COMPLETE original-language text of a scripture passage.
+
 Section: "${reference}"
-Language code: "${language}"
+Context: This passage belongs to "${manuscriptTitle}".
 
-RESPOND WITH ONLY THE ORIGINAL-LANGUAGE TEXT. No translation, no commentary, no markdown formatting, no JSON wrapping. Just the raw text in the original language and script.
+${langGuide}
 
-For biblical manuscripts, use standard critical editions (NA28/UBS5 for Greek NT, BHS for Hebrew Bible) as your source. Provide the COMPLETE text of the section — every verse, every line. Do not truncate or summarize.
+CRITICAL RULES:
+1. Output ONLY the original-language text. No English, no translation, no verse labels, no commentary, no markdown, no JSON.
+2. Include EVERY verse of the section. Do not skip, truncate, or summarize.
+3. Use the standard critical edition text. Minor manuscript-specific variant readings are acceptable but not required.
+4. You know these texts — they are among the most published works in human history. Reproduce them accurately.
 
-If you cannot confidently provide the text for this section, respond with exactly: [UNAVAILABLE]`;
+Only if the section truly does not exist (e.g., a chapter number beyond the book's actual length), respond with exactly: [UNAVAILABLE]`;
 }
