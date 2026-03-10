@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import type { UserRole, User, Passage } from "@/lib/types";
 
+export const maxDuration = 60;
+
 const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {

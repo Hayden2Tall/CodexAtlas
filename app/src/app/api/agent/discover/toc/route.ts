@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import type { UserRole, User } from "@/lib/types";
 
+export const maxDuration = 60;
+
 const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: aiModel,
-        max_tokens: 4096,
+        max_tokens: 16384,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -104,9 +106,13 @@ export async function POST(request: NextRequest) {
     const sections = parseTocResponse(rawContent);
 
     if (!sections || sections.length === 0) {
-      console.error("Failed to parse TOC response:", rawContent.slice(0, 500));
+      console.error("Failed to parse TOC response. Length:", rawContent.length, "Start:", rawContent.slice(0, 300));
       return NextResponse.json(
-        { error: "Could not parse table of contents" },
+        {
+          error: "Could not parse table of contents",
+          debug_length: rawContent.length,
+          debug_start: rawContent.slice(0, 200),
+        },
         { status: 502 }
       );
     }
@@ -192,20 +198,45 @@ CRITICAL RULES:
 }
 
 function parseTocResponse(raw: string): TocSection[] | null {
+  // Strip markdown code fences if present
+  let cleaned = raw.trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+
+  // Try direct parse
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed)) return validateTocSections(parsed);
   } catch {
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
+    // noop
+  }
+
+  // Try extracting JSON array from surrounding text
+  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed)) return validateTocSections(parsed);
+    } catch {
+      // noop
+    }
+  }
+
+  // Handle truncated JSON — find the last complete object and close the array
+  const arrayStart = cleaned.indexOf("[");
+  if (arrayStart >= 0) {
+    let truncated = cleaned.slice(arrayStart);
+    const lastCloseBrace = truncated.lastIndexOf("}");
+    if (lastCloseBrace > 0) {
+      truncated = truncated.slice(0, lastCloseBrace + 1) + "]";
       try {
-        const parsed = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(truncated);
         if (Array.isArray(parsed)) return validateTocSections(parsed);
       } catch {
-        return null;
+        // noop
       }
     }
   }
+
   return null;
 }
 
