@@ -138,73 +138,111 @@ export function FullImportPanel({ manuscripts }: Props) {
         return next;
       });
 
-      try {
-        const res = await fetch("/api/agent/discover/section-text", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            manuscript_id: ms.id,
-            manuscript_title: ms.title,
-            original_language: ms.original_language,
-            reference: section.reference,
-            description: section.description,
-            sequence_order: section.sequence_order,
-          }),
-        });
+      const MAX_RETRIES = 2;
+      let lastReason = "";
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let data: any;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (cancelRef.current) break;
+
         try {
-          data = await res.json();
-        } catch {
-          throw new Error(res.status === 504 ? "Timed out" : `Server error (${res.status})`);
-        }
+          const res = await fetch("/api/agent/discover/section-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              manuscript_id: ms.id,
+              manuscript_title: ms.title,
+              original_language: ms.original_language,
+              reference: section.reference,
+              description: section.description,
+              sequence_order: section.sequence_order,
+            }),
+          });
 
-        if (data.skipped) {
-          setResults((prev) => {
-            const next = new Map(prev);
-            next.set(section.reference, {
-              reference: section.reference,
-              status: "skipped",
-              reason: data.reason ?? "Already exists",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let data: any;
+          try {
+            data = await res.json();
+          } catch {
+            throw new Error(res.status === 504 ? "Timed out" : `Server error (${res.status})`);
+          }
+
+          if (data.skipped) {
+            const reason: string = data.reason ?? "Already exists";
+            const isRetryable = reason.startsWith("AI refused") || reason.startsWith("Wrong script");
+
+            if (isRetryable && attempt < MAX_RETRIES) {
+              lastReason = reason;
+              setResults((prev) => {
+                const next = new Map(prev);
+                next.set(section.reference, {
+                  reference: section.reference,
+                  status: "importing",
+                  reason: `Retry ${attempt + 1}/${MAX_RETRIES} — ${reason}`,
+                });
+                return next;
+              });
+              await new Promise((r) => setTimeout(r, 2000));
+              continue;
+            }
+
+            setResults((prev) => {
+              const next = new Map(prev);
+              next.set(section.reference, {
+                reference: section.reference,
+                status: "skipped",
+                reason: attempt > 0 ? `${reason} (after ${attempt + 1} attempts)` : reason,
+              });
+              return next;
             });
-            return next;
-          });
-        } else if (res.ok) {
-          const cost = data.usage?.estimated_cost_usd ?? 0;
-          runningCost += cost;
-          setTotalImportCost(runningCost);
-          setResults((prev) => {
-            const next = new Map(prev);
-            next.set(section.reference, {
-              reference: section.reference,
-              status: "done",
-              textLength: data.text_length,
-              cost,
+          } else if (res.ok) {
+            const cost = data.usage?.estimated_cost_usd ?? 0;
+            runningCost += cost;
+            setTotalImportCost(runningCost);
+            setResults((prev) => {
+              const next = new Map(prev);
+              next.set(section.reference, {
+                reference: section.reference,
+                status: "done",
+                textLength: data.text_length,
+                cost,
+              });
+              return next;
             });
-            return next;
-          });
-        } else {
+          } else {
+            const errMsg = data.error ?? "Unknown error";
+            if (attempt < MAX_RETRIES) {
+              lastReason = errMsg;
+              await new Promise((r) => setTimeout(r, 2000));
+              continue;
+            }
+            setResults((prev) => {
+              const next = new Map(prev);
+              next.set(section.reference, {
+                reference: section.reference,
+                status: "failed",
+                error: `${errMsg} (after ${attempt + 1} attempts)`,
+              });
+              return next;
+            });
+          }
+          break;
+        } catch (err) {
+          if (attempt < MAX_RETRIES) {
+            lastReason = err instanceof Error ? err.message : "Network error";
+            await new Promise((r) => setTimeout(r, 2000));
+            continue;
+          }
           setResults((prev) => {
             const next = new Map(prev);
             next.set(section.reference, {
               reference: section.reference,
               status: "failed",
-              error: data.error ?? "Unknown error",
+              error: `${lastReason || (err instanceof Error ? err.message : "Network error")} (after ${attempt + 1} attempts)`,
             });
             return next;
           });
+          break;
         }
-      } catch (err) {
-        setResults((prev) => {
-          const next = new Map(prev);
-          next.set(section.reference, {
-            reference: section.reference,
-            status: "failed",
-            error: err instanceof Error ? err.message : "Network error",
-          });
-          return next;
-        });
       }
 
       // Rate limit: 1.5s between calls

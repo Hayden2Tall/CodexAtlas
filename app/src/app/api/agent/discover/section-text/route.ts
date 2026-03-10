@@ -64,16 +64,27 @@ export async function POST(request: NextRequest) {
       .eq("manuscript_id", manuscript_id)
       .ilike("reference", reference.trim());
 
-    // Only skip if the existing passage has substantial text (full chapter = 500+ chars).
-    // Short snippets from discovery or empty records get overwritten.
+    // Only skip if the existing passage has substantial text in the correct script.
     const MIN_TEXT_LENGTH = 500;
+    const lang = (original_language ?? "grc").toLowerCase();
+
+    function textHasCorrectScript(text: string): boolean {
+      const grc = (text.match(/[\u0370-\u03FF\u1F00-\u1FFF]/g) || []).length;
+      const heb = (text.match(/[\u0590-\u05FF]/g) || []).length;
+      if (lang === "grc") return grc > text.length * 0.15;
+      if (lang === "heb") return heb > text.length * 0.15;
+      return true;
+    }
 
     const existingComplete = existing?.find(
-      (p) => p.original_text && p.original_text.trim().length >= MIN_TEXT_LENGTH
+      (p) =>
+        p.original_text &&
+        p.original_text.trim().length >= MIN_TEXT_LENGTH &&
+        textHasCorrectScript(p.original_text)
     );
 
     if (existingComplete) {
-      console.log(`[section-text] ${reference}: skipped — existing passage ${existingComplete.id} has ${existingComplete.original_text?.length ?? 0} chars`);
+      console.log(`[section-text] ${reference}: skipped — existing passage ${existingComplete.id} has ${existingComplete.original_text?.length ?? 0} chars of valid text`);
       return NextResponse.json({
         passage_id: existingComplete.id,
         skipped: true,
@@ -81,7 +92,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Existing record with no/short text — we'll update it after getting the full text
+    // Existing record with no/short/wrong-script text — we'll overwrite it
     const existingToUpdate = existing?.[0] ?? null;
 
     if (existingToUpdate) {
@@ -199,18 +210,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Reject responses that are clearly English refusal/explanation, not scripture.
-    // Only reject if response is SHORT — long text starting with "I" might be valid
-    // in some languages or contexts.
-    if (
-      originalText.length < 300 &&
-      /^(I |Sorry|Unfortunately|I'm |This |The text|I cannot|I don't)/i.test(originalText)
-    ) {
-      console.log(`[section-text] ${reference}: rejected as English refusal: "${originalText.slice(0, 300)}"`);
+    // Reject English refusal responses regardless of length.
+    // Claude Haiku often returns 1000+ char polite refusals.
+    const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI)/i;
+    if (refusalPattern.test(originalText)) {
+      console.log(`[section-text] ${reference}: rejected as English refusal (${originalText.length} chars): "${originalText.slice(0, 200)}"`);
       return NextResponse.json({
         passage_id: null,
         skipped: true,
-        reason: `AI refused: "${originalText.slice(0, 100)}..."`,
+        reason: `AI refused — will retry. "${originalText.slice(0, 80)}..."`,
+      });
+    }
+
+    // Validate that the response contains characters from the expected script.
+    const greekChars = (originalText.match(/[\u0370-\u03FF\u1F00-\u1FFF]/g) || []).length;
+    const hebrewChars = (originalText.match(/[\u0590-\u05FF]/g) || []).length;
+    const totalChars = originalText.length;
+
+    const hasExpectedScript = textHasCorrectScript(originalText);
+
+    if (!hasExpectedScript) {
+      console.log(`[section-text] ${reference}: wrong script — expected ${lang}, got ${greekChars} Greek / ${hebrewChars} Hebrew chars out of ${totalChars}. First 200: "${originalText.slice(0, 200)}"`);
+      return NextResponse.json({
+        passage_id: null,
+        skipped: true,
+        reason: `Wrong script: response is not in ${lang === "grc" ? "Greek" : lang === "heb" ? "Hebrew" : lang}`,
       });
     }
 
