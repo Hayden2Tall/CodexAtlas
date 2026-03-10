@@ -117,15 +117,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const aiResult = await anthropicRes.json();
+    let aiResult;
+    try {
+      aiResult = await anthropicRes.json();
+    } catch (jsonErr) {
+      console.error("Failed to parse Anthropic response as JSON:", jsonErr);
+      return NextResponse.json(
+        { error: "Malformed response from Claude API" },
+        { status: 502 }
+      );
+    }
+
     const rawContent: string | undefined = aiResult.content?.[0]?.text;
     const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
     const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
     const costUsd = estimateCostUsd(aiModel, tokensInput, tokensOutput);
 
     if (!rawContent || rawContent.trim().length === 0) {
+      console.error("Empty AI response. Stop reason:", aiResult.stop_reason, "Model:", aiResult.model);
       return NextResponse.json(
-        { error: "Empty response for section text" },
+        { error: `Empty response (stop_reason: ${aiResult.stop_reason ?? "unknown"})` },
         { status: 502 }
       );
     }
@@ -224,9 +235,10 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (err) {
-    console.error("POST /api/agent/discover/section-text error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("POST /api/agent/discover/section-text error:", msg, err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: `Server error: ${msg}` },
       { status: 500 }
     );
   }

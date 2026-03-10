@@ -280,9 +280,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Translation pipeline error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Translation pipeline error:", msg, err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: `Server error: ${msg}` },
       { status: 500 }
     );
   }

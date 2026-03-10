@@ -390,10 +390,10 @@ export function FullImportPanel({ manuscripts }: Props) {
                         </span>
                       ) : result?.status === "failed" ? (
                         <span
-                          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 cursor-help"
+                          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 cursor-help max-w-[200px] truncate"
                           title={result.error}
                         >
-                          Failed
+                          {result.error ?? "Failed"}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">
