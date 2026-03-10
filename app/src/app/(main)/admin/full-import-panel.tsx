@@ -381,12 +381,10 @@ export function FullImportPanel({ manuscripts }: Props) {
                         </span>
                       ) : result?.status === "skipped" ? (
                         <span
-                          className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600"
-                          title={result.reason ?? "Already exists"}
+                          className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600 cursor-help max-w-[220px] truncate"
+                          title={result.reason ?? "Skipped"}
                         >
-                          {result.reason === "Text not available for this section"
-                            ? "Unavailable"
-                            : "Skipped"}
+                          {result.reason ?? "Skipped"}
                         </span>
                       ) : result?.status === "failed" ? (
                         <span

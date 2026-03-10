@@ -73,15 +73,22 @@ export async function POST(request: NextRequest) {
     );
 
     if (existingComplete) {
+      console.log(`[section-text] ${reference}: skipped — existing passage ${existingComplete.id} has ${existingComplete.original_text?.length ?? 0} chars`);
       return NextResponse.json({
         passage_id: existingComplete.id,
         skipped: true,
-        reason: "Passage already imported",
+        reason: `Already imported (${existingComplete.original_text?.length ?? 0} chars)`,
       });
     }
 
     // Existing record with no/short text — we'll update it after getting the full text
     const existingToUpdate = existing?.[0] ?? null;
+
+    if (existingToUpdate) {
+      console.log(`[section-text] ${reference}: found existing passage ${existingToUpdate.id} with ${existingToUpdate.original_text?.length ?? 0} chars — will overwrite`);
+    } else {
+      console.log(`[section-text] ${reference}: no existing passage found — will create new`);
+    }
 
     const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildSectionTextPrompt(
@@ -174,6 +181,11 @@ export async function POST(request: NextRequest) {
       // Raw text response — use as-is
     }
 
+    // Log the first 200 chars of what Claude returned for debugging
+    console.log(
+      `[section-text] ${reference}: ${originalText.length} chars, starts: "${originalText.slice(0, 200).replace(/\n/g, " ")}"`
+    );
+
     // Handle [UNAVAILABLE] — section truly doesn't exist
     if (
       originalText === "[UNAVAILABLE]" ||
@@ -183,18 +195,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         passage_id: null,
         skipped: true,
-        reason: "Section does not exist in this manuscript",
+        reason: "Unavailable: section does not exist in this manuscript",
       });
     }
 
-    // Reject responses that are clearly English refusal text, not scripture
+    // Reject responses that are clearly English refusal/explanation, not scripture.
+    // Only reject if response is SHORT — long text starting with "I" might be valid
+    // in some languages or contexts.
     if (
+      originalText.length < 300 &&
       /^(I |Sorry|Unfortunately|I'm |This |The text|I cannot|I don't)/i.test(originalText)
     ) {
+      console.log(`[section-text] ${reference}: rejected as English refusal: "${originalText.slice(0, 300)}"`);
       return NextResponse.json({
         passage_id: null,
         skipped: true,
-        reason: "AI could not reproduce this text",
+        reason: `AI refused: "${originalText.slice(0, 100)}..."`,
       });
     }
 
