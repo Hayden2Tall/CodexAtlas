@@ -9,9 +9,9 @@ Builder-first: build the content engine, fill the platform via AI agents, use it
 
 ## Current State
 
-Phase 1 (MVP) complete. Phase 2 (Research Tools + Agent Engine) is next.
+Phase 2 (Research Tools + Agent Engine) complete. Actively populating content. Phase 3 (Polish + Scale) when ready.
 
-Working features: manuscript ingestion, passage creation, AI translation with evidence records, human reviews, variant comparison, transparency indicators, public read access.
+Working features: manuscript discovery, full manuscript import (TOC → iterative section import), AI translation (single + batch), OCR pipeline, automated variant detection, advanced search, evidence explorer, scholarly export (JSON/CSV/TEI XML), admin dashboard with cost tracking, passage editing/deletion, human reviews, public read access.
 
 ## Core Principles
 
@@ -63,14 +63,23 @@ Working features: manuscript ingestion, passage creation, AI translation with ev
 - **Audit trail** — every mutation logged in `audit_log`
 - **Published by default** — translations are immediately visible with transparency indicators
 
-## Phase 2 Priorities (Current Focus)
+## AI Model Strategy
 
-1. **Agent task system** — structured task execution with cost tracking
-2. **Batch translation** — queue-based translation of all untranslated passages
-3. **Manuscript discovery** — AI agent finds manuscripts from public digital archives
-4. **OCR pipeline** — Claude vision extracts text from manuscript images
-5. **Variant detection** — automated cross-manuscript comparison
-6. **Advanced search** — full-text search across growing corpus
-7. **Evidence explorer** — full chain navigation
-8. **Scholarly export** — CSV, JSON, TEI XML
-9. **Admin dashboard** — content stats, agent activity, cost monitoring
+| Task | Model | Rationale |
+|------|-------|-----------|
+| Text import / recall | Claude Haiku 4.5 | Fast, cheap — recall task, not reasoning |
+| Translation | Claude Sonnet 4 | Needs scholarly reasoning and nuance |
+| Discovery / TOC | Claude Sonnet 4 | Needs research knowledge |
+| OCR | Claude Sonnet 4 | Needs vision + script recognition |
+| Variant detection | Claude Sonnet 4 | Needs textual criticism reasoning |
+
+All AI endpoints use 50s AbortControllers (under Vercel's 60s limit). Client-side orchestration handles batch workflows with retry, pause/cancel, and per-item progress tracking.
+
+## Current Focus: Content Population
+
+Use the working agent pipeline to fill the platform with manuscripts and translations:
+1. Discover manuscripts → add to library
+2. Full import (TOC scan → select sections → import text)
+3. Batch translate imported passages
+4. Detect variants across manuscripts
+5. Review, validate, and share

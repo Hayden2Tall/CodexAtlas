@@ -39,6 +39,65 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Full Manuscript Import Pipeline and Timeout Hardening
+
+**Type:** milestone
+**Author:** Founding Architect
+**Status:** accepted
+
+**Context:**
+After Phase 2 completion, testing the manuscript discovery and import workflow revealed several issues: the initial discovery flow tried to import sample passages inline (too granular, single verses), there was no way to import a manuscript's full content, and AI API calls were timing out on Vercel's 60s serverless limit.
+
+**Key Deliverables:**
+
+Full Manuscript Import:
+- Two-stage import: Claude provides the book list, chapters are expanded programmatically from a lookup table
+- Section-by-section text retrieval using Claude Haiku 4.5 (fast recall model)
+- Already-imported detection on re-scan (sections show "Imported" badge)
+- Select-all/none, progress tracking, cancel, and "Retry Failed" for failed sections
+- Passage inline editing and deletion from the manuscript detail page
+
+Timeout Hardening:
+- 50s AbortController added to all 6 AI-calling endpoints
+- Graceful JSON error responses instead of raw HTML 504 pages
+- Client-side error handling for timeouts and non-JSON responses
+- Retry buttons on both full import and batch translation panels
+
+Model Strategy:
+- Claude Haiku 4.5 for text import (fast recall task, ~3-8s per chapter)
+- Claude Sonnet 4 for translation, analysis, and reasoning tasks
+- Discovered Claude 3.5 Haiku was retired Feb 19, 2026; swapped to Haiku 4.5
+
+Database:
+- Migration 020: Added `ai_reconstructed` and `ai_imported` to passages `transcription_method` CHECK constraint
+- Fixed cascade deletion for passages with translations (foreign key chain)
+
+**Architecture Decisions:**
+
+1. **Separate discovery from import:** Discovery adds the manuscript record to the library. Full Import is a second step that scans the TOC and imports section text. This separates "what exists" from "get the content."
+
+2. **Programmatic chapter expansion:** Instead of asking Claude to enumerate every chapter (slow, token-heavy), Claude provides just the book list. Chapters are expanded from a hardcoded biblical chapter count table. Faster, cheaper, and deterministic.
+
+3. **Right model for the job:** Text reproduction is a recall task — Haiku 4.5 is 4-5x faster than Sonnet 4 at 1/3 the cost. Reasoning tasks (translation, variant detection) stay on Sonnet.
+
+4. **Detailed error surfacing:** All AI endpoints now return the actual error message to the client, not generic "Internal server error." Enables debugging without server log access.
+
+**Consequences:**
+- Full manuscript import pipeline operational
+- Codex Vaticanus successfully importing sections
+- All AI endpoints hardened against timeouts
+- Model pricing table updated for current Anthropic models
+- Platform ready for systematic content population
+
+**Related Documents:**
+- docs/ROADMAP.md (Phase 2.3b added)
+- scripts/migrations/020_add_ai_transcription_methods.sql
+- app/src/app/api/agent/discover/section-text/route.ts
+- app/src/app/api/agent/discover/toc/route.ts
+- app/src/app/(main)/admin/full-import-panel.tsx
+
+---
+
 ### 2026-03-10 — Phase 2 Complete: Research Tools + Agent Engine
 
 **Type:** milestone

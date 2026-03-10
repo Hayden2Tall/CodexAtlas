@@ -90,10 +90,22 @@ The plan is structured around a **builder-first philosophy**: build the content 
 
 - [x] Claude-powered discovery (research query → structured manuscript suggestions)
 - [x] Discovery prompts tuned for scholarly accuracy and confidence notes
-- [x] One-click manuscript + passage ingestion from discovery results
+- [x] One-click "Add to Library" from discovery results (manuscript record only)
 - [x] Duplicate detection against existing library
 - [x] "Add All New" batch approval
 - [x] Example query suggestions in UI
+
+### 2.3b Full Manuscript Import
+
+- [x] Two-stage import: TOC scan (Claude lists books) → programmatic chapter expansion
+- [x] Section-by-section text retrieval via Claude Haiku 4.5 (fast recall model)
+- [x] Already-imported section detection (re-scan shows "Imported" badge)
+- [x] Select-all / select-none / individual section checkboxes
+- [x] Progress bar with per-section cost tracking
+- [x] "Retry Failed" button for re-attempting failed imports
+- [x] Cancel mid-import support
+- [x] Passage editing and deletion from manuscript detail page
+- [x] Migration 020: `ai_reconstructed` and `ai_imported` transcription methods
 
 ### 2.4 OCR Pipeline
 
@@ -202,6 +214,7 @@ Platform is ready for broader public and institutional use if desired.
 | Scope creep into public-facing features before content depth | Medium | Phase 2 focuses exclusively on content and research tools; polish deferred to Phase 3 |
 | Technical debt from rapid Phase 2 development | Medium | Architecture already sound from Phase 0/1; maintain test coverage and code review |
 | Anthropic API changes or pricing shifts | Medium | Abstraction layer over AI calls; prompt templates separate from application logic |
+| AI model retirement (experienced: Haiku 3.5 retired Feb 2026) | Medium | Use dated model IDs, monitor Anthropic deprecation notices, quick swap to successor |
 
 ---
 

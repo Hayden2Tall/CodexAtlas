@@ -145,7 +145,9 @@ The critical apparatus is not a static footnote — it is a living, queryable sy
 
 **Target:** You.
 
-**What happens:** AI agents fill the platform with manuscripts and translations. You use the research tools, review translations, explore variants, and find the content genuinely useful for your own study and curiosity.
+**What happens:** The agent pipeline is built and working. Now fill the platform with manuscripts and translations. Use the research tools, review translations, explore variants, and find the content genuinely useful for your own study and curiosity.
+
+**Current status:** Agent infrastructure complete (discovery, full import, batch translation, OCR, variant detection). Active content population underway. Codex Vaticanus importing successfully.
 
 **Success looks like:** A platform you actually use regularly, with hundreds or thousands of manuscripts, and translations you trust because you can see exactly how they were produced.
 
