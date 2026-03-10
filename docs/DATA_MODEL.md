@@ -1,7 +1,7 @@
 # CodexAtlas Data Model Specification
 
 > **Database:** Supabase (PostgreSQL)
-> **Last Updated:** 2026-03-09
+> **Last Updated:** 2026-03-10
 > **Status:** Canonical Reference
 
 This document defines the complete data model for CodexAtlas, an open-source AI-assisted research platform for ancient religious manuscripts. It is intended to be precise enough for a developer to implement the schema directly.

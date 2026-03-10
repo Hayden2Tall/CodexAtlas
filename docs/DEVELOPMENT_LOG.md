@@ -39,6 +39,87 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Pipeline Hardening for Diverse Manuscripts + Variant Detection Optimization
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Testing revealed two issues: (1) Fragmentary manuscripts like Papyrus 52 (P52) failed to import because the TOC generated bare book references ("John") without chapter numbers, causing every source lookup to silently fail. (2) Variant detection timed out consistently because it used Sonnet (slow) with a 50s timeout for large passage comparisons.
+
+**Key Deliverables:**
+
+1. **TOC hardening for fragmentary manuscripts:**
+   - Added `chapter_start` to the TOC prompt so Claude reports which chapter a fragment starts at (P52 → `chapter_start: 18`)
+   - Rewrote `expandBooksToSections` to distinguish single-chapter books (Philemon, Jude) from fragments of multi-chapter books
+   - Fragments now always include a chapter number in the reference
+   - Switched TOC from Sonnet to Haiku for cost savings
+
+2. **Section-text route hardening:**
+   - Added `hasChapter` guards so bare references skip gracefully with clear reasons
+   - Added language-aware short-circuiting: bolls.life only for Greek/Hebrew, DSS only for Hebrew, SBLGNT only for Greek NT
+   - Lowered `MIN_TEXT_LENGTH` from 500 to 100 for fragmentary manuscripts
+   - Expanded script detection to 9 scripts (Greek, Hebrew, Latin, Syriac, Coptic, Ethiopic, Armenian, Georgian, Arabic)
+   - Added `BOLLS_LIFE_LANGUAGES` and `LANGUAGE_NAMES` constants
+   - Updated AI prompt to include manuscript title and public domain context
+   - Added P52 and more papyri to NTVMR mappings with alias variants
+
+3. **Variant detection optimization:**
+   - Switched from Sonnet to Haiku (3-5x faster for text comparison)
+   - Added retry mechanism (2 attempts, 30s timeout)
+   - Reduced `max_tokens` from 8192 to 4000
+   - Capped passage text at 6000 chars per passage to bound input tokens
+   - Tightened prompt for fewer output tokens
+   - Removed unused `_passages` parameter (cleaned ESLint warning)
+
+4. **Comprehensive structured logging:**
+   - Request ID correlation across all log lines in section-text route
+   - Logging at every decision point: TOC parsing, book expansion, source chain steps, DB operations
+   - Logging in all helper functions (fetchFromBibleApi, fetchFromSblgnt, fetchFromSinaiticusProject, fetchFromDss)
+   - Variant detection: passage sizes, AI response stats, parse results, final counts
+
+**Rationale:**
+The platform needs to handle diverse manuscripts — not just complete Greek codices but fragmentary papyri, non-Greek manuscripts (Ethiopic, Syriac, Latin, Coptic), and manuscripts with unusual structures. Each of these edge cases was causing silent failures. Adding structured logging means future issues can be diagnosed from Vercel logs without back-and-forth debugging sessions.
+
+**Consequences:**
+- P52 now correctly generates "John 18" and can be imported
+- Non-Greek/Hebrew manuscripts skip inapplicable sources cleanly instead of failing
+- Variant detection completes in <15 seconds instead of timing out
+- Every import and detection operation is traceable via structured logs
+- Future manuscript types (Ethiopian, Syriac, etc.) have a clear path through the pipeline
+
+**Related Documents:**
+- app/src/app/api/agent/discover/toc/route.ts (chapter_start, Haiku switch)
+- app/src/app/api/agent/discover/section-text/route.ts (hasChapter, language guards, logging)
+- app/src/lib/utils/text-sources.ts (expanded scripts, NTVMR mappings, BOLLS_LIFE_LANGUAGES)
+- app/src/app/api/agent/detect-variants/route.ts (Haiku, retry, cap, logging)
+
+---
+
+### 2026-03-10 — Text Provenance UI for Reader Transparency
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+The source chain data was being stored in passage metadata and shown in the admin import panel, but readers viewing translations had no way to see where the original text came from or why a particular source was used. This violated the platform's transparency principle.
+
+**Decision:**
+Created a `TextProvenance` client component displayed on the translation page below the original text. It shows:
+- Collapsed state: "Text Source" label with a color-coded tier badge (Manuscript-Specific, Standard Edition, AI Reconstructed)
+- Expanded state: primary source label and description, full source chain with each step's result, reason, and duration
+
+**Rationale:**
+Constitution Principle 1 (Transparency Over Convenience) requires that readers understand not just what the text says, but where it came from and how it was obtained. This information was already in the database — the UI just needed to surface it.
+
+**Related Documents:**
+- app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/text-provenance.tsx
+- app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/translation-workspace.tsx
+
+---
+
 ### 2026-03-10 — Transparent Source Chain Reasoning in Import Pipeline
 
 **Type:** decision

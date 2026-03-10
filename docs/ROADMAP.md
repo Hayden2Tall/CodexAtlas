@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-10
-> **Status:** Phase 2 (Research Tools + Agent Engine) complete, including 2.10 Manuscript Source Integration · Phase 3 (Polish + Scale) when ready
+> **Status:** Phase 2 complete (all 11 subsystems operational) · Entering Phase 3 (Polish + Scale)
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -175,9 +175,9 @@ The plan is structured around a **builder-first philosophy**: build the content 
 - [x] `manuscript_source_texts` Supabase table for preprocessed data (Migration 023)
 - [x] Codex Sinaiticus Project XML preprocessing script (CC BY-NC-SA 3.0, OT+NT)
 - [x] ETCBC Dead Sea Scrolls preprocessing script (MIT, OT Hebrew fragments)
-- [ ] Run Sinaiticus preprocessing to populate data (pending)
-- [ ] Run DSS preprocessing to populate data (pending)
-- [ ] Expanded book order lists (deuterocanonical, Ethiopian canon, apocryphal texts)
+- [x] Run Sinaiticus preprocessing to populate data
+- [x] Run DSS preprocessing to populate data
+- [x] Expanded book order lists (deuterocanonical, Ethiopian canon, apocryphal texts)
 
 ### 2.11 Test Infrastructure and Process Compliance
 
@@ -190,35 +190,95 @@ The plan is structured around a **builder-first philosophy**: build the content 
 - [x] SECURITY_MODEL.md updated (agent_tasks, manuscript_source_texts RLS policies)
 - [x] DEVELOPMENT_LOG.md entry recorded
 
+### 2.12 Pipeline Hardening + Transparency
+
+- [x] TOC generation: `chapter_start` support for fragmentary manuscripts (P52 → "John 18" not bare "John")
+- [x] TOC model switch: Sonnet → Haiku for cost savings (book list generation)
+- [x] Section-text: `hasChapter` guards prevent silent failures on bare book references
+- [x] Section-text: language-aware source chain (bolls.life skipped for non-Greek/Hebrew, DSS skipped for non-Hebrew)
+- [x] Section-text: `MIN_TEXT_LENGTH` lowered to 100 for fragmentary manuscripts
+- [x] Script detection expanded: Syriac, Coptic, Ethiopic, Armenian, Georgian, Arabic, Latin
+- [x] AI prompt: manuscript title included for context, language-specific prefill characters
+- [x] NTVMR mappings expanded: P52 and more papyri with alias variants
+- [x] Variant detection: Sonnet → Haiku for speed, retry with 30s timeout, passage text capped at 6000 chars
+- [x] Variant detection: `max_tokens` reduced 8192 → 4000, prompt tightened
+- [x] Comprehensive structured logging with request IDs across TOC, section-text, and variant detection
+- [x] Text Provenance component on translation page (collapsible source chain for readers)
+
 ### Exit Criteria — Met
 
-AI agents can discover manuscripts, transcribe images, translate passages, and detect variants. Admin dashboard provides cost monitoring and task management. Research tools (search, evidence explorer, export) make content accessible. Text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI generation.
+AI agents can discover manuscripts, transcribe images, translate passages, and detect variants. Admin dashboard provides cost monitoring and task management. Research tools (search, evidence explorer, export) make content accessible. Text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI generation. All pipelines have structured logging with request IDs. Readers can see transparent source provenance for every passage.
 
 ---
 
-## 5. Phase 3 — Polish + Scale (When Ready)
+## 5. Phase 3 — Polish + Scale
 
-**Goal:** When the platform has substantial content and you're ready to share it more broadly, add the polish and infrastructure for wider use.
+**Goal:** Transform the platform from a functional research engine into a polished, explorable product that readers and scholars want to use and share.
 
-This phase is intentionally open-ended. Pull items in as needed.
+### 3.1 Public Exploration Surface (Priority: High)
 
-### Potential Deliverables
+Build the reader-facing experience that makes manuscript data browsable and discoverable.
 
-- [ ] Public exploration surface (scripture browser, guided paths)
-- [ ] AI-generated plain-language research summaries
-- [ ] Interactive visualizations (manuscript timeline, geographic map, stemma tree)
-- [ ] Vercel deployment optimization (ISR for popular pages)
-- [ ] PWA offline reading and push notifications
-- [ ] WCAG 2.1 AA accessibility audit
-- [ ] Public REST API for third-party integrations
-- [ ] Multi-language interface (i18n)
-- [ ] Collaboration features (shared workspaces, annotation)
-- [ ] Community contribution workflows
-- [ ] Institutional partnership integrations (IIIF, Zotero, catalog linking)
+- [ ] Scripture browser: navigate by book/chapter across all manuscripts
+- [ ] Manuscript comparison view: side-by-side original text from different manuscripts at same reference
+- [ ] Guided discovery paths (e.g., "Explore the oldest NT manuscripts", "Dead Sea Scrolls overview")
+- [ ] Landing page with content stats, featured manuscripts, recent translations
+- [ ] Passage deep-link sharing (URL → specific passage + translation)
+
+### 3.2 Variant System Enhancement (Priority: High)
+
+Make the variant detection and exploration system robust and useful for scholars.
+
+- [ ] Variant versioning: track variant detection runs with source metadata, allow re-detection without duplicates
+- [ ] Cross-source comparison: compare same passage's text from different sources (NTVMR vs standard edition vs AI) for a single manuscript
+- [ ] Variant exploration UI: browse all variants by book/chapter, filter by significance
+- [ ] Variant attestation display: show which manuscripts support each reading
+- [ ] Link variants to passages bidirectionally (passage page shows variants, variant page shows passages)
+
+### 3.3 AI Research Summaries (Priority: Medium)
+
+- [ ] Plain-language passage summaries (what does this text say and why does it matter)
+- [ ] Manuscript significance summaries (auto-generated from metadata + passage count + variant data)
+- [ ] Translation confidence explanations (why this score, what would improve it)
+
+### 3.4 Interactive Visualizations (Priority: Medium)
+
+- [ ] Manuscript timeline (plot manuscripts by date with interactive detail)
+- [ ] Geographic provenance map (origin + current archive locations)
+- [ ] Textual family tree / stemma visualization (when lineage data available)
+
+### 3.5 Performance + Infrastructure (Priority: Medium)
+
+- [ ] Vercel ISR for popular manuscript and passage pages
+- [ ] Database query optimization for large passage sets
+- [ ] Image optimization pipeline for manuscript images
+- [ ] PWA offline reading cache for previously viewed content
+- [ ] Push notifications via Firebase (translation complete, new review, variant detected)
+
+### 3.6 Accessibility + i18n (Priority: Standard)
+
+- [ ] WCAG 2.1 AA accessibility audit and remediation
+- [ ] RTL text support for Hebrew, Arabic, Syriac passages
+- [ ] Multi-language interface (i18n) — English first, then community translations
+- [ ] Screen reader optimization for manuscript/passage navigation
+
+### 3.7 API + Integrations (Priority: Standard)
+
+- [ ] Public REST API with rate limiting and documentation
+- [ ] IIIF manifest generation for manuscript images
+- [ ] Zotero integration for citation export
+- [ ] Institutional catalog linking (OCLC, WorldCat)
+
+### 3.8 Collaboration + Community (Priority: Future)
+
+- [ ] Shared workspaces for research teams
+- [ ] Annotation system (user notes on passages)
+- [ ] Community contribution workflows (suggest corrections, submit readings)
+- [ ] Moderation and quality control for community contributions
 
 ### Exit Criteria
 
-Platform is ready for broader public and institutional use if desired.
+Platform is polished, accessible, and ready for broader public and institutional use. Readers can explore manuscripts intuitively. Scholars can use the variant and comparison tools for real research. Content is discoverable via search engines and shareable via direct links.
 
 ---
 
@@ -239,6 +299,11 @@ Platform is ready for broader public and institutional use if desired.
 | Manuscript-specific text sources (NTVMR, Sinaiticus, DSS) | Complete | 2 |
 | Six-step text source fallback chain operational | Complete | 2 |
 | Test infrastructure with text source chain coverage | Complete | 2 |
+| Pipeline hardening with comprehensive logging | Complete | 2 |
+| Text provenance transparency for readers | Complete | 2 |
+| Public scripture browser | Phase 3 | 3 |
+| Variant versioning and cross-source comparison | Phase 3 | 3 |
+| Interactive manuscript visualizations | Phase 3 | 3 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |
 

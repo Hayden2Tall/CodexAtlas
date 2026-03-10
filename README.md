@@ -23,9 +23,9 @@ Build an open research platform that serves two equally important purposes:
 
 ## Current Status
 
-**Phase 2: Research Tools + Agent Engine — Complete.** The full AI agent framework and research toolkit are operational. Manuscript discovery, OCR, batch translation, variant detection, advanced search, evidence explorer, and scholarly export (JSON, CSV, TEI XML) all work end-to-end. Admin dashboard provides cost monitoring and task management.
+**Phase 2: Research Tools + Agent Engine — Complete.** The full AI agent framework and research toolkit are operational. Manuscript discovery, OCR, batch translation, variant detection, advanced search, evidence explorer, and scholarly export (JSON, CSV, TEI XML) all work end-to-end. Six-step text source chain prioritizes manuscript-specific scholarly transcriptions over standard editions over AI. Admin dashboard provides cost monitoring and task management. Comprehensive structured logging across all pipelines.
 
-**Next: Content population, then Phase 3 (Polish + Scale) when ready.** Use the agent tools to build the manuscript corpus. See [Roadmap](docs/ROADMAP.md) for details.
+**Next: Phase 3 (Polish + Scale).** Public exploration surfaces, variant versioning, interactive visualizations, and accessibility. See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 
@@ -51,7 +51,9 @@ CodexAtlas/
 │       └── lib/         #   Supabase clients, types, utilities
 ├── docs/                # Project documentation
 ├── scripts/
-│   └── migrations/      # SQL migration files (001-018)
+│   ├── migrations/      # SQL migration files (001-023)
+│   ├── preprocess-sinaiticus.mjs  # One-time Sinaiticus XML preprocessing
+│   └── preprocess-dss.mjs        # One-time Dead Sea Scrolls preprocessing
 ├── agents/              # Agent definitions and registry
 ├── prompts/             # Agent task templates
 ├── summaries/           # Compressed architecture summaries for agents
@@ -89,7 +91,7 @@ CodexAtlas/
    Fill in your Supabase URL, anon key, service role key, and Anthropic API key.
 
 4. Run the database migrations:
-   Execute each SQL file in `scripts/migrations/` (001 through 018) in order via the Supabase SQL Editor.
+   Execute each SQL file in `scripts/migrations/` (001 through 023) in order via the Supabase SQL Editor.
 
 5. Start the dev server:
    ```bash

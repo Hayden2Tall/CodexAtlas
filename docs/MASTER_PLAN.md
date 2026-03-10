@@ -187,41 +187,40 @@ Notifications are opt-in per category. Users control granularity in their notifi
 
 ## 3. Repository Structure
 
+> **Note:** The original plan envisioned separate `pipelines/` and `services/` directories. In practice, all application logic lives inside `app/` using Next.js API routes and shared utilities. The structure below reflects the actual implementation.
+
 ```
 CodexAtlas/
-├── app/              — Next.js frontend application
-│   ├── (research)/   — Research Surface routes (scholars)
-│   ├── (explore)/    — Exploration Surface routes (public)
-│   ├── api/          — API route handlers
-│   ├── components/   — Shared UI components
-│   └── lib/          — Client-side utilities, hooks, state
-├── agents/           — AI agent definitions and task packet templates
-│   ├── development/  — Development Organization agent configs
-│   └── research/     — Research Engine agent configs
-├── pipelines/        — Analysis pipelines (OCR, translation, variant detection, etc.)
-│   ├── ocr/
-│   ├── translation/
-│   ├── variant/
-│   ├── review/
-│   └── scoring/
-├── services/         — Backend service modules
-│   ├── auth/
-│   ├── manuscripts/
-│   ├── translations/
-│   ├── reviews/
-│   └── graph/
-├── data/             — Structured research data and seeds
-│   ├── seeds/        — Database seed data
-│   └── fixtures/     — Test fixtures
-├── prompts/          — Task packet templates for agents
-├── summaries/        — Compressed architecture summaries for agent context
-├── docs/             — Governance, architecture, and documentation
-├── tests/            — Automated tests (unit, integration, e2e)
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── scripts/          — Utility and migration scripts
-└── public/           — Static assets (icons, fonts, images)
+├── app/                          — Next.js application (frontend + API)
+│   ├── public/                   —   Static assets (PWA icons, manifest)
+│   └── src/
+│       ├── app/
+│       │   ├── (main)/           —   Authenticated and public pages
+│       │   │   ├── admin/        —     Admin dashboard (import, batch, variants, OCR)
+│       │   │   ├── manuscripts/  —     Manuscript browsing, detail, passages, translation
+│       │   │   ├── search/       —     Public full-text search
+│       │   │   ├── variants/     —     Variant exploration
+│       │   │   └── evidence/     —     Evidence explorer
+│       │   ├── api/
+│       │   │   ├── agent/        —     AI agent endpoints (discover, import, translate, detect, OCR)
+│       │   │   ├── search/       —     Search API
+│       │   │   ├── evidence/     —     Evidence API
+│       │   │   ├── export/       —     Scholarly export (JSON, CSV, TEI XML)
+│       │   │   ├── translate/    —     Translation API
+│       │   │   └── passages/     —     Passage CRUD
+│       │   └── auth/             —   Auth pages (login, signup, callback)
+│       ├── components/           —   Shared UI components
+│       └── lib/                  —   Supabase clients, types, utilities
+│           └── utils/            —     Text source chain, AI cost, helpers
+├── agents/                       — Agent registry and definitions
+├── docs/                         — Project documentation (8 documents)
+├── prompts/                      — Agent task packet templates
+├── summaries/                    — Compressed architecture summaries for agent context
+├── scripts/
+│   ├── migrations/               — SQL migration files (001-023)
+│   ├── preprocess-sinaiticus.mjs — One-time Codex Sinaiticus XML preprocessing
+│   └── preprocess-dss.mjs       — One-time Dead Sea Scrolls preprocessing
+└── README.md
 ```
 
 ---
