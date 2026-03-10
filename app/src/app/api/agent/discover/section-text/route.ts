@@ -64,20 +64,24 @@ export async function POST(request: NextRequest) {
       .eq("manuscript_id", manuscript_id)
       .ilike("reference", reference.trim());
 
-    const existingWithText = existing?.find(
-      (p) => p.original_text && p.original_text.trim().length > 0
+    // Only skip if the existing passage has substantial text (full chapter = 500+ chars).
+    // Short snippets from discovery or empty records get overwritten.
+    const MIN_TEXT_LENGTH = 500;
+
+    const existingComplete = existing?.find(
+      (p) => p.original_text && p.original_text.trim().length >= MIN_TEXT_LENGTH
     );
 
-    if (existingWithText) {
+    if (existingComplete) {
       return NextResponse.json({
-        passage_id: existingWithText.id,
+        passage_id: existingComplete.id,
         skipped: true,
-        reason: "Passage already exists",
+        reason: "Passage already imported",
       });
     }
 
-    // If passage record exists but has no text, we'll update it after getting the text
-    const emptyPassage = existing?.[0] ?? null;
+    // Existing record with no/short text — we'll update it after getting the full text
+    const existingToUpdate = existing?.[0] ?? null;
 
     const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildSectionTextPrompt(
@@ -198,7 +202,7 @@ export async function POST(request: NextRequest) {
     try {
       let passageId: string;
 
-      if (emptyPassage) {
+      if (existingToUpdate) {
         const { error: uErr } = await admin
           .from("passages")
           .update({
@@ -211,7 +215,7 @@ export async function POST(request: NextRequest) {
               tokens_used: tokensInput + tokensOutput,
             },
           } as Record<string, unknown>)
-          .eq("id", emptyPassage.id);
+          .eq("id", existingToUpdate.id);
 
         if (uErr) {
           console.error("Passage update failed:", uErr);
@@ -220,7 +224,7 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           );
         }
-        passageId = emptyPassage.id;
+        passageId = existingToUpdate.id;
       } else {
         const { data: passage, error: pErr } = await admin
           .from("passages")
