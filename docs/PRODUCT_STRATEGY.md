@@ -1,6 +1,6 @@
 # CodexAtlas — Product Strategy
 
-> **Version:** 1.0
+> **Version:** 2.0
 > **Last Updated:** March 2026
 > **Status:** Living Document
 
@@ -8,315 +8,213 @@
 
 ## 1. Product Vision
 
-CodexAtlas is the world's first open, transparent, AI-assisted research platform for ancient manuscripts. Its mission is to make manuscript research — discovery, analysis, translation, comparison, and publication — accessible to scholars and the public while maintaining uncompromising academic rigor.
+CodexAtlas is an open, transparent, AI-assisted research platform for ancient manuscripts. It makes manuscript research — discovery, analysis, translation, comparison, and publication — accessible and rigorous by combining AI-driven content pipelines with radical transparency.
 
-The platform is built on a principle of **radical transparency**: every AI-generated translation, every confidence score, every piece of underlying evidence is visible, traceable, and reproducible. Nothing is hidden. Nothing is opaque. Every claim links back to its evidence chain, and every AI decision can be inspected, challenged, and improved by the community.
+The platform is built on a principle of **radical transparency**: every AI-generated translation, every confidence score, every piece of underlying evidence is visible, traceable, and reproducible. Nothing is hidden. Every claim links back to its evidence chain, and every AI decision can be inspected, challenged, and improved.
 
 CodexAtlas treats ancient manuscript research not as a finished product but as a living scholarly conversation — one that AI can accelerate but only humans can validate.
 
 ---
 
-## 2. Target Users
+## 2. Builder-First Philosophy
 
-### Primary: Academic Scholars and Researchers
+CodexAtlas is being built by its primary user. The development philosophy is:
 
-**Who they are:** Textual critics, biblical scholars, historians, linguists, papyrologists, and philologists working directly with ancient manuscript traditions.
+1. **Build it and use it.** The platform should be genuinely useful to its creator first. If it's useful to one person doing real research, it will be useful to others.
 
-**Core needs:**
+2. **Content depth drives value.** A platform full of well-translated, well-evidenced manuscripts is inherently valuable. Get the content in first; worry about onboarding and marketing later.
 
-- Professional-grade tools for manuscript comparison, variant analysis, and lineage reconstruction
-- Reproducible research workflows with stable, citable outputs
-- Transparent AI assistance that shows its work rather than presenting black-box results
+3. **AI agents do the heavy lifting.** Manual manuscript entry is a bottleneck. AI agents discover, transcribe, translate, and analyze — humans review and validate.
 
-**Pain points today:**
+4. **Share organically.** Share with people around you. See how they use it. Let adoption grow naturally from genuine utility, not from growth hacking.
 
-- Fragmented tooling — scholars juggle spreadsheets, image viewers, custom scripts, and PDF critical editions
-- Opaque AI outputs — existing AI tools produce translations without exposing confidence, method, or source evidence
-- Difficulty reproducing results — no standard platform for sharing and verifying manuscript analysis
-
-**Value proposition:** An integrated, transparent, reproducible research environment purpose-built for manuscript scholarship — where AI accelerates the work and full evidence trails ensure every conclusion is verifiable.
-
-### Secondary: Theological Students and Seminary Faculty
-
-**Who they are:** Graduate students, seminarians, and faculty in theology, divinity, and religious studies programs.
-
-**Core needs:**
-
-- Access to the manuscript evidence behind modern Bible translations
-- Tools to understand textual history and the development of the canon
-
-**Pain points today:**
-
-- Critical editions are expensive, dense, and intimidating
-- No accessible tool shows how we get from ancient manuscripts to modern translations
-
-**Value proposition:** See the evidence behind every translation — explore manuscript variants, understand why translations differ, and engage with the textual tradition directly.
-
-### Tertiary: Curious Public
-
-**Who they are:** People with a general interest in ancient texts, religious history, archaeology, and the origins of scripture.
-
-**Core needs:**
-
-- Accessible exploration of ancient manuscripts without requiring specialized training
-- Trustworthy information about what ancient texts actually say and how we know it
-
-**Pain points today:**
-
-- Scholarly resources are locked behind institutional access, academic jargon, and prohibitive cost
-- Popular sources often lack rigor or transparency
-
-**Value proposition:** A beautiful, approachable interface to explore real scholarship — not a dumbed-down version, but a different lens on the same evidence scholars use.
+5. **Design for scale, build for one.** The architecture supports thousands of users and millions of records. But right now, build for the needs of one serious user — and keep the door open for growth.
 
 ---
 
-## 3. Platform Surfaces
+## 3. Target Users
 
-CodexAtlas serves its diverse user base through two distinct but interconnected surfaces.
+### Now: The Builder
 
-### Research Surface (Scholars)
+The primary user is the person building the platform — someone deeply interested in ancient manuscripts who wants a powerful, transparent tool for exploring, translating, and understanding these texts.
 
-The Research Surface is a professional-grade workspace for manuscript scholarship.
+**Core needs:**
+- AI-driven content pipeline that fills the platform with manuscripts and translations
+- Tools to explore, compare, and understand the growing corpus
+- Full evidence trails so every translation can be trusted or questioned
+- Export capabilities for personal research
 
-| Capability | Description |
-|---|---|
-| **Manuscript Browser** | Browse manuscripts with full provenance data — origin, date, script, archive, condition, digitization source |
-| **Variant Comparison** | Passage-level side-by-side and diff views across manuscript witnesses |
-| **Lineage Visualization** | Interactive stemma graphs showing manuscript relationships and transmission history |
-| **Translation Workspace** | Draft, refine, and version translations with full edit history and AI assistance |
-| **Review System** | Submit structured reviews of translations; view and respond to peer critiques |
-| **Cluster Analysis** | AI-powered analysis of review consensus — detect agreement patterns and emerging scholarly consensus |
-| **Evidence Explorer** | Full audit trail for every translation, score, and decision — trace any claim back to source evidence |
-| **Scholarly Export** | Export research packages in CSV, JSON, and TEI XML with stable citation identifiers |
-| **Advanced Search** | Filter and search across manuscripts, translations, reviews, and metadata |
+### Next: People Around You
 
-### Exploration Surface (Public)
+Friends, study group members, fellow students, church community — people you'd share interesting findings with.
 
-The Exploration Surface makes the same underlying research accessible to a broader audience.
+**Core needs:**
+- Browse manuscripts and translations without needing an account
+- Understand the evidence behind translations (confidence, method, reviews)
+- Accessible enough for non-scholars to engage with
 
-| Capability | Description |
-|---|---|
-| **Scripture Explorer** | Browse ancient texts with multiple translation options and contextual information |
-| **Translation Viewer** | Read translations alongside transparency indicators — confidence scores, methods used, review status |
-| **Discoveries Feed** | A curated stream of new findings, notable analyses, and platform activity |
-| **Research Summaries** | AI-generated plain-language summaries of scholarly work, linked to the underlying evidence |
-| **Interactive Timelines** | Visualize the chronological journey of manuscripts and textual traditions |
-| **Manuscript Maps** | Geographic visualization of manuscript origins, discoveries, and current locations |
-| **"How Do We Know This?"** | Every major claim includes links that expose the full evidence chain in accessible language |
+### Eventually: Scholars and the Public
 
-Both surfaces draw from the same data layer. The Research Surface provides depth and precision; the Exploration Surface provides clarity and accessibility. Scholars and the public see the same evidence through different lenses.
+If the platform proves genuinely useful and contains substantial content, broader adoption follows naturally.
+
+**Core needs:**
+- Professional-grade research tools (variant analysis, lineage, export)
+- Reproducible workflows with stable citations
+- Accessible exploration for non-specialists
 
 ---
 
-## 4. Open Research Model
+## 4. Platform Surfaces
 
-CodexAtlas operates as an **Open Research** environment. This is not a walled garden where AI produces results behind closed doors — it is a transparent, participatory system where every output is published with full context and every participant can verify, challenge, and improve the work.
+### Research Surface (Primary)
+
+The workspace for serious manuscript work.
+
+| Capability | Description |
+|---|---|
+| **Manuscript Browser** | Browse manuscripts with provenance, language, date, and archive metadata |
+| **Variant Comparison** | Side-by-side passage comparison with word-level diff highlighting |
+| **Translation Workspace** | Generate, version, and review translations with full evidence trails |
+| **Evidence Explorer** | Trace any claim back to its source manuscripts and AI reasoning |
+| **Review System** | Structured reviews with star ratings, categories, and free text |
+| **Scholarly Export** | CSV, JSON, and TEI XML with stable citation identifiers |
+| **Advanced Search** | Full-text and filtered search across the growing corpus |
+| **Agent Dashboard** | Monitor AI agent activity, content stats, and API costs |
+
+### Read Surface (Public)
+
+The same data, accessible to anyone without an account.
+
+| Capability | Description |
+|---|---|
+| **Browse** | All manuscripts, passages, and translations are publicly readable |
+| **Transparency Indicators** | Confidence scores, method badges, and evidence links on every translation |
+| **Reviews** | All reviews are visible — see what reviewers think of each translation |
+| **Version History** | Every translation version is preserved and accessible |
+
+---
+
+## 5. Open Research Model
 
 ### Immediate Publication with Full Transparency
 
-AI-generated translations are published immediately upon creation. There is no hidden staging area. Every translation enters the platform with mandatory transparency metadata:
+AI-generated translations are published immediately. There is no draft/publish gate. Every translation enters the platform with mandatory transparency metadata:
 
-- **Confidence Score** — the AI's self-assessed reliability for the translation
-- **Source Manuscripts** — which manuscript witnesses informed the translation
-- **Translation Method** — the approach used (literal, dynamic, AI-assisted, hybrid)
-- **AI Model** — the specific model and version that produced the output
+- **Confidence Score** — the AI's self-assessed reliability
+- **Source Manuscripts** — which witnesses informed the translation
+- **Translation Method** — AI initial, AI revised, human, or hybrid
+- **AI Model** — the specific model and version
 - **Version History** — complete record of all prior versions
-- **Review History** — every review, rating, and critique attached to the translation
+- **Review History** — every review, rating, and critique
 
-### Structured Human Review
+### The Legitimacy Signals Are the Product
 
-Scholars submit structured reviews that include ratings, critiques, suggested alternatives, and supporting evidence. Reviews are themselves transparent — reviewers are identified and their reasoning is visible.
+Users determine trustworthiness for themselves by examining:
+- How high is the confidence score?
+- How many reviews has this received?
+- What do reviewers say?
+- What's the evidence chain?
+- How many manuscript witnesses support this reading?
 
-### AI-Powered Consensus Detection
-
-The platform uses cluster analysis to detect patterns in human reviews — identifying areas of agreement, persistent disagreements, and emerging consensus. This analysis is advisory, not authoritative.
-
-### Consensus-Driven Versioning
-
-When credible scholarly consensus emerges around a revision, the system proposes a new translation version. Proposals require human approval. The previous version remains permanently visible.
+There is no editorial authority declaring translations "approved." The transparency indicators are the approval mechanism.
 
 ### Append-Only Model
 
-Nothing is deleted. Every version of every translation, every review, every score change is permanently recorded. The platform operates on an append-only model — history is never rewritten.
-
-### Dispute Tracking
-
-When scholars disagree, the platform tracks the dispute explicitly. Competing interpretations are presented side by side with their supporting evidence, allowing users to evaluate the arguments rather than receiving a single "correct" answer.
+Nothing is deleted. Every version of every translation, review, and evidence record is permanently preserved.
 
 ---
 
-## 5. Living Critical Edition
-
-### The Problem with Static Editions
-
-Traditional critical editions of ancient texts — Nestle-Aland, the Oxford Classical Texts, the Göttingen Septuagint — are monumental achievements. They are also, by nature, static. Published once (or revised on decadal timescales), they represent a snapshot of scholarly consensus at a moment in time. New manuscript discoveries, new analytical methods, and evolving scholarly opinion accumulate in journal articles and conference presentations long before they reach a new edition.
-
-### The CodexAtlas Approach
+## 6. Living Critical Edition
 
 CodexAtlas presents an **evolving textual tradition** — a critical edition that is alive.
 
-For each passage, the platform maintains and displays:
+For each passage, the platform maintains:
 
-- **Manuscript Variants** — all known readings from manuscript witnesses, with provenance and dating
-- **Translation Variants** — all translations (AI-generated and human), each with transparency metadata
-- **Review History** — the complete scholarly conversation around each translation
-- **Historical Timeline** — when each manuscript was produced, discovered, and digitized
-- **Version Lineage** — how translations have evolved through successive revisions
+- **Manuscript Variants** — all known readings from manuscript witnesses
+- **Translation Variants** — all translations with transparency metadata
+- **Review History** — the scholarly conversation around each translation
+- **Version Lineage** — how translations evolved through revisions
 
-The critical apparatus is not a static footnote — it is a living, queryable, interconnected system that updates as new manuscripts are ingested, new translations are produced, and new analyses are performed.
-
-### Maturity Indicators
-
-Every element in the living critical edition carries **transparency indicators** that communicate its maturity:
-
-- How many manuscript witnesses support a reading
-- How many independent reviews a translation has received
-- Whether scholarly consensus has been reached or the reading is disputed
-- How recently the data was updated
-
-Users always know how much confidence to place in what they are reading — and they can drill into the evidence to form their own judgment.
-
----
-
-## 6. Differentiation
-
-CodexAtlas occupies a unique position in the landscape of digital humanities and manuscript research tools.
-
-| Differentiator | What It Means |
-|---|---|
-| **Radical Transparency** | Every AI decision is visible. Confidence scores, source evidence, model versions, and review history are mandatory — not optional metadata, but core to the user experience. |
-| **Open Source** | The entire platform is open source. Anyone can verify the code, audit the algorithms, contribute improvements, or fork the project. No black boxes. |
-| **Evidence Traceability** | Every translation, every score, every claim links back to its evidence chain. Nothing is opaque. Users can always ask "how do we know this?" and get a real answer. |
-| **Dual-Surface Design** | Most research tools serve only scholars. Most public tools sacrifice rigor. CodexAtlas serves both audiences from the same evidence base through purpose-designed interfaces. |
-| **Living Critical Edition** | Traditional critical editions are static snapshots. CodexAtlas presents an evolving textual tradition that updates as new evidence and analysis accumulate. |
-| **Reproducible Research** | Research outputs are exportable with stable citation identifiers. Other scholars can reproduce, verify, and build upon any analysis performed on the platform. |
-| **AI-Assisted, Human-Validated** | AI accelerates research but never replaces human judgment. The platform is designed so that AI does the heavy lifting and humans provide the validation, critique, and scholarly authority. |
+The critical apparatus is not a static footnote — it is a living, queryable system that updates as new manuscripts are ingested, new translations are produced, and new analyses are performed.
 
 ---
 
 ## 7. Growth Strategy
 
-### Phase 1: Foundation (Scholar-First)
+### Phase 1: Build and Use (Current)
 
-**Target:** A small, committed group of manuscript scholars as alpha users.
+**Target:** You.
 
-**Focus areas:**
+**What happens:** AI agents fill the platform with manuscripts and translations. You use the research tools, review translations, explore variants, and find the content genuinely useful for your own study and curiosity.
 
-- Core research tools — variant comparison, translation workspace, evidence explorer
-- AI translation pipeline with full transparency metadata
-- Structured review system
+**Success looks like:** A platform you actually use regularly, with hundreds or thousands of manuscripts, and translations you trust because you can see exactly how they were produced.
 
-**Goal:** Validate that the research workflow meets the needs of working scholars. Build credibility through genuine scholarly utility, not marketing. If the tools are good enough for professionals, every other audience will follow.
+### Phase 2: Share and Learn
 
-**Success looks like:** Alpha scholars using the platform in their actual research and providing candid feedback on gaps and friction.
+**Target:** People around you — friends, study groups, fellow students.
 
-### Phase 2: Academic Adoption
+**What happens:** You share the platform link. People browse manuscripts, read translations, look at evidence chains. You learn what's confusing, what's compelling, what's missing.
 
-**Target:** University departments, seminary programs, and research groups.
+**Success looks like:** Other people find it interesting and come back. You get feedback that improves the platform.
 
-**Focus areas:**
+### Phase 3: Grow If It Makes Sense
 
-- Scholarly export with stable citations and TEI XML support
-- Reproducibility features — shareable research packages, versioned datasets
-- Collaboration tools — shared workspaces, annotation, commenting
-- Integration with existing academic infrastructure (IIIF, Zotero, institutional SSO)
+**Target:** Broader scholarly and public audience.
 
-**Goal:** Become a standard tool in textual criticism and digital humanities courses. Establish CodexAtlas as the platform scholars recommend to their students and peers.
+**What happens:** If the content is substantial and the tool is useful, consider broader visibility — write about it, present it, reach out to scholars.
 
-**Success looks like:** Adoption by multiple university programs; citations of CodexAtlas research packages in published papers.
-
-### Phase 3: Public Launch
-
-**Target:** The general public — anyone curious about ancient texts and their history.
-
-**Focus areas:**
-
-- Exploration Surface — scripture explorer, discoveries feed, research summaries
-- Progressive Web App (PWA) with offline reading and push notifications
-- Plain-language summaries and guided exploration paths
-- Accessibility and internationalization
-
-**Goal:** Make manuscript research accessible to everyone. Demonstrate that transparency and rigor are not barriers to engagement — they are features.
-
-**Success looks like:** Sustained public engagement; media coverage; growth in non-scholar user base without loss of scholarly credibility.
-
-### Phase 4: Global Research Network
-
-**Target:** International scholars, archives, libraries, and cultural heritage institutions.
-
-**Focus areas:**
-
-- Manuscript partnerships — digitization collaborations, data sharing agreements
-- Multilingual platform support
-- Public API for third-party integrations and research tools
-- Interoperability with major digital humanities standards and repositories
-
-**Goal:** Become the global clearinghouse for manuscript research — the place where scholars, institutions, and the public converge around the world's ancient textual heritage.
-
-**Success looks like:** Active partnerships with major archives and libraries; international scholarly community contributing manuscripts, translations, and reviews; API adoption by third-party research tools.
+**Success looks like:** External validation that the platform provides real value. Possible academic citations, institutional interest, contributor community.
 
 ---
 
 ## 8. Success Metrics
 
-CodexAtlas measures success across four dimensions: content depth, scholarly engagement, public reach, and community health.
-
-### Content Depth
+### Content Depth (Primary)
 
 | Metric | Description |
 |---|---|
-| Manuscripts ingested | Total manuscripts available on the platform with provenance data |
-| Passages covered | Percentage of target textual traditions with at least one translation |
-| Translations produced | Total translations (AI-generated and human-authored) |
-| Reviews submitted | Total structured reviews from scholars |
+| Manuscripts ingested | Total manuscripts with provenance data |
+| Passages translated | Total passages with at least one AI translation |
+| Evidence records | Total evidence chains supporting translations |
+| Reviews submitted | Total structured reviews |
 
-### Scholarly Engagement
-
-| Metric | Description |
-|---|---|
-| Active scholar users | Scholars using the platform monthly for research |
-| Research packages exported | Datasets and analysis packages downloaded for external use |
-| Academic citations | Published papers citing CodexAtlas data or tools |
-| Institutional adoptions | Universities and programs using CodexAtlas in courses or research |
-
-### Public Reach
+### Personal Utility
 
 | Metric | Description |
 |---|---|
-| Monthly active users | Total unique users engaging with the Exploration Surface |
-| Content engagement | Pages viewed, time on platform, return visit rate |
-| Discovery interactions | Engagement with discoveries feed, summaries, and evidence chains |
+| Daily use | Do you actually open the platform regularly? |
+| Trust | Do you trust the translations enough to learn from them? |
+| Discovery | Does the platform surface things you didn't know? |
 
-### Community Health
+### Sharing (Later)
 
 | Metric | Description |
 |---|---|
-| Open source contributions | Pull requests, issues filed, and community discussions |
-| Contributor diversity | Geographic and institutional diversity of contributors |
-| Review participation rate | Percentage of translations that receive at least one human review |
-| Dispute resolution rate | Percentage of tracked disputes that reach documented resolution |
+| Engagement | Do people you share with come back? |
+| Feedback | Are you getting useful feedback that improves the platform? |
 
 ---
 
-## 9. Monetization (Sustainability)
-
-### Guiding Principle
-
-**Research data and core tools are always free.** CodexAtlas exists to advance scholarship and public understanding. Monetization serves sustainability, not profit extraction. No paywall will ever stand between a user and research data.
-
-### Sustainability Models
-
-| Model | Description |
-|---|---|
-| **Grants** | Apply to funding bodies aligned with digital humanities and open scholarship — NEH, AHRC, Mellon Foundation, DFG, and similar organizations |
-| **Institutional Subscriptions** | Offer premium features for institutional users — bulk export, elevated API access, priority support, custom integrations, and usage analytics |
-| **Donations** | Accept individual and organizational donations through transparent, accountable channels |
-| **Archive & Library Partnerships** | Revenue-sharing or service agreements with institutions that contribute manuscript collections and benefit from platform digitization and analysis tools |
-| **Sponsored Research** | Funded research projects that use CodexAtlas as infrastructure, contributing results back to the open platform |
+## 9. Sustainability
 
 ### Cost Management
 
-Sustainability also means keeping costs low. CodexAtlas is designed with a lean architecture, aggressive caching, tiered AI processing, and cost controls that ensure the platform can operate even in low-funding periods.
+The primary cost is the Anthropic API for AI translations and agent tasks. Sustainability means:
+
+- **Per-task token limits** — no single agent operation can exceed a defined budget
+- **Session caps** — total token spend per batch run is capped
+- **Cost dashboard** — real-time visibility into API spend
+- **Rate limiting** — agents operate within defined throughput limits
+- **Caching** — avoid re-translating passages that haven't changed
+
+### Long-Term
+
+Research data and core tools are always free. If the platform grows to need funding:
+
+- Grants from digital humanities foundations
+- Institutional subscriptions for premium features
+- Donations
+- Sponsored research partnerships
 
 ---
 
@@ -324,13 +222,11 @@ Sustainability also means keeping costs low. CodexAtlas is designed with a lean 
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| **AI translations presented as authoritative** | Users treat unreviewed AI output as scholarly consensus, damaging credibility | Mandatory transparency indicators on every translation — confidence scores, review status, and maturity badges are unavoidable, not optional. Unreviewed translations are clearly marked. |
-| **Low scholar adoption** | Platform lacks the scholarly engagement needed to validate and improve content | Build *with* scholars, not *for* them. Alpha testing with real researchers. Advisory board of domain experts. Prioritize scholar feedback over feature velocity. |
-| **Data quality issues** | Incorrect provenance, mistranscribed manuscripts, or unreliable metadata undermine trust | Provenance tracking on all ingested data. Evidence records linking every claim to sources. Human review loops as a quality gate. Flagging and correction workflows. |
-| **Sustainability** | Insufficient funding threatens long-term viability | Lean architecture with controlled costs. Diversified funding (grants, institutional subscriptions, donations). Open source community reduces single-point-of-failure risk. |
-| **Scope creep** | Platform tries to do too much, diluting quality and delaying delivery | Project constitution defining boundaries. Architecture guardian role. Phased roadmap with clear milestones. Features evaluated against the constitution before implementation. |
-| **Scholarly resistance to AI** | Some academics distrust AI involvement in manuscript research | Transparency-first design ensures AI is a tool, not an authority. Scholars always have final say. AI outputs are starting points for human evaluation, never endpoints. |
-| **Data sovereignty and cultural sensitivity** | Manuscripts may involve sensitive cultural heritage or contested provenance | Establish clear data governance policies. Consult with originating communities. Respect institutional access agreements. Transparent provenance records for all materials. |
+| AI API costs exceed personal budget | High | Per-task limits, session budgets, cost dashboard, rate limiting |
+| AI translations treated as authoritative without review | Medium | Mandatory transparency indicators, confidence scores, unreviewed translations clearly marked |
+| Content quality issues from automated ingestion | Medium | Confidence scoring on all agent output, human review queue, evidence records |
+| Scope creep into features before content depth | Medium | Phase 2 focuses on content engine and research tools; polish deferred |
+| Burnout from solo development | Medium | Build what's useful to you first; don't chase external validation prematurely |
 
 ---
 

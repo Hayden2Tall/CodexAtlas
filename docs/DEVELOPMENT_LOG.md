@@ -39,6 +39,45 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-09 — Strategic Pivot: Builder-First, Agent-Driven
+
+**Type:** decision
+**Author:** Founding Architect
+**Status:** accepted
+
+**Context:**
+After completing the Phase 1 MVP and testing the full pipeline (manuscript creation, AI translation, reviews, variant comparison), a strategic reassessment was made. The original 5-phase roadmap was designed for institutional adoption and public scale. The actual goal is different: build a powerful research engine, fill it with content via AI agents, use it personally, share it with people nearby, and grow organically if the platform proves genuinely useful.
+
+**Decision:**
+Collapsed the original 5-phase roadmap into 3 phases:
+
+1. **Phase 1 (Complete):** MVP — core pipeline works end-to-end
+2. **Phase 2 (Next):** Research Tools + Agent Engine — AI agents populate the platform, research tools make the content useful
+3. **Phase 3 (When Ready):** Polish + Scale — public exploration, accessibility, API, institutional features
+
+Key changes:
+- AI agent framework pulled forward from Phase 4 to Phase 2 (next priority)
+- Batch translation, OCR, manuscript discovery, and automated variant detection are now immediate priorities
+- Public exploration polish, institutional partnerships, i18n, and community governance deferred to Phase 3
+- Traffic optimization and CI/CD sophistication deprioritized
+- Cost tracking elevated to Phase 2 essential (agents burn tokens autonomously)
+
+**Rationale:**
+A platform full of well-translated, well-evidenced manuscripts is inherently valuable regardless of user count. Content depth drives value more than user breadth. The architecture already supports scale — it doesn't need to be built for thousands of concurrent users to be useful to one serious user. Manual manuscript entry is a bottleneck that agents can eliminate. Building what you use and sharing what works is a more honest growth strategy than building for imagined institutional adoption.
+
+**Consequences:**
+- Phase 2 is substantially larger and more ambitious than originally planned
+- API cost management becomes critical immediately (agents running autonomously)
+- Some research tools (lineage visualization, review clustering) may be deferred within Phase 2 to prioritize the content engine
+- The PRODUCT_STRATEGY.md and ROADMAP.md were rewritten to reflect this direction
+
+**Related Documents:**
+- docs/ROADMAP.md (rewritten)
+- docs/PRODUCT_STRATEGY.md (rewritten)
+- summaries/ARCHITECTURE_SUMMARY.md (updated)
+
+---
+
 ### 2026-03-09 — Phase 1 MVP Complete
 
 **Type:** milestone

@@ -23,19 +23,9 @@ Build an open research platform that serves two equally important purposes:
 
 ## Current Status
 
-**Phase 1: MVP — Complete.** The core research pipeline works end-to-end:
+**Phase 1: MVP — Complete.** The core research pipeline works end-to-end: manuscript ingestion, AI translation with evidence records, human reviews, variant comparison, and full transparency indicators. Public read access means anyone can browse without an account.
 
-- Manuscript ingestion with full metadata (language, date, provenance, archive)
-- Passage creation with original-language text
-- AI translation via Claude with confidence scores and evidence records
-- Translation version history with full provenance
-- Human review system (star rating, structured feedback, critique)
-- Variant comparison with word-level diff highlighting
-- Transparency indicators on every translation (confidence, method, model, source)
-- Public read access — anyone can browse manuscripts, translations, and reviews without an account
-- PWA-ready with icons and manifest
-
-**Next:** Vercel deployment, then Phase 2 (Research Platform).
+**Next: Phase 2 — Research Tools + Agent Engine.** Build the AI agent framework that fills the platform with content (manuscript discovery, OCR, batch translation, variant detection) and the research tools to explore that content (search, evidence explorer, scholarly export). See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 

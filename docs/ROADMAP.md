@@ -1,30 +1,29 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-09
-> **Status:** Phase 1 — MVP (Complete) · Phase 2 next
+> **Status:** Phase 1 (MVP) complete · Phase 2 (Research Tools + Agent Engine) next
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
 
 ## 1. Roadmap Overview
 
-This roadmap defines the phased development plan for CodexAtlas — an open-source, AI-assisted research platform for ancient religious manuscripts. Each phase builds on the previous one, progressively expanding from foundational documentation through a minimal viable prototype, professional research tools, public exploration, scalability, and ultimately a global research network.
+This roadmap defines the development plan for CodexAtlas — an open-source, AI-assisted research platform for ancient religious manuscripts.
 
-**Core Principles:**
+The plan is structured around a **builder-first philosophy**: build the content engine and research tools, fill the platform with manuscripts via AI agents, use it personally, share it with people around you, and grow from there. Institutional adoption, public-facing polish, and traffic scaling are real goals but they follow naturally from having a platform full of valuable content — not the other way around.
 
-- **Quality over speed.** Architecture integrity and data trustworthiness are never sacrificed for velocity.
-- **Transparency first.** Every AI output carries an evidence record. Every translation is versioned and reviewable.
-- **Phase gates are real.** No phase begins until the exit criteria of the previous phase are met.
-- **Ship incrementally.** Each phase delivers usable value on its own.
+**Core Priorities:**
 
-**Tech Stack:** Next.js (App Router) PWA deployed on Vercel · Supabase (Postgres + Auth + Storage) · Firebase (push notifications) · Claude AI (translation and analysis)
+1. **Content depth over user breadth.** A platform with 10,000 manuscripts and one user is more valuable than a polished app with zero content.
+2. **Agent-driven ingestion over manual entry.** Humans validate; AI does the heavy lifting of discovery, transcription, and translation.
+3. **Research utility over public polish.** Build tools that make manuscript research genuinely useful before worrying about onboarding flows and marketing.
+4. **Architecture for scale, build for one.** Keep the architecture sound so it can scale later, but don't over-engineer for traffic or contributors that don't exist yet.
 
 ---
 
 ## 2. Phase 0 — Foundation (Complete)
 
-**Timeline:** Weeks 1–2
-**Goal:** Establish the architectural and documentation foundation that every future phase depends on.
+**Goal:** Establish the architectural and documentation foundation.
 
 ### Deliverables
 
@@ -32,298 +31,192 @@ This roadmap defines the phased development plan for CodexAtlas — an open-sour
 - [x] PROJECT_CONSTITUTION.md
 - [x] MASTER_PLAN.md
 - [x] PRODUCT_STRATEGY.md
-- [x] ROADMAP.md *(this document)*
+- [x] ROADMAP.md
 - [x] DATA_MODEL.md
 - [x] SECURITY_MODEL.md
 - [x] UX_GUIDELINES.md
 - [x] DEVELOPMENT_LOG.md
 - [x] Architecture summaries for agent context
-- [x] Git repository initialized
-- [x] README.md with project overview
-- [x] `.gitignore` configured
-- [x] Initial `package.json`
-
-### Exit Criteria
-
-All documentation complete and reviewed. Repository initialized with proper ignore rules and dependency manifest. Team (human and AI) has the context needed to begin Phase 1.
+- [x] Git repository initialized with README, .gitignore, LICENSE
 
 ---
 
-## 3. Phase 1 — Minimal Viable Prototype (MVP) (Complete)
+## 3. Phase 1 — Minimal Viable Prototype (Complete)
 
-**Timeline:** Weeks 3–8
-**Goal:** Build the core research pipeline end-to-end — from manuscript ingestion through AI translation to human review — with full transparency at every step.
+**Goal:** Build the core research pipeline end-to-end with full transparency.
 
-### 1.1 Project Setup
+### Deliverables
 
-- [x] Next.js project initialization (App Router, TypeScript, Tailwind CSS)
-- [x] Supabase project setup (database, auth, storage buckets)
-- [x] Database schema migration (core tables from DATA_MODEL.md — 18 migration files)
-- [x] Authentication setup (Supabase Auth — email, OAuth)
-- [x] Row-Level Security (RLS) policies for all tables (including public read access)
-- [x] PWA configuration (web manifest, icons, service worker registration)
-- [ ] CI/CD pipeline (GitHub Actions → Vercel preview + production deploys)
-
-### 1.2 Manuscript Ingestion
-
-- [x] Manuscript creation form (manual entry with metadata fields)
-- [x] Manuscript metadata storage (language, date range, archive, condition)
-- [x] Manuscript image upload to Supabase Storage
-- [x] Passage creation and original-language text storage
-- [x] Basic manuscript browser (list, filter by language/date)
-
-### 1.3 Translation Pipeline
-
-- [x] AI translation endpoint (Claude API integration via API route)
-- [x] Translation version creation and storage with full provenance
-- [x] Evidence record generation for each translation decision
-- [x] Confidence score calculation (per-passage)
-- [x] Translation viewer with version history navigation
-
-### 1.4 Variant Comparison
-
-- [x] Variant reading entry (manual)
-- [x] Side-by-side passage comparison view
-- [x] Basic diff visualization (word-level highlighting)
-- [ ] Similarity scoring between variant readings
-
-### 1.5 Review System
-
-- [x] Review submission form (structured rating, critique categories, free text)
-- [x] Review display on translation versions
-- [ ] Basic review listing with filters
-
-### 1.6 Transparency Layer
-
-- [x] Transparency indicators on all translations (confidence %, method, model version, source manuscripts)
-- [x] Version history viewer (who changed what, when, why)
-- [x] Evidence record viewer (reasoning chain for every AI decision)
-
-### 1.7 Open Research Model
-
-- [x] Public read access for all research data (no sign-in required to browse)
-- [x] Auth-gated write actions (create, translate, review require sign-in)
-- [x] Translations default to "published" — transparency indicators are the legitimacy signals
-
-### Exit Criteria
-
-A user can ingest a manuscript, generate an AI translation with a full evidence record, compare variant readings across manuscripts, and submit a structured review — all with complete transparency into how every output was produced.
+- [x] Next.js application (App Router, TypeScript, Tailwind CSS)
+- [x] Supabase integration (Postgres, Auth, Storage)
+- [x] 18 database migration files implementing full schema
+- [x] Row-Level Security with public read access
+- [x] PWA configuration with icons and manifest
+- [x] Manuscript ingestion (create, browse, detail view)
+- [x] Passage creation with original-language text
+- [x] AI translation via Claude with evidence records
+- [x] Translation version history with provenance
+- [x] Human review system (star rating, structured feedback, critique)
+- [x] Variant comparison with word-level diff
+- [x] Transparency indicators (confidence, method, model, source)
+- [x] Evidence panel ("How do we know this?")
+- [x] Public read access — anyone can browse without an account
+- [x] Auth-gated write actions
 
 ---
 
-## 4. Phase 2 — Research Platform
+## 4. Phase 2 — Research Tools + Agent Engine (Next)
 
-**Timeline:** Weeks 9–16
-**Goal:** Build professional research tools that make CodexAtlas indispensable for manuscript scholars.
+**Goal:** Build the AI agent framework that populates the platform with content, and the research tools to explore that content. This is where CodexAtlas goes from a demo to something genuinely useful.
 
-### 2.1 Advanced Variant Analysis
+### 2.1 Agent Task System
 
-- [ ] Multi-manuscript variant comparison (3+ witnesses)
-- [ ] Variant apparatus generation (critical apparatus format)
-- [ ] Variant frequency analysis across corpus
-- [ ] Variant visualization (charts, heatmaps, distribution plots)
+The foundation for all autonomous agent work.
 
-### 2.2 Manuscript Lineage
+- [ ] Task packet runner (structured JSON in → structured result out)
+- [ ] Agent execution via API routes using service role key
+- [ ] Cost tracking per task (tokens used, model, estimated cost)
+- [ ] Token budget enforcement (per-task limits, session caps)
+- [ ] Task status tracking (queued, running, completed, failed)
+- [ ] Task result logging to audit_log with full provenance
 
-- [ ] Lineage relationship creation (parent/child, sibling, copy-of)
-- [ ] Stemma visualization (interactive tree/graph using D3 or similar)
-- [ ] Confidence-scored lineage hypotheses with evidence links
-- [ ] Lineage comparison tools (overlay multiple stemma proposals)
+### 2.2 Batch Translation Pipeline
 
-### 2.3 Review Cluster Analysis
+Scale the existing translation endpoint to handle volume.
 
-- [ ] AI-powered review clustering (group reviews by position)
-- [ ] Consensus detection across reviewer clusters
-- [ ] Cluster visualization (scatter, dendrogram)
-- [ ] Consensus-driven translation revision proposals
+- [ ] Queue-based batch processor (translate all untranslated passages)
+- [ ] Rate limiting to stay within API cost budgets
+- [ ] Progress tracking UI (X of Y passages translated)
+- [ ] Error handling and retry logic
+- [ ] Multi-language batch support (translate to English, then other languages)
 
-### 2.4 Evidence Explorer
+### 2.3 Manuscript Discovery Agent
 
-- [ ] Full evidence chain navigation (translation → evidence → source)
-- [ ] Cross-reference browsing between related evidence records
-- [ ] Evidence scoring dashboard (strength, coverage, agreement)
+AI agent that finds and catalogs manuscripts from public digital archives.
 
-### 2.5 Scholarly Export
+- [ ] Source registry (list of digital archives to crawl — e.g., CSNTM, INTF, British Library, Vatican Library)
+- [ ] Discovery prompts (Claude analyzes archive metadata to extract structured manuscript data)
+- [ ] Manuscript creation from discovered metadata
+- [ ] Duplicate detection (avoid re-ingesting known manuscripts)
+- [ ] Source attribution and provenance tracking
 
-- [ ] Research package generation (bundled data + metadata)
-- [ ] CSV export (tabular data)
-- [ ] JSON export (structured data)
-- [ ] TEI XML export (scholarly standard format)
-- [ ] Stable citation identifiers (persistent URIs for every entity)
-- [ ] Reproducibility metadata (model version, prompt hash, timestamp)
+### 2.4 OCR Pipeline
+
+Extract text from manuscript images using Claude's vision capabilities.
+
+- [ ] Image upload and processing queue
+- [ ] Claude vision API integration (image → transcribed text)
+- [ ] Passage creation from OCR output
+- [ ] Confidence scoring for OCR quality
+- [ ] Human review queue for low-confidence transcriptions
+
+### 2.5 Automated Variant Detection
+
+Cross-manuscript comparison when multiple witnesses exist for the same passage.
+
+- [ ] Passage alignment (match passages across manuscripts by reference)
+- [ ] Word-level and character-level diffing
+- [ ] Variant record creation with classification (spelling, word order, omission, addition)
+- [ ] Significance scoring (trivial vs. meaningful variants)
 
 ### 2.6 Advanced Search
 
-- [ ] Full-text search across manuscripts and translations (Postgres full-text or pg_trgm)
-- [ ] Filtered search by language, date range, archive, status, confidence
+Essential once the corpus grows beyond what you can browse manually.
+
+- [ ] Full-text search across manuscripts, passages, and translations
+- [ ] Filtered search (language, date range, archive, confidence score)
 - [ ] Canonical reference search (book/chapter/verse lookup)
+- [ ] Search results with transparency indicators
+
+### 2.7 Evidence Explorer
+
+Full navigation of the evidence chain.
+
+- [ ] Evidence chain visualization (translation → evidence → source manuscript → passage)
+- [ ] Cross-reference browsing between related evidence records
+- [ ] Evidence strength indicators
+
+### 2.8 Scholarly Export
+
+Get data out in useful formats.
+
+- [ ] CSV export (tabular manuscript and translation data)
+- [ ] JSON export (structured data with full metadata)
+- [ ] TEI XML export (scholarly standard format)
+- [ ] Stable citation identifiers for every entity
+
+### 2.9 Admin Dashboard
+
+Monitor what the agents are doing and what the platform contains.
+
+- [ ] Content stats (manuscripts, passages, translations, reviews, variants)
+- [ ] Agent activity log (recent tasks, success/failure rates)
+- [ ] Cost dashboard (API spend by agent, by task type, over time)
+- [ ] Queue status (pending tasks, processing, completed)
 
 ### Exit Criteria
 
-Scholars can perform professional research workflows entirely within the platform — variant analysis, lineage exploration, review synthesis, and evidence navigation. Export and citation systems produce publication-ready outputs.
+AI agents can discover manuscripts, transcribe images, translate passages, and detect variants — all autonomously with human oversight. The platform contains a meaningful corpus of content. Research tools (search, evidence explorer, export) make that content useful.
 
 ---
 
-## 5. Phase 3 — Public Exploration Platform
+## 5. Phase 3 — Polish + Scale (When Ready)
 
-**Timeline:** Weeks 17–24
-**Goal:** Launch the public-facing exploration experience that makes manuscript research accessible to everyone.
+**Goal:** When the platform has substantial content and you're ready to share it more broadly, add the polish and infrastructure for wider use.
 
-### 3.1 Exploration Surface
+This phase is intentionally open-ended. Pull items in as needed.
 
-- [ ] Scripture explorer (browse by book → chapter → verse)
-- [ ] Translation viewer with transparency indicators visible by default
-- [ ] "How do we know this?" evidence links on every translation
-- [ ] Plain-language research summaries (AI-generated, human-reviewed)
+### Potential Deliverables
 
-### 3.2 Discovery Feed
-
-- [ ] Curated discoveries feed (editorially selected highlights)
-- [ ] New manuscript notifications
-- [ ] Translation update notifications
-- [ ] Personalized feed based on user interests
-
-### 3.3 PWA Enhancement
-
-- [ ] Offline reading capability (cached manuscripts and translations)
-- [ ] Push notifications via Firebase Cloud Messaging
-- [ ] Install prompts (smart banner timing)
-- [ ] Performance optimization (target: < 3 s initial load, < 1 s navigation)
-
-### 3.4 Interactive Visualizations
-
-- [ ] Manuscript timeline (historical placement of all manuscripts)
-- [ ] Geographic manuscript map (archive locations, discovery sites)
-- [ ] Lineage tree explorer (simplified, interactive public version)
-
-### 3.5 Accessibility
-
-- [ ] WCAG 2.1 AA compliance audit and remediation
-- [ ] Screen reader optimization (ARIA labels, semantic HTML)
-- [ ] Full keyboard navigation
-- [ ] High contrast mode and reduced motion support
+- [ ] Public exploration surface (scripture browser, guided paths)
+- [ ] AI-generated plain-language research summaries
+- [ ] Interactive visualizations (manuscript timeline, geographic map, stemma tree)
+- [ ] Vercel deployment optimization (ISR for popular pages)
+- [ ] PWA offline reading and push notifications
+- [ ] WCAG 2.1 AA accessibility audit
+- [ ] Public REST API for third-party integrations
+- [ ] Multi-language interface (i18n)
+- [ ] Collaboration features (shared workspaces, annotation)
+- [ ] Community contribution workflows
+- [ ] Institutional partnership integrations (IIIF, Zotero, catalog linking)
 
 ### Exit Criteria
 
-Public users can explore manuscripts, read translations with full transparency, and engage with research findings through an accessible, performant PWA. Lighthouse scores ≥ 90 across all categories.
+Platform is ready for broader public and institutional use if desired.
 
 ---
 
-## 6. Phase 4 — Scale and Optimization
-
-**Timeline:** Weeks 25–36
-**Goal:** Scale the platform to handle large manuscript collections and high traffic without degrading the user experience.
-
-### 4.1 Performance
-
-- [ ] Database query optimization (EXPLAIN ANALYZE audit, index tuning)
-- [ ] Postgres partitioning for large tables (passages, evidence records)
-- [ ] Connection pooling optimization (Supabase pgBouncer tuning)
-- [ ] CDN optimization for manuscript images (responsive formats, lazy loading)
-- [ ] Incremental Static Regeneration for public exploration pages
-
-### 4.2 Processing Pipelines
-
-- [ ] OCR pipeline (manuscript image → raw text via vision model)
-- [ ] Batch translation pipeline (queue-based, rate-limited)
-- [ ] Automated variant detection pipeline (cross-manuscript diffing)
-- [ ] Background job queue system (Postgres-based or external queue)
-
-### 4.3 Knowledge Graph
-
-- [ ] Knowledge graph query optimization (materialized views, recursive CTEs)
-- [ ] Graph traversal APIs (shortest path, neighborhood queries)
-- [ ] Relationship recommendation engine (suggest likely connections)
-
-### 4.4 AI Agent Framework
-
-- [ ] Agent task packet system implementation (structured task → result)
-- [ ] Agent autonomy mode controls (full-auto, supervised, manual)
-- [ ] Cost tracking and per-task limits (token budgets, dollar caps)
-- [ ] Agent monitoring dashboard (task status, cost, quality metrics)
-
-### 4.5 Public API
-
-- [ ] Public REST API for third-party access
-- [ ] API documentation (OpenAPI 3.1 spec, interactive docs)
-- [ ] Rate limiting and usage tracking (tiered access)
-- [ ] API key management
-
-### Exit Criteria
-
-Platform handles 10,000+ manuscripts with sub-second response times. Processing pipelines operate reliably in the background. Public API is documented and available to third-party developers.
-
----
-
-## 7. Phase 5 — Global Research Network
-
-**Timeline:** Months 10–18
-**Goal:** Become the global open research platform for ancient religious manuscripts.
-
-### 5.1 Collaboration
-
-- [ ] Multi-user research workspaces (shared projects with role-based access)
-- [ ] Annotation sharing (highlights, notes, cross-references)
-- [ ] Discussion threads on passages and translations
-
-### 5.2 Institutional Partnerships
-
-- [ ] Archive integration APIs (pull metadata and images from partner archives)
-- [ ] Library catalog linking (WorldCat, OCLC, institutional catalogs)
-- [ ] University program partnerships (curriculum integration, research grants)
-
-### 5.3 Multilingual Interface
-
-- [ ] Interface localization (i18n framework, initial languages: English, German, French)
-- [ ] Multi-language translation support (expand beyond initial language pairs)
-- [ ] RTL language support (Arabic, Hebrew interface and content rendering)
-
-### 5.4 Community
-
-- [ ] Contributor onboarding (documentation, first-issue labels, mentoring)
-- [ ] Community review programs (structured volunteer reviewer training)
-- [ ] Open governance processes (RFC process, public roadmap voting)
-
-### Exit Criteria
-
-International scholar and institutional adoption. Active open-source contributor community. Multiple interface languages supported. Governance processes enable community-driven development.
-
----
-
-## 8. Success Milestones
+## 6. Success Milestones
 
 | Milestone | Target | Phase |
 |---|---|---|
-| First manuscript ingested | Week 4 | 1 |
-| First AI translation with evidence record | Week 5 | 1 |
-| First variant comparison completed | Week 6 | 1 |
-| First human review submitted | Week 7 | 1 |
-| 100 manuscripts in the system | Week 12 | 2 |
-| First scholarly export generated | Week 14 | 2 |
-| Public beta launch | Week 20 | 3 |
-| 1,000 manuscripts in the system | Week 30 | 4 |
-| First academic citation of CodexAtlas | Month 12 | 5 |
-| 10,000 manuscripts in the system | Month 18 | 5 |
+| First manuscript ingested and translated | Complete | 1 |
+| First human review submitted | Complete | 1 |
+| Batch translation pipeline operational | Phase 2 | 2 |
+| First agent-discovered manuscript ingested | Phase 2 | 2 |
+| 100 manuscripts in the system | Phase 2 | 2 |
+| First OCR transcription from manuscript image | Phase 2 | 2 |
+| 1,000 passages translated with evidence records | Phase 2 | 2 |
+| First scholarly export generated | Phase 2 | 2 |
+| Full-text search operational | Phase 2 | 2 |
 
 ---
 
-## 9. Risk Register
+## 7. Risk Register
 
-| Risk | Impact | Likelihood | Mitigation |
-|---|---|---|---|
-| Scope creep | High | High | Strict adherence to PROJECT_CONSTITUTION; phased exit criteria enforce discipline |
-| AI cost overrun | Medium | Medium | Per-task cost limits; token budgets; caching repeated queries; cost monitoring dashboard |
-| Low scholar adoption | High | Medium | Co-design with scholars from Phase 1; alpha testing program; conference presentations |
-| Technical debt accumulation | Medium | Medium | Architecture Guardian agent; Tech Debt Monitor; refactoring sprints between phases |
-| Data quality issues | High | Low | Evidence records provide auditability; human review layer; confidence thresholds for publication |
-| API/vendor lock-in | Medium | Low | Abstraction layers over Supabase and Claude; standard export formats; self-host path documented |
-| Security breach (sensitive manuscripts) | High | Low | RLS on every table; SECURITY_MODEL.md policies enforced; regular penetration testing |
+| Risk | Impact | Mitigation |
+|---|---|---|
+| AI API cost overrun from agent activity | High | Per-task token limits, session budgets, cost dashboard, rate limiting |
+| Low-quality agent output (bad OCR, wrong metadata) | Medium | Confidence scoring on all agent output, human review queue for low-confidence items |
+| Scope creep into public-facing features before content depth | Medium | Phase 2 focuses exclusively on content and research tools; polish deferred to Phase 3 |
+| Technical debt from rapid Phase 2 development | Medium | Architecture already sound from Phase 0/1; maintain test coverage and code review |
+| Anthropic API changes or pricing shifts | Medium | Abstraction layer over AI calls; prompt templates separate from application logic |
 
 ---
 
 ## Appendix: How to Read This Roadmap
 
-- **Checkboxes** (`- [ ]` / `- [x]`) track individual deliverables. Update them as work completes.
-- **Exit Criteria** define what "done" means for each phase. No phase transitions without meeting them.
-- **Timelines** are estimates. Adjust based on actual velocity, but do not skip phases.
-- **This is a living document.** Update it as the project evolves, but preserve the phase structure and exit-criteria discipline defined in the PROJECT_CONSTITUTION.
+- **Checkboxes** track individual deliverables.
+- **Exit Criteria** define what "done" means for each phase.
+- **This is a living document.** Update it as the project evolves.
+- **Phases are sequential** but the boundary between 2 and 3 is flexible — pull Phase 3 items forward if they become blocking.
