@@ -23,9 +23,9 @@ Build an open research platform that serves two equally important purposes:
 
 ## Current Status
 
-**Phase 1: MVP — Complete.** The core research pipeline works end-to-end: manuscript ingestion, AI translation with evidence records, human reviews, variant comparison, and full transparency indicators. Public read access means anyone can browse without an account.
+**Phase 2: Research Tools + Agent Engine — Complete.** The full AI agent framework and research toolkit are operational. Manuscript discovery, OCR, batch translation, variant detection, advanced search, evidence explorer, and scholarly export (JSON, CSV, TEI XML) all work end-to-end. Admin dashboard provides cost monitoring and task management.
 
-**Next: Phase 2 — Research Tools + Agent Engine.** Build the AI agent framework that fills the platform with content (manuscript discovery, OCR, batch translation, variant detection) and the research tools to explore that content (search, evidence explorer, scholarly export). See [Roadmap](docs/ROADMAP.md) for details.
+**Next: Content population, then Phase 3 (Polish + Scale) when ready.** Use the agent tools to build the manuscript corpus. See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 

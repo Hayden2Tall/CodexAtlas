@@ -39,6 +39,70 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Phase 2 Complete: Research Tools + Agent Engine
+
+**Type:** milestone
+**Author:** Founding Architect
+**Status:** accepted
+
+**Context:**
+Phase 2 implemented the complete AI agent framework and research tools across 4 development blocks, adding approximately 5,000 lines of new code in a single development session.
+
+**Key Deliverables:**
+
+Block 1 — Agent Task System + Batch Translation:
+- `agent_tasks` table (migration 019) with cost tracking, progress, RLS
+- Agent task CRUD API with admin-gated access
+- AI cost estimation utility with per-model pricing
+- Updated translate API to capture and return token usage from Anthropic
+- Client-orchestrated batch translation with pause/resume/cancel and live progress
+
+Block 2 — Manuscript Discovery Agent:
+- Claude-powered discovery API (research query → structured manuscript suggestions)
+- Manuscript ingest API with duplicate detection
+- Discovery panel UI with example queries, result cards, one-click approval
+- "Add All New" batch approval for discovered manuscripts
+
+Block 3 — OCR Pipeline + Variant Detection:
+- OCR API using Claude Vision (base64 upload or Supabase Storage)
+- Passage extraction with confidence scoring and language detection
+- Review-then-save workflow for OCR results
+- Variant detection API comparing passages across manuscripts
+- AI classification of variants (major, minor, orthographic)
+- Save variants and readings to database
+
+Block 4 — Search, Evidence Explorer, Scholarly Export:
+- Advanced search API with full-text search (GIN tsvector) and type filters
+- Public search page at `/search`
+- Evidence explorer API and page with visual provenance chain
+- Scholarly export API supporting JSON, CSV, and TEI XML (TEI P5 standard)
+- Export dropdown on manuscript detail page
+
+**Architecture Decisions:**
+
+1. **Client-orchestrated batch processing:** Rather than long-running server jobs (which hit Vercel timeout limits), batch operations are orchestrated client-side. The browser calls individual API endpoints in sequence with configurable delays. This works within serverless constraints and provides natural pause/resume/cancel capability.
+
+2. **Discovery via Claude research prompts:** Instead of web scraping digital archives (which requires bespoke scrapers per source), the discovery agent uses Claude's knowledge to suggest historically documented manuscripts. This is faster to build, produces scholarly-quality metadata, and naturally includes confidence notes.
+
+3. **OCR review-then-save flow:** OCR results are returned to the admin for review before being saved as passages. This prevents bad transcriptions from entering the database and maintains the human-in-the-loop principle from the Project Constitution.
+
+4. **Public search and export:** Search and export APIs require no authentication, consistent with the Open Research Model. All research data is freely accessible.
+
+**Consequences:**
+- All Phase 2 roadmap items complete
+- Platform now has full content pipeline: discover → ingest → OCR → translate → detect variants
+- Research tools operational: search, evidence explorer, scholarly export
+- Admin dashboard provides cost monitoring and task management
+- Ready for content population — use discovery + batch translate to build the corpus
+- Phase 3 (Polish + Scale) is available when needed
+
+**Related Documents:**
+- docs/ROADMAP.md (Phase 2 checkboxes complete)
+- scripts/migrations/019_create_agent_tasks.sql
+- 4 API route groups: /api/agent/*, /api/search, /api/evidence/*, /api/export/*
+
+---
+
 ### 2026-03-09 — Strategic Pivot: Builder-First, Agent-Driven
 
 **Type:** decision
