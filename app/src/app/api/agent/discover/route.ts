@@ -127,16 +127,17 @@ export async function POST(request: NextRequest) {
     const titles = manuscripts.map((m) => m.title);
     const { data: existing } = await admin
       .from("manuscripts")
-      .select("title")
+      .select("id, title")
       .in("title", titles);
 
-    const existingTitles = new Set(
-      (existing ?? []).map((e: { title: string }) => e.title.toLowerCase())
+    const existingMap = new Map(
+      (existing ?? []).map((e: { id: string; title: string }) => [e.title.toLowerCase(), e.id])
     );
 
     const results = manuscripts.map((m) => ({
       ...m,
-      already_exists: existingTitles.has(m.title.toLowerCase()),
+      already_exists: existingMap.has(m.title.toLowerCase()),
+      existing_manuscript_id: existingMap.get(m.title.toLowerCase()) ?? null,
     }));
 
     // Track the discovery task
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
         task_type: "discover_manuscript",
         status: "completed",
         config: { query: query.trim(), max_results: maxResults },
-        result: { manuscripts_found: manuscripts.length, duplicates: existingTitles.size },
+        result: { manuscripts_found: manuscripts.length, duplicates: existingMap.size },
         tokens_input: tokensInput,
         tokens_output: tokensOutput,
         estimated_cost_usd: costUsd,
@@ -209,7 +210,7 @@ Guidelines:
 - Only suggest manuscripts that are historically documented and well-attested
 - Dates should be integers representing years (positive for CE, negative for BCE)
 - Include 1-5 key passages per manuscript
-- For original_text: provide actual text only if you are confident it is accurate; use null if uncertain
+- For original_text: ALWAYS provide the text in the original language/script if the passage is from a well-known, widely published manuscript (e.g., biblical manuscripts, Dead Sea Scrolls, major codices). Use standard scholarly editions as your source. Only use null for truly obscure or unpublished texts.
 - confidence_notes should clearly distinguish established facts from scholarly speculation
 - Prefer well-known, important manuscripts with good available scholarship`;
 }

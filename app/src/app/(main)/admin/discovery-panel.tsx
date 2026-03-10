@@ -22,6 +22,7 @@ interface DiscoveredManuscript {
   suggested_passages: DiscoveredPassage[];
   confidence_notes: string;
   already_exists: boolean;
+  existing_manuscript_id: string | null;
 }
 
 interface IngestResult {
@@ -29,6 +30,8 @@ interface IngestResult {
   success: boolean;
   manuscriptId?: string;
   passagesCreated?: number;
+  passagesSkipped?: number;
+  isNew?: boolean;
   error?: string;
 }
 
@@ -101,21 +104,28 @@ export function DiscoveryPanel() {
     });
 
     try {
+      const payload: Record<string, unknown> = {
+        passages: ms.suggested_passages,
+      };
+
+      if (ms.already_exists && ms.existing_manuscript_id) {
+        payload.existing_manuscript_id = ms.existing_manuscript_id;
+      } else {
+        payload.title = ms.title;
+        payload.original_language = ms.original_language;
+        payload.estimated_date_start = ms.estimated_date_start;
+        payload.estimated_date_end = ms.estimated_date_end;
+        payload.origin_location = ms.origin_location;
+        payload.archive_location = ms.archive_location;
+        payload.archive_identifier = ms.archive_identifier;
+        payload.description = ms.description;
+        payload.historical_context = ms.historical_context;
+      }
+
       const res = await fetch("/api/agent/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: ms.title,
-          original_language: ms.original_language,
-          estimated_date_start: ms.estimated_date_start,
-          estimated_date_end: ms.estimated_date_end,
-          origin_location: ms.origin_location,
-          archive_location: ms.archive_location,
-          archive_identifier: ms.archive_identifier,
-          description: ms.description,
-          historical_context: ms.historical_context,
-          passages: ms.suggested_passages,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -128,6 +138,8 @@ export function DiscoveryPanel() {
             success: true,
             manuscriptId: data.manuscript?.id,
             passagesCreated: data.passages_created,
+            passagesSkipped: data.passages_skipped,
+            isNew: data.is_new,
           });
           return next;
         });
@@ -157,7 +169,7 @@ export function DiscoveryPanel() {
 
   async function handleIngestAll() {
     const toIngest = manuscripts.filter(
-      (m) => !m.already_exists && !ingestResults.has(m.title)
+      (m) => !ingestResults.has(m.title)
     );
     for (const ms of toIngest) {
       await handleIngest(ms);
@@ -171,8 +183,8 @@ export function DiscoveryPanel() {
     return `c. ${fmt(start ?? end!)}`;
   }
 
-  const newManuscripts = manuscripts.filter(
-    (m) => !m.already_exists && !ingestResults.has(m.title)
+  const actionableManuscripts = manuscripts.filter(
+    (m) => !ingestResults.has(m.title)
   );
 
   return (
@@ -263,12 +275,12 @@ export function DiscoveryPanel() {
                 </span>
               )}
             </p>
-            {newManuscripts.length > 1 && (
+            {actionableManuscripts.length > 1 && (
               <button
                 onClick={handleIngestAll}
                 className="rounded-md border border-primary-300 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100 transition-colors"
               >
-                Add All New ({newManuscripts.length})
+                Add All ({actionableManuscripts.length})
               </button>
             )}
           </div>
@@ -334,7 +346,8 @@ export function DiscoveryPanel() {
                           href={`/manuscripts/${result.manuscriptId}`}
                           className="inline-block rounded-md bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700"
                         >
-                          Added ({result.passagesCreated} passages)
+                          {result.isNew ? "Added" : "Updated"} ({result.passagesCreated} new
+                          {result.passagesSkipped ? `, ${result.passagesSkipped} skipped` : ""})
                         </a>
                       ) : result?.error ? (
                         <span className="text-xs text-red-600">
@@ -344,16 +357,12 @@ export function DiscoveryPanel() {
                         <span className="text-xs text-gray-400">
                           Adding...
                         </span>
-                      ) : ms.already_exists ? (
-                        <span className="text-xs text-gray-400">
-                          Exists
-                        </span>
                       ) : (
                         <button
                           onClick={() => handleIngest(ms)}
                           className="rounded-md bg-primary-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-800 transition-colors"
                         >
-                          Add to Library
+                          {ms.already_exists ? "Add Passages" : "Add to Library"}
                         </button>
                       )}
                     </div>

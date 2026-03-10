@@ -56,72 +56,112 @@ export async function POST(request: NextRequest) {
       description,
       historical_context,
       passages,
+      existing_manuscript_id,
     } = body;
-
-    if (!title || typeof title !== "string") {
-      return NextResponse.json(
-        { error: "title is required" },
-        { status: 400 }
-      );
-    }
 
     const admin = createAdminClient();
 
-    // Check for duplicate
-    const { data: existing } = await admin
-      .from("manuscripts")
-      .select("id, title")
-      .ilike("title", title.trim())
-      .limit(1);
+    let manuscript: Manuscript;
+    let isNew = false;
 
-    if (existing && existing.length > 0) {
-      return NextResponse.json(
-        {
-          error: `Manuscript "${existing[0].title}" already exists`,
-          existing_id: existing[0].id,
-        },
-        { status: 409 }
-      );
+    if (existing_manuscript_id) {
+      // Add passages to an existing manuscript
+      const { data: existing } = await admin
+        .from("manuscripts")
+        .select("*")
+        .eq("id", existing_manuscript_id)
+        .single<Manuscript>();
+
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Existing manuscript not found" },
+          { status: 404 }
+        );
+      }
+
+      manuscript = existing;
+    } else {
+      // Create new manuscript
+      if (!title || typeof title !== "string") {
+        return NextResponse.json(
+          { error: "title is required" },
+          { status: 400 }
+        );
+      }
+
+      const { data: duplicate } = await admin
+        .from("manuscripts")
+        .select("id, title")
+        .ilike("title", title.trim())
+        .limit(1);
+
+      if (duplicate && duplicate.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Manuscript "${duplicate[0].title}" already exists`,
+            existing_id: duplicate[0].id,
+          },
+          { status: 409 }
+        );
+      }
+
+      const { data: created, error: mErr } = await admin
+        .from("manuscripts")
+        .insert({
+          title: title.trim(),
+          original_language: original_language ?? "grc",
+          estimated_date_start: estimated_date_start ?? null,
+          estimated_date_end: estimated_date_end ?? null,
+          origin_location: origin_location ?? null,
+          archive_location: archive_location ?? null,
+          archive_identifier: archive_identifier ?? null,
+          description: description ?? null,
+          historical_context: historical_context ?? null,
+          created_by: user.id,
+          metadata: { ingested_by: "discovery_agent" },
+        } as Record<string, unknown>)
+        .select()
+        .single<Manuscript>();
+
+      if (mErr || !created) {
+        console.error("Manuscript creation failed:", mErr);
+        return NextResponse.json(
+          { error: "Failed to create manuscript" },
+          { status: 500 }
+        );
+      }
+
+      manuscript = created;
+      isNew = true;
     }
 
-    // Create manuscript
-    const { data: manuscript, error: mErr } = await admin
-      .from("manuscripts")
-      .insert({
-        title: title.trim(),
-        original_language: original_language ?? "grc",
-        estimated_date_start: estimated_date_start ?? null,
-        estimated_date_end: estimated_date_end ?? null,
-        origin_location: origin_location ?? null,
-        archive_location: archive_location ?? null,
-        archive_identifier: archive_identifier ?? null,
-        description: description ?? null,
-        historical_context: historical_context ?? null,
-        created_by: user.id,
-        metadata: { ingested_by: "discovery_agent" },
-      } as Record<string, unknown>)
-      .select()
-      .single<Manuscript>();
+    // Get existing passage references to avoid duplicates
+    const { data: existingPassages } = await admin
+      .from("passages")
+      .select("reference")
+      .eq("manuscript_id", manuscript.id);
 
-    if (mErr || !manuscript) {
-      console.error("Manuscript creation failed:", mErr);
-      return NextResponse.json(
-        { error: "Failed to create manuscript" },
-        { status: 500 }
-      );
-    }
+    const existingRefs = new Set(
+      (existingPassages ?? []).map((p: { reference: string }) =>
+        p.reference.toLowerCase().trim()
+      )
+    );
 
-    // Create passages if provided
     let passagesCreated = 0;
     const typedPassages: IngestPassage[] = Array.isArray(passages) ? passages : [];
 
     if (typedPassages.length > 0) {
       const passageRows = typedPassages
-        .filter((p) => p.reference && typeof p.reference === "string")
+        .filter(
+          (p) =>
+            p.reference &&
+            typeof p.reference === "string" &&
+            !existingRefs.has(p.reference.toLowerCase().trim())
+        )
         .map((p, i) => ({
           manuscript_id: manuscript.id,
           reference: p.reference.trim(),
-          sequence_order: i + 1,
+          sequence_order: (existingRefs.size) + i + 1,
           original_text: p.original_text?.trim() || null,
           transcription_method: p.original_text ? "manual" : null,
           created_by: user.id,
@@ -139,17 +179,21 @@ export async function POST(request: NextRequest) {
           .returns<Pick<Passage, "id">[]>();
 
         if (pErr) {
-          console.error("Passage creation failed (manuscript still created):", pErr);
+          console.error("Passage creation failed:", pErr);
         } else {
           passagesCreated = createdPassages?.length ?? 0;
         }
       }
     }
 
+    const skipped = typedPassages.length - passagesCreated;
+
     return NextResponse.json({
       manuscript,
       passages_created: passagesCreated,
-    }, { status: 201 });
+      passages_skipped: skipped > 0 ? skipped : 0,
+      is_new: isNew,
+    }, { status: isNew ? 201 : 200 });
   } catch (err) {
     console.error("POST /api/agent/ingest error:", err);
     return NextResponse.json(

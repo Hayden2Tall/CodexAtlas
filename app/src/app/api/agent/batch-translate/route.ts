@@ -67,11 +67,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Also count passages that have no original text at all
+    let totalPassageCount = 0;
     if (allPassages.length === 0) {
+      const countQuery = admin
+        .from("passages")
+        .select("id", { count: "exact", head: true });
+      if (manuscriptId) countQuery.eq("manuscript_id", manuscriptId);
+      const { count } = await countQuery;
+      totalPassageCount = count ?? 0;
+
       return NextResponse.json({
         task: null,
         pending_passages: [],
-        message: "No passages with original text found",
+        message: totalPassageCount > 0
+          ? `Found ${totalPassageCount} passage(s) but none have original text yet. Add original text (manually or via OCR) before translating.`
+          : "No passages found",
       });
     }
 
