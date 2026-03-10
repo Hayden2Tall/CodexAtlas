@@ -205,6 +205,7 @@ CodexAtlas/
 │       │   ├── api/
 │       │   │   ├── agent/        —     AI agent endpoints (discover, import, translate, detect, OCR)
 │       │   │   ├── scripture/    —     Scripture browsing API (books index, chapter data)
+│       │   │   ├── summaries/    —     AI summary generation (passage, manuscript) (Phase 3.3)
 │       │   │   ├── stats/        —     Platform statistics API
 │       │   │   ├── search/       —     Search API
 │       │   │   ├── evidence/     —     Evidence API
@@ -216,7 +217,7 @@ CodexAtlas/
 │       │   ├── brand/            —   Logo components
 │       │   ├── layout/           —   Header, mobile nav
 │       │   ├── scripture/        —   PassageNavigator (Phase 3.1)
-│       │   └── ui/               —   Shared UI (badges, share button, cards)
+│       │   └── ui/               —   Shared UI (badges, share button, confidence explanation, summaries)
 │       └── lib/                  —   Supabase clients, types, utilities
 │           └── utils/            —     Text sources, book ordering, AI cost, helpers
 ├── agents/                       — Agent registry and definitions

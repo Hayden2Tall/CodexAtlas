@@ -29,7 +29,9 @@ Build an open research platform that serves two equally important purposes:
 
 **Phase 3.2: Variant System Enhancement — Complete.** Variant detection runs are versioned and tracked. Variants are browsable by book with significance filters and search. Attestation display shows majority/minority readings with manuscript dates. Bidirectional linking connects passages to variants across the translate page, variant detail, and chapter reading views.
 
-**Next: Phase 3.3 (AI Research Summaries).** AI-generated passage summaries, manuscript significance summaries, and confidence score explanations. See [Roadmap](docs/ROADMAP.md) for details.
+**Phase 3.3: AI Research Summaries — Complete.** AI-generated passage and manuscript summaries (cached, Haiku-powered). Confidence score explanations with improvement tips. "About This Passage" expandable sections in the chapter reading view. "Scholarly Significance" summaries on manuscript detail pages.
+
+**Next: Phase 3.4 (Interactive Visualizations).** Manuscript timeline, geographic provenance map (Leaflet), and textual family tree / stemma infrastructure. See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 

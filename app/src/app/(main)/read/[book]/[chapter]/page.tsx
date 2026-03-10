@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
+import { PassageSummary } from "@/components/scripture/passage-summary";
 import { ChapterNav } from "./chapter-nav";
 import { ShareButton } from "@/components/ui/share-button";
 
@@ -213,6 +215,10 @@ export default async function ChapterPage({ params }: PageProps) {
     variantsByRef.set(v.passage_reference, existing);
   }
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthenticated = !!user;
+
   if (!results || results.length === 0) {
     return (
       <div className="mx-auto max-w-3xl py-12 text-center">
@@ -330,6 +336,17 @@ export default async function ChapterPage({ params }: PageProps) {
                   {r.passage.original_text}
                 </pre>
               </details>
+
+              {/* Passage summary */}
+              <PassageSummary
+                passageId={r.passage.id}
+                cachedSummary={
+                  (r.passage.metadata as Record<string, unknown> | null)?.ai_summary
+                    ? ((r.passage.metadata as Record<string, unknown>).ai_summary as { summary: string; historical_context: string; significance: string; key_themes: string[] })
+                    : null
+                }
+                isAuthenticated={isAuthenticated}
+              />
 
               {/* Variant indicator + link to full translation page */}
               <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">

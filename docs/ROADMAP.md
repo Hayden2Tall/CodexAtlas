@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-10
-> **Status:** Phase 2 complete · Phase 3.1 complete · Phase 3.2 (Variant System Enhancement) complete · Entering Phase 3.3
+> **Status:** Phase 2 complete · Phase 3.1 complete · Phase 3.2 complete · Phase 3.3 (AI Research Summaries) complete · Entering Phase 3.4
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -241,11 +241,14 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] Bidirectional linking: translate page shows related variants, variant detail page shows source passages, chapter view shows variant badges
 - [x] Scholarly analysis panel on variant detail page with significance badge
 
-### 3.3 AI Research Summaries (Priority: Medium)
+### 3.3 AI Research Summaries (Priority: Medium) — Complete
 
-- [ ] Plain-language passage summaries (what does this text say and why does it matter)
-- [ ] Manuscript significance summaries (auto-generated from metadata + passage count + variant data)
-- [ ] Translation confidence explanations (why this score, what would improve it)
+- [x] Passage summary API (`/api/summaries/passage`) — Haiku-powered, cached in `passages.metadata.ai_summary`
+- [x] Manuscript summary API (`/api/summaries/manuscript`) — Haiku-powered, cached in `manuscripts.metadata.ai_summary`
+- [x] "About This Passage" expandable section in chapter reading view with generate button for authenticated users
+- [x] "Scholarly Significance" section on manuscript detail page with significance factors and traditions
+- [x] ConfidenceExplanation component in translation workspace — derives breakdown from version, evidence, and review data
+- [x] Improvement tips panel suggesting how to raise confidence scores
 
 ### 3.4 Interactive Visualizations (Priority: Medium)
 
@@ -314,7 +317,9 @@ Platform is polished, accessible, and ready for broader public and institutional
 | Variant versioning with detection run tracking | Complete | 3.2 |
 | Variant exploration UI with book grouping and filters | Complete | 3.2 |
 | Variant attestation and bidirectional passage linking | Complete | 3.2 |
-| Interactive manuscript visualizations | Phase 3 | 3 |
+| AI passage and manuscript summaries with caching | Complete | 3.3 |
+| Confidence score explanations with improvement tips | Complete | 3.3 |
+| Interactive manuscript visualizations | Phase 3.4 | 3 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |
 

@@ -12,6 +12,7 @@ import type {
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
 import { VersionIndicator } from "@/components/ui/version-indicator";
+import { ConfidenceExplanation } from "@/components/ui/confidence-explanation";
 import { VersionHistory } from "./version-history";
 import { EvidencePanel } from "./evidence-panel";
 import { ReviewSection } from "./review-section";
@@ -240,6 +241,15 @@ export function TranslationWorkspace({
         <EvidencePanel
           evidenceRecord={activeEvidence}
           version={activeVersion}
+        />
+      )}
+
+      {/* ── Confidence explanation ─────────────────────────────────── */}
+      {activeVersion && activeVersion.confidence_score != null && (
+        <ConfidenceExplanation
+          version={activeVersion}
+          evidenceRecord={activeEvidence ?? null}
+          reviewCount={reviews.filter((r) => r.translation_version_id === activeVersion.id).length}
         />
       )}
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Manuscript, Passage, ManuscriptImage } from "@/lib/types";
 import { formatManuscriptDate } from "@/lib/utils/dates";
 import { getLanguageName } from "@/lib/utils/languages";
+import { ManuscriptSummary } from "@/components/ui/manuscript-summary";
 
 type Tab = "overview" | "passages" | "images";
 
@@ -117,7 +118,7 @@ export function ManuscriptDetail({
 
       {/* Tab Content */}
       {activeTab === "overview" && (
-        <OverviewTab manuscript={manuscript} />
+        <OverviewTab manuscript={manuscript} isAuthenticated={isAuthenticated} />
       )}
       {activeTab === "passages" && (
         <PassagesTab
@@ -135,7 +136,12 @@ export function ManuscriptDetail({
   );
 }
 
-function OverviewTab({ manuscript }: { manuscript: Manuscript }) {
+function OverviewTab({ manuscript, isAuthenticated }: { manuscript: Manuscript; isAuthenticated: boolean }) {
+  const meta = (manuscript.metadata as Record<string, unknown>) ?? {};
+  const cachedSummary = meta.ai_summary
+    ? (meta.ai_summary as { summary: string; significance_factors: string[]; historical_period: string; related_traditions: string })
+    : null;
+
   const fields: { label: string; value: string | null }[] = [
     {
       label: "Date Range",
@@ -176,6 +182,12 @@ function OverviewTab({ manuscript }: { manuscript: Manuscript }) {
             </p>
           </section>
         )}
+
+        <ManuscriptSummary
+          manuscriptId={manuscript.id}
+          cachedSummary={cachedSummary}
+          isAuthenticated={isAuthenticated}
+        />
       </div>
 
       {/* Sidebar metadata */}

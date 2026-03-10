@@ -39,6 +39,71 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Phase 3.3: AI Research Summaries
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+With Phase 3.2 complete, the platform had robust variant detection and exploration. However, readers and researchers lacked contextual summaries — what does a passage mean, why does a manuscript matter, and why is a confidence score what it is. Phase 3.3 adds AI-generated summaries and data-driven explanations.
+
+**Key Deliverables:**
+
+1. **Passage Summary API (`/api/summaries/passage`):**
+   - POST endpoint generating plain-language passage summaries via Claude Haiku
+   - Returns summary, historical context, significance, and key themes
+   - Caches results in `passages.metadata.ai_summary` JSONB field
+   - Authenticated-only for generation (costs money); cached summaries served publicly
+   - Includes model, cost, and generation timestamp in cached data
+
+2. **Manuscript Summary API (`/api/summaries/manuscript`):**
+   - POST endpoint generating scholarly significance summaries
+   - Aggregates passage count, translation count, and variant reading count
+   - Returns summary, significance factors, historical period, and related traditions
+   - Caches in `manuscripts.metadata.ai_summary`
+
+3. **ConfidenceExplanation Component:**
+   - Expandable "Why this confidence score?" panel on translation workspace
+   - Derives factors from existing data: translation method, AI model, source count, version number, review count
+   - Color-coded impact indicators (positive/neutral/negative)
+   - Improvement tips suggest concrete actions to raise confidence
+
+4. **Passage Summary UI (Chapter Reading View):**
+   - "About This Passage" expandable section per manuscript article
+   - Shows cached AI summary with context, significance, and theme tags
+   - Authenticated users see "Generate AI summary" button if none exists
+   - AI Summary badge per UX guidelines
+
+5. **Manuscript Significance UI (Manuscript Detail):**
+   - "Scholarly Significance" section in overview tab
+   - Displays cached summary, significance factors as bullet list, period and traditions
+   - "Generate Significance Summary" button for authenticated users
+
+**Files Changed:**
+- `app/src/app/api/summaries/passage/route.ts` (created)
+- `app/src/app/api/summaries/manuscript/route.ts` (created)
+- `app/src/components/ui/confidence-explanation.tsx` (created)
+- `app/src/components/ui/manuscript-summary.tsx` (created)
+- `app/src/components/scripture/passage-summary.tsx` (created)
+- `app/src/app/(main)/manuscripts/[id]/manuscript-detail.tsx` (ManuscriptSummary integration)
+- `app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/translation-workspace.tsx` (ConfidenceExplanation integration)
+- `app/src/app/(main)/read/[book]/[chapter]/page.tsx` (PassageSummary integration)
+
+**Rationale:**
+Summaries make the platform accessible to non-specialists. Confidence explanations build trust in AI translations. Caching prevents repeated AI costs. Using existing metadata fields (JSONB) avoids new migrations.
+
+**Consequences:**
+- No new database migration needed — uses existing JSONB metadata fields
+- AI costs are incurred only when an authenticated user explicitly clicks "Generate"
+- Cached summaries are served to all users including unauthenticated readers
+- Haiku model keeps per-summary cost under $0.01
+
+**Related Documents:**
+- [ROADMAP.md](./ROADMAP.md) — Phase 3.3 items marked complete
+
+---
+
 ### 2026-03-10 — Phase 3.2: Variant System Enhancement
 
 **Type:** milestone
