@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Manuscript, Passage, ManuscriptImage } from "@/lib/types";
 import { formatManuscriptDate } from "@/lib/utils/dates";
@@ -59,27 +59,30 @@ export function ManuscriptDetail({
             <span className="text-sm text-gray-500">{dateStr}</span>
           </div>
         </div>
-        {isAuthenticated && (
-          <Link
-            href={`/manuscripts/${manuscript.id}/passages/new`}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-800"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
+        <div className="flex items-center gap-2">
+          <ExportMenu manuscriptId={manuscript.id} />
+          {isAuthenticated && (
+            <Link
+              href={`/manuscripts/${manuscript.id}/passages/new`}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-800"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            Add Passage
-          </Link>
-        )}
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+              Add Passage
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -344,6 +347,69 @@ function ImagesTab({ images }: { images: ManuscriptImage[] }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ExportMenu({ manuscriptId }: { manuscriptId: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const formats = [
+    { key: "json", label: "JSON", desc: "Full structured data" },
+    { key: "csv", label: "CSV", desc: "Spreadsheet-compatible" },
+    { key: "tei", label: "TEI XML", desc: "Scholarly standard" },
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+          />
+        </svg>
+        Export
+      </button>
+      {open && (
+        <div className="absolute right-0 z-10 mt-1 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          {formats.map((f) => (
+            <a
+              key={f.key}
+              href={`/api/export/${manuscriptId}?format=${f.key}`}
+              onClick={() => setOpen(false)}
+              className="flex flex-col px-4 py-2 hover:bg-gray-50"
+            >
+              <span className="text-sm font-medium text-gray-900">
+                {f.label}
+              </span>
+              <span className="text-xs text-gray-500">{f.desc}</span>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
