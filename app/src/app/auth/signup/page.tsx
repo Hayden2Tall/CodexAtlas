@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Logo } from "@/components/brand/logo";
 import { SignupForm } from "./signup-form";
 
 export const metadata: Metadata = {
@@ -8,15 +9,18 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-4">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-[400px]">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-primary-700">
-            CodexAtlas
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Ancient manuscripts, modern insight
-          </p>
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <Logo size={48} />
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-primary-700 font-serif">
+              CodexAtlas
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Ancient manuscripts, modern insight
+            </p>
+          </div>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

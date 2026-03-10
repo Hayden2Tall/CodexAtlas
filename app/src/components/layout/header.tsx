@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MobileNav } from "./mobile-nav";
+import { Logo } from "@/components/brand/logo";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
@@ -88,11 +89,12 @@ export function Header() {
               </svg>
             </button>
 
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2.5">
+              <Logo size={30} />
               <span className="font-serif text-xl font-bold text-primary-700">
                 CodexAtlas
               </span>
-              <span className="rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-700">
+              <span className="hidden sm:inline rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-700">
                 Alpha
               </span>
             </Link>

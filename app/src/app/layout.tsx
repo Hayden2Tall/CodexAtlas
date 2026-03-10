@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description:
     "AI-assisted research platform for ancient religious manuscripts",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
   openGraph: {
     title: "CodexAtlas",
     description:
@@ -18,7 +22,8 @@ export const viewport: Viewport = {
   themeColor: "#1a365d",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

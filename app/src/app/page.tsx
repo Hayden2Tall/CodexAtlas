@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
+import { Logo } from "@/components/brand/logo";
 
 export default function Home() {
   return (
@@ -7,7 +8,8 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
-        <section className="mx-auto max-w-4xl px-4 py-24 text-center">
+        <section className="mx-auto max-w-4xl px-4 py-20 md:py-28 text-center">
+          <Logo size={56} className="mx-auto mb-6" />
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 font-serif leading-tight">
             Ancient Manuscripts,
             <br />
@@ -26,10 +28,10 @@ export default function Home() {
               Explore Manuscripts
             </Link>
             <Link
-              href="/about"
+              href="/search"
               className="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:border-gray-400 transition-colors"
             >
-              How It Works
+              Search the Corpus
             </Link>
           </div>
         </section>
@@ -38,8 +40,10 @@ export default function Home() {
           <div className="mx-auto max-w-5xl px-4 py-16">
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
-                <div className="w-12 h-12 bg-primary-100 text-primary-700 rounded-xl flex items-center justify-center mx-auto text-xl font-bold">
-                  T
+                <div className="w-12 h-12 bg-primary-100 text-primary-700 rounded-xl flex items-center justify-center mx-auto">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" />
+                  </svg>
                 </div>
                 <h3 className="mt-4 font-semibold text-gray-900">
                   Transparent Translations
@@ -50,8 +54,10 @@ export default function Home() {
                 </p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-12 bg-secondary-100 text-secondary-700 rounded-xl flex items-center justify-center mx-auto text-xl font-bold">
-                  E
+                <div className="w-12 h-12 bg-secondary-100 text-secondary-700 rounded-xl flex items-center justify-center mx-auto">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.753a4.5 4.5 0 00-6.364-6.364L4.5 8.88a4.5 4.5 0 001.242 7.244" />
+                  </svg>
                 </div>
                 <h3 className="mt-4 font-semibold text-gray-900">
                   Evidence-Based
@@ -62,8 +68,10 @@ export default function Home() {
                 </p>
               </div>
               <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center mx-auto text-xl font-bold">
-                  V
+                <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center mx-auto">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
                 <h3 className="mt-4 font-semibold text-gray-900">
                   Version History
@@ -83,7 +91,7 @@ export default function Home() {
         <p className="mt-1">
           Open source ·{" "}
           <a
-            href="https://github.com/codexatlas"
+            href="https://github.com/Hayden2Tall/CodexAtlas"
             className="underline hover:text-gray-700"
           >
             GitHub
