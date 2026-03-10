@@ -6,6 +6,29 @@
  */
 
 // ---------------------------------------------------------------------------
+// Source chain reasoning
+// ---------------------------------------------------------------------------
+
+export interface SourceChainStep {
+  step: number;
+  source: string;
+  attempted: boolean;
+  result: "success" | "skipped" | "no_data" | "wrong_script" | "not_applicable";
+  reason: string;
+  durationMs?: number;
+}
+
+export const SOURCE_LABELS: Record<string, string> = {
+  "sinaiticus-project": "Codex Sinaiticus Project (manuscript-specific XML transcription)",
+  ntvmr: "INTF NTVMR (manuscript-specific scholarly transcription, NT only)",
+  dss: "ETCBC Dead Sea Scrolls (manuscript-specific OT fragments)",
+  sblgnt: "SBLGNT (NT Greek critical edition from GitHub)",
+  "bible-api": "bolls.life (standard edition: LXX / TR / WLC)",
+  "leningrad-wlc": "Westminster Leningrad Codex (standard edition recognized as manuscript-specific)",
+  ai: "AI Models (Claude Haiku → Sonnet)",
+};
+
+// ---------------------------------------------------------------------------
 // Book / Chapter parsing
 // ---------------------------------------------------------------------------
 

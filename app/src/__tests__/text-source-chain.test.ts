@@ -4,6 +4,7 @@ import {
   NTVMR_MANUSCRIPTS,
   NT_SBL_BOOKS,
   LENINGRAD_TITLES,
+  SOURCE_LABELS,
   parseBookAndChapter,
   textHasCorrectScript,
   parseNtvmrHtml,
@@ -250,5 +251,28 @@ describe("LENINGRAD_TITLES", () => {
   it("does not match unrelated titles", () => {
     expect(LENINGRAD_TITLES.has("codex sinaiticus")).toBe(false);
     expect(LENINGRAD_TITLES.has("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SOURCE_LABELS
+// ---------------------------------------------------------------------------
+describe("SOURCE_LABELS", () => {
+  it("has labels for all source types", () => {
+    const expectedSources = [
+      "sinaiticus-project", "ntvmr", "dss", "sblgnt",
+      "bible-api", "leningrad-wlc", "ai",
+    ];
+    for (const source of expectedSources) {
+      expect(SOURCE_LABELS[source]).toBeDefined();
+      expect(SOURCE_LABELS[source].length).toBeGreaterThan(10);
+    }
+  });
+
+  it("distinguishes manuscript-specific from edition sources", () => {
+    expect(SOURCE_LABELS["ntvmr"]).toContain("manuscript-specific");
+    expect(SOURCE_LABELS["sinaiticus-project"]).toContain("manuscript-specific");
+    expect(SOURCE_LABELS["bible-api"]).toContain("standard edition");
+    expect(SOURCE_LABELS["ai"]).toContain("AI");
   });
 });

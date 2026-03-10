@@ -10,6 +10,14 @@ interface TocSection {
   sequence_order?: number;
 }
 
+interface SourceChainStep {
+  step: number;
+  source: string;
+  result: string;
+  reason: string;
+  ms?: number;
+}
+
 interface SectionResult {
   reference: string;
   status: "pending" | "importing" | "done" | "skipped" | "failed";
@@ -17,6 +25,9 @@ interface SectionResult {
   cost?: number;
   error?: string;
   reason?: string;
+  sourceUsed?: string;
+  sourceLabel?: string;
+  sourceChain?: SourceChainStep[];
 }
 
 type ImportPhase = "idle" | "loading-toc" | "selecting" | "importing" | "complete";
@@ -35,6 +46,7 @@ export function FullImportPanel({ manuscripts }: Props) {
   const [estimatedImportCost, setEstimatedImportCost] = useState(0);
   const [totalImportCost, setTotalImportCost] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
+  const [expandedChain, setExpandedChain] = useState<string | null>(null);
   const cancelRef = useRef(false);
 
   const ms = manuscripts.find((m) => m.id === selectedMs);
@@ -205,6 +217,9 @@ export function FullImportPanel({ manuscripts }: Props) {
                 status: "done",
                 textLength: data.text_length,
                 cost,
+                sourceUsed: data.source_used,
+                sourceLabel: data.source_label,
+                sourceChain: data.source_chain,
               });
               return next;
             });
@@ -373,71 +388,135 @@ export function FullImportPanel({ manuscripts }: Props) {
               {sections.map((s) => {
                 const result = results.get(s.reference);
                 const isChecked = selected.has(s.reference);
+                const isExpanded = expandedChain === s.reference;
                 return (
-                  <label
-                    key={s.reference}
-                    className={`flex items-center gap-3 border-b border-gray-50 px-3 py-2 text-sm ${
-                      s.already_imported
-                        ? "bg-gray-50 text-gray-400"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleSection(s.reference)}
-                      disabled={
-                        s.already_imported ||
-                        phase === "importing" ||
-                        phase === "complete"
-                      }
-                      className="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800">
-                        {s.reference}
-                      </span>
-                      {s.description && (
-                        <span className="ml-2 text-xs text-gray-500 truncate">
-                          — {s.description}
+                  <div key={s.reference} className="border-b border-gray-50">
+                    <label
+                      className={`flex items-center gap-3 px-3 py-2 text-sm ${
+                        s.already_imported
+                          ? "bg-gray-50 text-gray-400"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSection(s.reference)}
+                        disabled={
+                          s.already_imported ||
+                          phase === "importing" ||
+                          phase === "complete"
+                        }
+                        className="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-gray-800">
+                          {s.reference}
                         </span>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      {s.already_imported ? (
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400">
-                          Imported
-                        </span>
-                      ) : result?.status === "done" ? (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                          {result.textLength?.toLocaleString()} chars
-                        </span>
-                      ) : result?.status === "importing" ? (
-                        <span className="flex items-center gap-1 text-xs text-primary-600">
-                          <span className="h-3 w-3 animate-spin rounded-full border border-primary-300 border-t-primary-700" />
-                          Importing
-                        </span>
-                      ) : result?.status === "skipped" ? (
-                        <span
-                          className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600 cursor-help max-w-[220px] truncate"
-                          title={result.reason ?? "Skipped"}
-                        >
-                          {result.reason ?? "Skipped"}
-                        </span>
-                      ) : result?.status === "failed" ? (
-                        <span
-                          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 cursor-help max-w-[200px] truncate"
-                          title={result.error}
-                        >
-                          {result.error ?? "Failed"}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">
-                          ~{s.estimated_verses} verses
-                        </span>
-                      )}
-                    </div>
-                  </label>
+                        {s.description && (
+                          <span className="ml-2 text-xs text-gray-500 truncate">
+                            — {s.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        {s.already_imported ? (
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400">
+                            Imported
+                          </span>
+                        ) : result?.status === "done" ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setExpandedChain(isExpanded ? null : s.reference);
+                            }}
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              result.sourceUsed && ["sinaiticus-project", "ntvmr", "dss", "leningrad-wlc"].includes(result.sourceUsed)
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : result.sourceUsed === "ai"
+                                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            }`}
+                            title="Click to see source chain reasoning"
+                          >
+                            {result.sourceUsed === "bible-api"
+                              ? `Std. Edition`
+                              : result.sourceUsed === "ntvmr"
+                                ? "NTVMR"
+                                : result.sourceUsed === "sinaiticus-project"
+                                  ? "Sinaiticus"
+                                  : result.sourceUsed === "dss"
+                                    ? "DSS"
+                                    : result.sourceUsed === "sblgnt"
+                                      ? "SBLGNT"
+                                      : result.sourceUsed === "leningrad-wlc"
+                                        ? "Leningrad"
+                                        : result.sourceUsed === "ai"
+                                          ? "AI"
+                                          : "Done"}
+                            {" "}({result.textLength?.toLocaleString()} chars)
+                            <span className="ml-1">{isExpanded ? "▴" : "▾"}</span>
+                          </button>
+                        ) : result?.status === "importing" ? (
+                          <span className="flex items-center gap-1 text-xs text-primary-600">
+                            <span className="h-3 w-3 animate-spin rounded-full border border-primary-300 border-t-primary-700" />
+                            {result.reason ?? "Importing"}
+                          </span>
+                        ) : result?.status === "skipped" ? (
+                          <span
+                            className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600 cursor-help max-w-[220px] truncate"
+                            title={result.reason ?? "Skipped"}
+                          >
+                            {result.reason ?? "Skipped"}
+                          </span>
+                        ) : result?.status === "failed" ? (
+                          <span
+                            className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 cursor-help max-w-[200px] truncate"
+                            title={result.error}
+                          >
+                            {result.error ?? "Failed"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            ~{s.estimated_verses} verses
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                    {isExpanded && result?.sourceChain && (
+                      <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5 text-xs">
+                        <div className="font-medium text-gray-600 mb-1.5">
+                          Source chain for {s.reference}:
+                        </div>
+                        <div className="space-y-1">
+                          {result.sourceChain.map((step) => (
+                            <div key={step.step} className="flex items-start gap-2">
+                              <span className={`inline-block w-3.5 text-center font-mono ${
+                                step.result === "success" ? "text-green-600" :
+                                step.result === "not_applicable" ? "text-gray-400" :
+                                "text-red-400"
+                              }`}>
+                                {step.result === "success" ? "✓" : step.result === "not_applicable" ? "—" : "✗"}
+                              </span>
+                              <span className="font-medium text-gray-700 min-w-[110px]">
+                                {step.source}
+                              </span>
+                              <span className="text-gray-500 flex-1">
+                                {step.reason}
+                                {step.ms ? ` (${step.ms}ms)` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {result.sourceLabel && (
+                          <div className="mt-2 pt-1.5 border-t border-gray-200 text-gray-500">
+                            <span className="font-medium">Used:</span> {result.sourceLabel}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

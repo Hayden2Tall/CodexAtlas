@@ -39,6 +39,48 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Transparent Source Chain Reasoning in Import Pipeline
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+During testing, importing Psalms 77 for Codex Sinaiticus completed quickly but used the bolls.life LXX standard edition (Step 5) instead of the Codex Sinaiticus Project source (Step 1). The chain was working correctly — the Sinaiticus preprocessing data hasn't been populated yet, and Psalms is an OT book so NTVMR/SBLGNT (NT-only) were correctly skipped — but the user had no visibility into what was tried, why each step passed or failed, or how the final source was selected. This violated the platform's transparency principle.
+
+**Decision:**
+Added full source chain reasoning to the import pipeline:
+
+1. **`SourceChainStep` type** in `text-sources.ts`: Tracks step number, source name, whether it was attempted, result (`success`, `skipped`, `no_data`, `wrong_script`, `not_applicable`), human-readable reason, and duration in ms.
+
+2. **Chain tracking in `section-text/route.ts`**: Each of the 6 steps now records a reasoning entry explaining exactly what happened — e.g., "Manuscript 'Codex Sinaiticus' is not an NT book — NTVMR is NT-only" or "No data in manuscript_source_texts table — run scripts/preprocess-sinaiticus.mjs to populate."
+
+3. **API response**: `source_chain` array, `source_used` type, and `source_label` human-readable description returned with every successful import.
+
+4. **Passage metadata**: Chain summary stored in `metadata.source_chain` on each passage for permanent traceability.
+
+5. **Full-import panel UI**: Each imported section shows a color-coded badge (green = manuscript-specific, blue = standard edition, amber = AI). Clicking the badge expands a detailed chain view showing every step, its result, reasoning, and timing.
+
+6. **Server-side logging**: Console output includes compact chain summary for each import: `1:sinaiticus-project=no_data, 2:ntvmr=not_applicable, 3:dss=no_data, 4:sblgnt=not_applicable, 5:bible-api=success`.
+
+**Rationale:**
+Transparency is a core principle (Constitution Principle 1). Users need to understand not just *what* source was used, but *why* higher-priority sources were skipped. This also serves as a diagnostic tool: if the Sinaiticus Project source shows "no_data," the user knows they need to run the preprocessing script. The chain data in passage metadata creates a permanent audit trail.
+
+**Consequences:**
+- Every import now carries full source provenance
+- Users can immediately diagnose why a lower-priority source was used
+- Chain data persists in passage metadata for long-term traceability
+- Added ~500 bytes per passage in metadata (acceptable trade-off)
+- 39 unit tests pass (2 new for SOURCE_LABELS)
+
+**Related Documents:**
+- app/src/lib/utils/text-sources.ts (SourceChainStep, SOURCE_LABELS)
+- app/src/app/api/agent/discover/section-text/route.ts (chain tracking)
+- app/src/app/(main)/admin/full-import-panel.tsx (chain UI)
+- app/src/__tests__/text-source-chain.test.ts (SOURCE_LABELS tests)
+
+---
+
 ### 2026-03-10 — Test Infrastructure and Development Process Compliance
 
 **Type:** milestone
