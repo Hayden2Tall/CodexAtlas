@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import type { UserRole, User, Passage, Manuscript, EvidenceRecord, Translation, TranslationVersion } from "@/lib/types";
 
+export const maxDuration = 60;
+
 const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "editor", "admin"];
 
 export async function POST(request: NextRequest) {

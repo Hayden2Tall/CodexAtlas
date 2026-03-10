@@ -10,6 +10,8 @@ import type {
   Passage,
 } from "@/lib/types";
 
+export const maxDuration = 60;
+
 const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
 
 async function requireAdmin(
