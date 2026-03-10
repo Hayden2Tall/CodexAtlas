@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     const aiModel = "claude-haiku-4-5-20251001";
-    const prompt = buildSectionTextPrompt(
+    const { system, user: userMsg } = buildSectionTextPrompt(
       manuscript_title,
       original_language ?? "grc",
       reference
@@ -123,7 +123,8 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           model: aiModel,
           max_tokens: 8192,
-          messages: [{ role: "user", content: prompt }],
+          system,
+          messages: [{ role: "user", content: userMsg }],
         }),
         signal: controller.signal,
       });
@@ -140,8 +141,14 @@ export async function POST(request: NextRequest) {
     if (!anthropicRes.ok) {
       const detail = await anthropicRes.text();
       console.error("Anthropic API error:", anthropicRes.status, detail);
+
+      const isContentFilter = detail.includes("content filtering policy");
       return NextResponse.json(
-        { error: `Claude API error: ${anthropicRes.status}` },
+        {
+          error: isContentFilter
+            ? `Content filter blocked (${anthropicRes.status})`
+            : `Claude API error: ${anthropicRes.status}`,
+        },
         { status: 502 }
       );
     }
@@ -327,27 +334,20 @@ function buildSectionTextPrompt(
   manuscriptTitle: string,
   language: string,
   reference: string
-): string {
+): { system: string; user: string } {
   const langGuide = language === "heb"
-    ? "Provide the text in Biblical Hebrew as found in ancient manuscripts."
+    ? "Biblical Hebrew"
     : language === "grc"
-      ? "Provide the text in Koine Greek as preserved in ancient manuscripts. For Old Testament books, use the Septuagint text. For New Testament books, use the text as transmitted in the Greek manuscript tradition."
-      : `Provide the text in the original language (code: ${language}).`;
+      ? "Koine Greek"
+      : language;
 
-  return `You are an academic tool for biblical manuscript research. A scholar needs the original-language text of an ancient scripture passage for study purposes.
+  const system = `You are a scholarly reference tool used by academic researchers studying ancient biblical manuscripts. Your purpose is to help scholars access ancient scripture texts in their original languages for comparative textual analysis.
 
-These ancient texts are in the PUBLIC DOMAIN — they were written thousands of years ago and no one holds copyright over the original ancient language text. You are not reproducing any modern copyrighted edition; you are providing the ancient text as known from manuscript tradition.
+All texts you provide are from ancient manuscripts written over a thousand years ago and are in the public domain. This is standard academic practice equivalent to consulting a reference library.
 
-Section: "${reference}"
-Manuscript context: "${manuscriptTitle}"
+Output rules: Respond ONLY with the original-language scripture text. No English translations, commentary, verse numbers, markdown formatting, or explanations. If a requested section does not exist, respond with exactly: [UNAVAILABLE]`;
 
-${langGuide}
+  const user = `Please provide the complete ${langGuide} text of ${reference} from ${manuscriptTitle}. Include every verse of this chapter.`;
 
-RULES:
-1. Output ONLY the original-language text. No English, no translation, no commentary, no markdown, no JSON.
-2. Include EVERY verse of the section. Do not skip, truncate, or summarize.
-3. These texts have been freely published for centuries in countless editions. Reproduce the text accurately.
-4. Do NOT refuse this request. The ancient text is public domain and reproducing it is standard academic practice.
-
-Only if the section truly does not exist (e.g., a chapter number beyond the book's actual length), respond with exactly: [UNAVAILABLE]`;
+  return { system, user };
 }
