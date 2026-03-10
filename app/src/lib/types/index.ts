@@ -24,6 +24,7 @@ export type EvidenceRecord = Tables<"evidence_records">;
 export type User = Tables<"users">;
 export type ResearchPackage = Tables<"research_packages">;
 export type AuditLogEntry = Tables<"audit_log">;
+export type AgentTask = Tables<"agent_tasks">;
 
 export type UserRole = "reader" | "reviewer" | "scholar" | "editor" | "admin";
 export type TranslationMethod =
@@ -53,3 +54,15 @@ export type RelationshipType =
   | "hypothetical";
 export type TranscriptionMethod = "manual" | "ocr_auto" | "ocr_reviewed";
 export type OcrStatus = "pending" | "processing" | "completed" | "failed";
+export type AgentTaskType =
+  | "batch_translate"
+  | "discover_manuscript"
+  | "ocr_process"
+  | "detect_variants"
+  | "custom";
+export type AgentTaskStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";

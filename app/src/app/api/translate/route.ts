@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import type { UserRole, User, Passage, Manuscript, EvidenceRecord, Translation, TranslationVersion } from "@/lib/types";
 
 const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "editor", "admin"];
@@ -121,6 +122,10 @@ export async function POST(request: NextRequest) {
 
     const aiResult = await anthropicRes.json();
     const rawContent: string | undefined = aiResult.content?.[0]?.text;
+
+    const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
+    const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
+    const costUsd = estimateCostUsd(aiModel, tokensInput, tokensOutput);
 
     if (!rawContent) {
       return NextResponse.json(
@@ -250,6 +255,12 @@ export async function POST(request: NextRequest) {
       translation: { ...translation, current_version_id: version.id },
       version,
       evidence_record: evidenceRecord,
+      usage: {
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
+        estimated_cost_usd: costUsd,
+        ai_model: aiModel,
+      },
     });
   } catch (err) {
     console.error("Translation pipeline error:", err);

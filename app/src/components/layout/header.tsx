@@ -9,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
   { href: "/manuscripts", label: "Manuscripts" },
+  { href: "/admin", label: "Admin" },
 ] as const;
 
 export function Header() {

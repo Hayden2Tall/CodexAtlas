@@ -535,6 +535,73 @@ export interface Database {
         Relationships: [];
       };
 
+      agent_tasks: {
+        Row: {
+          id: string;
+          task_type: string;
+          status: string;
+          priority: number;
+          config: Json;
+          result: Json | null;
+          error_message: string | null;
+          tokens_input: number;
+          tokens_output: number;
+          estimated_cost_usd: number;
+          ai_model: string | null;
+          total_items: number | null;
+          completed_items: number;
+          failed_items: number;
+          created_by: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          task_type: string;
+          status?: string;
+          priority?: number;
+          config?: Json;
+          result?: Json | null;
+          error_message?: string | null;
+          tokens_input?: number;
+          tokens_output?: number;
+          estimated_cost_usd?: number;
+          ai_model?: string | null;
+          total_items?: number | null;
+          completed_items?: number;
+          failed_items?: number;
+          created_by?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          task_type?: string;
+          status?: string;
+          priority?: number;
+          config?: Json;
+          result?: Json | null;
+          error_message?: string | null;
+          tokens_input?: number;
+          tokens_output?: number;
+          estimated_cost_usd?: number;
+          ai_model?: string | null;
+          total_items?: number | null;
+          completed_items?: number;
+          failed_items?: number;
+          created_by?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+
       audit_log: {
         Row: {
           id: string;
