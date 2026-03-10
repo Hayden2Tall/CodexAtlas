@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MapView } from "./map-view";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Geographic Provenance Map — CodexAtlas",
   description: "Explore where manuscripts were created and where they are archived today.",

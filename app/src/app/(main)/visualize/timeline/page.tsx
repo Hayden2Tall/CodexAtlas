@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TimelineView } from "./timeline-view";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Manuscript Timeline — CodexAtlas",
   description: "Explore manuscripts plotted across history by estimated date of creation.",

@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StemmaView } from "./stemma-view";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Textual Family Tree — CodexAtlas",
   description: "Explore manuscript lineage relationships and textual transmission history.",

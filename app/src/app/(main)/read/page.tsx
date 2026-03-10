@@ -7,6 +7,8 @@ import {
   parseReference,
 } from "@/lib/utils/book-order";
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Scripture Browser — CodexAtlas",
   description:

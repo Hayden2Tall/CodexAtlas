@@ -3,6 +3,8 @@ import { Header } from "@/components/layout/header";
 import { Logo } from "@/components/brand/logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const revalidate = 300;
+
 interface StatsData {
   manuscripts: number;
   passages: number;
