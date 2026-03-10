@@ -15,6 +15,7 @@ import { VersionIndicator } from "@/components/ui/version-indicator";
 import { VersionHistory } from "./version-history";
 import { EvidencePanel } from "./evidence-panel";
 import { ReviewSection } from "./review-section";
+import { TextProvenance } from "./text-provenance";
 
 interface ReviewWithReviewer extends Review {
   users?: { display_name: string | null } | null;
@@ -184,6 +185,7 @@ export function TranslationWorkspace({
               {passage.original_text}
             </pre>
           </div>
+          <TextProvenance passage={passage} />
         </div>
 
         {/* Translation output */}
