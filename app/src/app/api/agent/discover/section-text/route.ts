@@ -329,23 +329,25 @@ function buildSectionTextPrompt(
   reference: string
 ): string {
   const langGuide = language === "heb"
-    ? "Provide the text in Biblical Hebrew (BHS/Westminster Leningrad Codex)."
+    ? "Provide the text in Biblical Hebrew as found in ancient manuscripts."
     : language === "grc"
-      ? "Provide the text in Koine Greek. For Old Testament / Septuagint books use the LXX (Rahlfs-Hanhart). For New Testament books use the standard critical text (NA28/UBS5)."
+      ? "Provide the text in Koine Greek as preserved in ancient manuscripts. For Old Testament books, use the Septuagint text. For New Testament books, use the text as transmitted in the Greek manuscript tradition."
       : `Provide the text in the original language (code: ${language}).`;
 
-  return `You are a biblical text specialist. Your task is to reproduce the COMPLETE original-language text of a scripture passage.
+  return `You are an academic tool for biblical manuscript research. A scholar needs the original-language text of an ancient scripture passage for study purposes.
+
+These ancient texts are in the PUBLIC DOMAIN — they were written thousands of years ago and no one holds copyright over the original ancient language text. You are not reproducing any modern copyrighted edition; you are providing the ancient text as known from manuscript tradition.
 
 Section: "${reference}"
-Context: This passage belongs to "${manuscriptTitle}".
+Manuscript context: "${manuscriptTitle}"
 
 ${langGuide}
 
-CRITICAL RULES:
-1. Output ONLY the original-language text. No English, no translation, no verse labels, no commentary, no markdown, no JSON.
+RULES:
+1. Output ONLY the original-language text. No English, no translation, no commentary, no markdown, no JSON.
 2. Include EVERY verse of the section. Do not skip, truncate, or summarize.
-3. Use the standard critical edition text. Minor manuscript-specific variant readings are acceptable but not required.
-4. You know these texts — they are among the most published works in human history. Reproduce them accurately.
+3. These texts have been freely published for centuries in countless editions. Reproduce the text accurately.
+4. Do NOT refuse this request. The ancient text is public domain and reproducing it is standard academic practice.
 
 Only if the section truly does not exist (e.g., a chapter number beyond the book's actual length), respond with exactly: [UNAVAILABLE]`;
 }
