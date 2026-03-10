@@ -204,7 +204,7 @@ function OverviewTab({ manuscript }: { manuscript: Manuscript }) {
 }
 
 function PassagesTab({
-  passages,
+  passages: initialPassages,
   manuscriptId,
   expandedPassage,
   onToggle,
@@ -216,6 +216,63 @@ function PassagesTab({
   onToggle: (id: string) => void;
   isAuthenticated: boolean;
 }) {
+  const [passages, setPassages] = useState(initialPassages);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editRef, setEditRef] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  function startEdit(passage: Passage) {
+    setEditingId(passage.id);
+    setEditText(passage.original_text ?? "");
+    setEditRef(passage.reference);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditText("");
+    setEditRef("");
+  }
+
+  async function saveEdit(passageId: string) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/passages/${passageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          original_text: editText,
+          reference: editRef,
+        }),
+      });
+      if (res.ok) {
+        const { passage: updated } = await res.json();
+        setPassages((prev) =>
+          prev.map((p) => (p.id === passageId ? { ...p, ...updated } : p))
+        );
+        cancelEdit();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deletePassage(passageId: string) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/passages/${passageId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setPassages((prev) => prev.filter((p) => p.id !== passageId));
+        setDeleteConfirm(null);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (passages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
@@ -238,6 +295,7 @@ function PassagesTab({
     <div className="space-y-3">
       {passages.map((passage) => {
         const isExpanded = expandedPassage === passage.id;
+        const isEditing = editingId === passage.id;
         return (
           <div
             key={passage.id}
@@ -261,6 +319,11 @@ function PassagesTab({
                     {passage.transcription_method}
                   </span>
                 )}
+                {!passage.original_text && (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-600">
+                    No text
+                  </span>
+                )}
               </div>
               <svg
                 className={`h-5 w-5 text-gray-400 transition-transform ${
@@ -280,23 +343,104 @@ function PassagesTab({
             </button>
             {isExpanded && (
               <div className="border-t border-gray-100 px-5 py-4">
-                {passage.original_text ? (
-                  <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-800">
-                    {passage.original_text}
-                  </pre>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-600">
+                        Reference
+                      </label>
+                      <input
+                        type="text"
+                        value={editRef}
+                        onChange={(e) => setEditRef(e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-600">
+                        Original Text
+                      </label>
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={10}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm leading-relaxed focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                        placeholder="Paste or type the original-language text here..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveEdit(passage.id)}
+                        disabled={saving}
+                        className="rounded-md bg-primary-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="text-sm italic text-gray-400">
-                    No original text transcribed.
-                  </p>
+                  <>
+                    {passage.original_text ? (
+                      <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-800">
+                        {passage.original_text}
+                      </pre>
+                    ) : (
+                      <p className="text-sm italic text-gray-400">
+                        No original text transcribed yet.
+                        {isAuthenticated && " Click Edit to add text."}
+                      </p>
+                    )}
+                    <div className="mt-4 flex items-center gap-2">
+                      <Link
+                        href={`/manuscripts/${manuscriptId}/passages/${passage.id}/translate`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-50"
+                      >
+                        View Translation
+                      </Link>
+                      {isAuthenticated && (
+                        <>
+                          <button
+                            onClick={() => startEdit(passage)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                          >
+                            Edit
+                          </button>
+                          {deleteConfirm === passage.id ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-xs text-red-600">Delete?</span>
+                              <button
+                                onClick={() => deletePassage(passage.id)}
+                                disabled={saving}
+                                className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                              >
+                                No
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirm(passage.id)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </>
                 )}
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    href={`/manuscripts/${manuscriptId}/passages/${passage.id}/translate`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-50"
-                  >
-                    View Translation
-                  </Link>
-                </div>
               </div>
             )}
           </div>

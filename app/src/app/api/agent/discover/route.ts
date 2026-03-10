@@ -197,20 +197,25 @@ Respond ONLY with a JSON array (no markdown fences, no extra text) of up to ${ma
     "historical_context": "Historical significance and provenance",
     "suggested_passages": [
       {
-        "reference": "Standard scholarly reference (e.g., Chapter 1:1-5, Folio 12r)",
-        "original_text": "Original language text if you can confidently provide it, otherwise null",
-        "description": "What this passage contains"
+        "reference": "Standard scholarly reference for this passage unit",
+        "original_text": "Full original-language text for this passage unit",
+        "description": "What this passage contains and its scholarly significance"
       }
     ],
     "confidence_notes": "What is well-established vs uncertain about this entry"
   }
 ]
 
-Guidelines:
+CRITICAL passage guidelines:
+- Each passage must be a SUBSTANTIAL, meaningful scholarly unit — an entire chapter, a complete pericope, a full folio, or a significant textual section. NEVER suggest individual verses or single lines.
+- For biblical manuscripts: use whole chapters (e.g., "Genesis 1", "John 1", "Matthew 5-7") or recognized pericopes (e.g., "The Prologue of John", "The Sermon on the Mount").
+- For non-biblical texts: use natural divisions like folios, sections, or titled segments.
+- Include 2-5 passages per manuscript, each covering a significant portion of text.
+- For original_text: ALWAYS provide the COMPLETE text in the original language/script for each passage unit. For well-known manuscripts (biblical codices, Dead Sea Scrolls, classical texts), use standard critical editions (NA28, BHS, etc.) as your source. Provide the full text of the chapter or pericope, not just the opening line. Only use null for genuinely unpublished or fragmentary texts where the content is unknown.
+
+Other guidelines:
 - Only suggest manuscripts that are historically documented and well-attested
 - Dates should be integers representing years (positive for CE, negative for BCE)
-- Include 1-5 key passages per manuscript
-- For original_text: ALWAYS provide the text in the original language/script if the passage is from a well-known, widely published manuscript (e.g., biblical manuscripts, Dead Sea Scrolls, major codices). Use standard scholarly editions as your source. Only use null for truly obscure or unpublished texts.
 - confidence_notes should clearly distinguish established facts from scholarly speculation
 - Prefer well-known, important manuscripts with good available scholarship`;
 }

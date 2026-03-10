@@ -135,17 +135,35 @@ export async function POST(request: NextRequest) {
       isNew = true;
     }
 
-    // Get existing passage references to avoid duplicates
+    // Get existing passage references to avoid duplicates and overlaps
     const { data: existingPassages } = await admin
       .from("passages")
       .select("reference")
       .eq("manuscript_id", manuscript.id);
 
-    const existingRefs = new Set(
-      (existingPassages ?? []).map((p: { reference: string }) =>
-        p.reference.toLowerCase().trim()
-      )
+    const existingRefs = (existingPassages ?? []).map(
+      (p: { reference: string }) => p.reference.toLowerCase().trim()
     );
+
+    function refsOverlap(newRef: string, existingRef: string): boolean {
+      const a = newRef.toLowerCase().trim();
+      const b = existingRef.toLowerCase().trim();
+      if (a === b) return true;
+      if (a.startsWith(b) || b.startsWith(a)) return true;
+      // "John 1" contains "John 1:1-3" and vice versa
+      const bookA = a.replace(/[\s:,\-\d]+$/g, "").trim();
+      const bookB = b.replace(/[\s:,\-\d]+$/g, "").trim();
+      if (bookA !== bookB || !bookA) return false;
+      // Same book — check if one is a broader range containing the other
+      const numA = a.replace(bookA, "").trim();
+      const numB = b.replace(bookB, "").trim();
+      if (!numA || !numB) return true; // one is the whole book/chapter
+      return false;
+    }
+
+    function isDuplicate(ref: string): boolean {
+      return existingRefs.some((existing) => refsOverlap(ref, existing));
+    }
 
     let passagesCreated = 0;
     const typedPassages: IngestPassage[] = Array.isArray(passages) ? passages : [];
@@ -156,12 +174,12 @@ export async function POST(request: NextRequest) {
           (p) =>
             p.reference &&
             typeof p.reference === "string" &&
-            !existingRefs.has(p.reference.toLowerCase().trim())
+            !isDuplicate(p.reference)
         )
         .map((p, i) => ({
           manuscript_id: manuscript.id,
           reference: p.reference.trim(),
-          sequence_order: (existingRefs.size) + i + 1,
+          sequence_order: existingRefs.length + i + 1,
           original_text: p.original_text?.trim() || null,
           transcription_method: p.original_text ? "manual" : null,
           created_by: user.id,
