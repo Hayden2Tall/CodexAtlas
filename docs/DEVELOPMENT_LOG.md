@@ -39,6 +39,42 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Expand Book Mappings for Deuterocanonical, Ethiopian, and Apocryphal Texts
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+The `BOOK_ORDER` map (used for display sorting on the manuscript detail page) and the `BOOK_NUMBERS` map (used for fetching text from the bolls.life Bible API) only covered the standard 66-book Protestant canon. Manuscripts containing deuterocanonical, Ethiopian canon, or other ancient texts (e.g., 1 Enoch, Tobit, Wisdom of Solomon, Jubilees) would sort incorrectly (falling to position 999) and fail to resolve against the free Bible API.
+
+**Decision:**
+Expanded both maps:
+
+1. **`BOOK_ORDER`** in `app/src/app/(main)/manuscripts/[id]/page.tsx` — Added ~40 entries covering:
+   - Alternate names for existing books (e.g., "song of songs" → Song of Solomon)
+   - Deuterocanonical/apocrypha (67–86): 1 Esdras, Tobit, Judith, Wisdom, Sirach, Baruch, 1–4 Maccabees, Susanna, Bel and the Dragon, Prayer of Azariah, Psalms of Solomon, Odes
+   - Ethiopian canon (100+): 1 Enoch, Jubilees, 1–3 Meqabyan, Rest of Words of Baruch, 4 Ezra
+   - Other ancient texts (150+): Prayer of Manasseh
+   - Common alternate spellings map to the same number
+
+2. **`BOOK_NUMBERS`** in `app/src/app/api/agent/discover/section-text/route.ts` — Added LXX-available books only (67–86). Ethiopian and non-LXX texts excluded since they don't exist in the bolls.life API and would produce failed lookups. Updated translation selection logic: books 40–66 route to Textus Receptus (NT), all others (including apocrypha 67+) route to LXX.
+
+**Rationale:**
+The platform serves manuscripts beyond the Protestant canon — Septuagint manuscripts include deuterocanonical books, and Ethiopian manuscripts (e.g., from the Ethiopian Orthodox canon) include 1 Enoch, Jubilees, and Meqabyan. Without these mappings, importing and sorting these texts would fail silently or produce incorrect ordering. The numbering scheme (67+ deuterocanonical, 100+ Ethiopian, 150+ other) keeps the standard canon untouched while providing logical sort order for extended texts.
+
+**Consequences:**
+- Passage sorting now handles deuterocanonical and Ethiopian texts correctly
+- Bible API lookups work for LXX apocryphal books (routed to LXX translation instead of TR)
+- Ethiopian and other non-LXX texts will still fall through to the AI model escalation path (by design)
+- New alternate name entries reduce the chance of unrecognized book names defaulting to sort position 999
+
+**Related Documents:**
+- app/src/app/(main)/manuscripts/[id]/page.tsx (BOOK_ORDER)
+- app/src/app/api/agent/discover/section-text/route.ts (BOOK_NUMBERS, fetchFromBibleApi translation logic)
+
+---
+
 ### 2026-03-10 — Full Manuscript Import Pipeline and Timeout Hardening
 
 **Type:** milestone
