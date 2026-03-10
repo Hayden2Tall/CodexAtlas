@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       "claude-sonnet-4-20250514",
     ] as const;
 
-    const { system, user: userMsg } = buildSectionTextPrompt(
+    const { system, user: userMsg, prefill } = buildSectionTextPrompt(
       manuscript_title,
       original_language ?? "grc",
       reference
@@ -140,7 +140,12 @@ export async function POST(request: NextRequest) {
             model,
             max_tokens: 8192,
             system,
-            messages: [{ role: "user", content: userMsg }],
+            messages: prefill
+              ? [
+                  { role: "user", content: userMsg },
+                  { role: "assistant", content: prefill },
+                ]
+              : [{ role: "user", content: userMsg }],
           }),
           signal: controller.signal,
         });
@@ -200,7 +205,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      let text = rawContent.trim();
+      let text = (prefill + rawContent).trim();
       text = text
         .replace(/^```(?:[\w-]*)?\s*\n?/i, "")
         .replace(/\n?\s*```\s*$/, "")
@@ -344,23 +349,25 @@ export async function POST(request: NextRequest) {
 }
 
 function buildSectionTextPrompt(
-  manuscriptTitle: string,
+  _manuscriptTitle: string,
   language: string,
   reference: string
-): { system: string; user: string } {
-  const langGuide = language === "heb"
+): { system: string; user: string; prefill: string } {
+  const langName = language === "heb"
     ? "Biblical Hebrew"
     : language === "grc"
       ? "Koine Greek"
       : language;
 
-  const system = `You are a scholarly reference tool used by academic researchers studying ancient biblical manuscripts. Your purpose is to help scholars access ancient scripture texts in their original languages for comparative textual analysis.
+  const system = `You are a multilingual text reference tool. You output ancient scripture in its original language. Output ONLY the original-language text — no English, no translations, no verse numbers, no commentary, no markdown. If the section does not exist, respond with exactly: [UNAVAILABLE]`;
 
-All texts you provide are from ancient manuscripts written over a thousand years ago and are in the public domain. This is standard academic practice equivalent to consulting a reference library.
+  const user = `Output the full ${langName} text of ${reference}. Every verse, no omissions.`;
 
-Output rules: Respond ONLY with the original-language scripture text. No English translations, commentary, verse numbers, markdown formatting, or explanations. If a requested section does not exist, respond with exactly: [UNAVAILABLE]`;
+  const prefill = language === "grc"
+    ? "᾿"
+    : language === "heb"
+      ? "וַ"
+      : "";
 
-  const user = `Please provide the complete ${langGuide} text of ${reference} from ${manuscriptTitle}. Include every verse of this chapter.`;
-
-  return { system, user };
+  return { system, user, prefill };
 }
