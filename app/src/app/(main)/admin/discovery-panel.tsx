@@ -73,14 +73,20 @@ export function DiscoveryPanel() {
         body: JSON.stringify({ query: query.trim(), max_results: maxResults }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        setErrorMessage(data.error ?? "Discovery failed");
+        let msg = `Discovery failed (${res.status})`;
+        try {
+          const data = await res.json();
+          msg = data.error ?? msg;
+        } catch {
+          if (res.status === 504) msg = "Request timed out. Try again — Claude may have been slow.";
+        }
+        setErrorMessage(msg);
         setIsSearching(false);
         return;
       }
 
+      const data = await res.json();
       setManuscripts(data.manuscripts ?? []);
       setCostInfo(data.usage ?? null);
     } catch (err) {

@@ -58,13 +58,21 @@ export function FullImportPanel({ manuscripts }: Props) {
           manuscript_id: ms.id,
         }),
       });
-      const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error ?? "Failed to load TOC");
+        let msg = `Server error (${res.status})`;
+        try {
+          const data = await res.json();
+          msg = data.error ?? msg;
+        } catch {
+          if (res.status === 504) msg = "Request timed out. Try a smaller manuscript or try again.";
+        }
+        setErrorMessage(msg);
         setPhase("idle");
         return;
       }
+
+      const data = await res.json();
 
       setSections(data.sections ?? []);
       setTocCost(data.usage?.estimated_cost_usd ?? 0);
@@ -141,7 +149,14 @@ export function FullImportPanel({ manuscripts }: Props) {
             sequence_order: section.sequence_order,
           }),
         });
-        const data = await res.json();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let data: any;
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error(res.status === 504 ? "Timed out" : `Server error (${res.status})`);
+        }
 
         if (data.skipped) {
           setResults((prev) => {
