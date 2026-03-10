@@ -8,6 +8,71 @@ export const maxDuration = 60;
 
 const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
 
+// Standard Bible book name → number mapping (1-66)
+const BOOK_NUMBERS: Record<string, number> = {
+  genesis: 1, exodus: 2, leviticus: 3, numbers: 4, deuteronomy: 5,
+  joshua: 6, judges: 7, ruth: 8, "1 samuel": 9, "2 samuel": 10,
+  "1 kings": 11, "2 kings": 12, "1 chronicles": 13, "2 chronicles": 14,
+  ezra: 15, nehemiah: 16, esther: 17, job: 18, psalms: 19, psalm: 19,
+  proverbs: 20, ecclesiastes: 21, "song of solomon": 22, isaiah: 23,
+  jeremiah: 24, lamentations: 25, ezekiel: 26, daniel: 27, hosea: 28,
+  joel: 29, amos: 30, obadiah: 31, jonah: 32, micah: 33, nahum: 34,
+  habakkuk: 35, zephaniah: 36, haggai: 37, zechariah: 38, malachi: 39,
+  matthew: 40, mark: 41, luke: 42, john: 43, acts: 44, romans: 45,
+  "1 corinthians": 46, "2 corinthians": 47, galatians: 48, ephesians: 49,
+  philippians: 50, colossians: 51, "1 thessalonians": 52, "2 thessalonians": 53,
+  "1 timothy": 54, "2 timothy": 55, titus: 56, philemon: 57, hebrews: 58,
+  james: 59, "1 peter": 60, "2 peter": 61, "1 john": 62, "2 john": 63,
+  "3 john": 64, jude: 65, revelation: 66,
+};
+
+function parseBookAndChapter(reference: string): { bookNum: number; chapter: number } | null {
+  const match = reference.match(/^(.+?)\s+(\d+)$/);
+  if (!match) return null;
+  const bookName = match[1].toLowerCase().trim();
+  const chapter = parseInt(match[2], 10);
+  const bookNum = BOOK_NUMBERS[bookName];
+  if (!bookNum || isNaN(chapter)) return null;
+  return { bookNum, chapter };
+}
+
+async function fetchFromBibleApi(
+  language: string,
+  reference: string
+): Promise<string | null> {
+  const parsed = parseBookAndChapter(reference);
+  if (!parsed) return null;
+
+  // Pick translation based on language and testament
+  let translation: string;
+  if (language === "grc") {
+    translation = parsed.bookNum >= 40 ? "TR" : "LXX";
+  } else if (language === "heb") {
+    translation = "WLC";
+  } else {
+    return null;
+  }
+
+  const url = `https://bolls.life/get-text/${translation}/${parsed.bookNum}/${parsed.chapter}/`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+
+    const verses: Array<{ verse: number; text: string }> = await res.json();
+    if (!Array.isArray(verses) || verses.length === 0) return null;
+
+    const text = verses
+      .sort((a, b) => a.verse - b.verse)
+      .map((v) => v.text.replace(/<[^>]*>/g, "").trim())
+      .filter(Boolean)
+      .join("\n");
+
+    return text.length > 50 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
     data: { user },
@@ -101,6 +166,25 @@ export async function POST(request: NextRequest) {
       console.log(`[section-text] ${reference}: no existing passage found — will create new`);
     }
 
+    // STEP 1: Try free Bible text API first (free, instant, no content filters)
+    const apiText = await fetchFromBibleApi(original_language ?? "grc", reference);
+    let originalText = "";
+    let aiModel = "bible-api";
+    let tokensInput = 0;
+    let tokensOutput = 0;
+    let costUsd = 0;
+
+    if (apiText && textHasCorrectScript(apiText)) {
+      console.log(`[section-text] ${reference}: fetched from Bible API (${apiText.length} chars)`);
+      originalText = apiText;
+    } else {
+      if (apiText) {
+        console.log(`[section-text] ${reference}: Bible API returned text but wrong script, trying AI`);
+      } else {
+        console.log(`[section-text] ${reference}: Bible API unavailable, trying AI`);
+      }
+
+    // STEP 2: Fall back to AI models
     const MODELS = [
       "claude-haiku-4-5-20251001",
       "claude-sonnet-4-20250514",
@@ -263,18 +347,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    } // end of else (Bible API unavailable, using AI fallback)
+
     // Save passage — update existing empty record or insert new one
     try {
       let passageId: string;
+
+      const isFromApi = aiModel === "bible-api";
 
       if (existingToUpdate) {
         const { error: uErr } = await admin
           .from("passages")
           .update({
             original_text: originalText,
-            transcription_method: "ai_reconstructed",
+            transcription_method: isFromApi ? "ai_imported" : "ai_reconstructed",
             metadata: {
-              ingested_by: "full_import_agent",
+              ingested_by: isFromApi ? "bible_api" : "full_import_agent",
               passage_description: description || null,
               ai_model: aiModel,
               tokens_used: tokensInput + tokensOutput,
@@ -298,10 +386,10 @@ export async function POST(request: NextRequest) {
             reference: reference.trim(),
             sequence_order: sequence_order ?? null,
             original_text: originalText,
-            transcription_method: "ai_reconstructed",
+            transcription_method: isFromApi ? "ai_imported" : "ai_reconstructed",
             created_by: user.id,
             metadata: {
-              ingested_by: "full_import_agent",
+              ingested_by: isFromApi ? "bible_api" : "full_import_agent",
               passage_description: description || null,
               ai_model: aiModel,
               tokens_used: tokensInput + tokensOutput,
