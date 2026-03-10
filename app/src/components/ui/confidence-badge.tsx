@@ -1,6 +1,7 @@
 import {
   getConfidenceLabel,
   getConfidenceColor,
+  getConfidenceExplanation,
 } from "@/lib/utils/translation";
 
 const colorMap: Record<string, string> = {
@@ -25,11 +26,13 @@ export function ConfidenceBadge({
 }: ConfidenceBadgeProps) {
   const color = getConfidenceColor(score);
   const label = getConfidenceLabel(score);
+  const explanation = getConfidenceExplanation(score);
   const classes = colorMap[color] ?? colorMap.red;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${classes}`}
+      className={`inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${classes}`}
+      title={explanation}
     >
       <span className="size-1.5 rounded-full bg-current" />
       {label}
