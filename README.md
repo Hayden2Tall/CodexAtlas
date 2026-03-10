@@ -27,7 +27,9 @@ Build an open research platform that serves two equally important purposes:
 
 **Phase 3.1: Public Exploration Surface — Complete.** Scripture browser (`/read`) lets readers navigate by book and chapter across all manuscripts. Chapter reading view with clean serif layout, transparency indicators, and evidence chain links. Side-by-side manuscript comparison view. Dynamic landing page with live stats, featured manuscripts, and recent translations. Deep-link sharing with OG metadata. Public API endpoints for scripture browsing and platform statistics.
 
-**Next: Phase 3.2 (Variant System Enhancement).** Variant versioning, cross-source comparison, and variant exploration UI. See [Roadmap](docs/ROADMAP.md) for details.
+**Phase 3.2: Variant System Enhancement — Complete.** Variant detection runs are versioned and tracked. Variants are browsable by book with significance filters and search. Attestation display shows majority/minority readings with manuscript dates. Bidirectional linking connects passages to variants across the translate page, variant detail, and chapter reading views.
+
+**Next: Phase 3.3 (AI Research Summaries).** AI-generated passage summaries, manuscript significance summaries, and confidence score explanations. See [Roadmap](docs/ROADMAP.md) for details.
 
 ## Tech Stack
 

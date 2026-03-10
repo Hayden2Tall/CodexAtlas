@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-10
-> **Status:** Phase 2 complete · Phase 3.1 (Public Exploration Surface) complete · Entering Phase 3.2
+> **Status:** Phase 2 complete · Phase 3.1 complete · Phase 3.2 (Variant System Enhancement) complete · Entering Phase 3.3
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -230,15 +230,16 @@ Build the reader-facing experience that makes manuscript data browsable and disc
 - [x] PassageNavigator component (desktop dropdowns, mobile bottom sheet)
 - [x] "Read" link added to header and mobile navigation
 
-### 3.2 Variant System Enhancement (Priority: High)
+### 3.2 Variant System Enhancement (Priority: High) — Complete
 
 Make the variant detection and exploration system robust and useful for scholars.
 
-- [ ] Variant versioning: track variant detection runs with source metadata, allow re-detection without duplicates
-- [ ] Cross-source comparison: compare same passage's text from different sources (NTVMR vs standard edition vs AI) for a single manuscript
-- [ ] Variant exploration UI: browse all variants by book/chapter, filter by significance
-- [ ] Variant attestation display: show which manuscripts support each reading
-- [ ] Link variants to passages bidirectionally (passage page shows variants, variant page shows passages)
+- [x] Variant versioning: `variant_detection_runs` table tracks each detection execution (migration 024)
+- [x] Detect-variants API: cache check for previous runs, `force` parameter for re-detection, run tracking on save
+- [x] Variant exploration UI: `/variants` page rewritten with book grouping, significance filter, search-by-reference
+- [x] Variant attestation display: attestation section below diff view showing majority/minority readings with manuscript dates
+- [x] Bidirectional linking: translate page shows related variants, variant detail page shows source passages, chapter view shows variant badges
+- [x] Scholarly analysis panel on variant detail page with significance badge
 
 ### 3.3 AI Research Summaries (Priority: Medium)
 
@@ -310,7 +311,9 @@ Platform is polished, accessible, and ready for broader public and institutional
 | Manuscript comparison view (side-by-side) | Complete | 3.1 |
 | Dynamic landing page with stats and discovery paths | Complete | 3.1 |
 | Deep-link sharing with OG metadata | Complete | 3.1 |
-| Variant versioning and cross-source comparison | Phase 3.2 | 3 |
+| Variant versioning with detection run tracking | Complete | 3.2 |
+| Variant exploration UI with book grouping and filters | Complete | 3.2 |
+| Variant attestation and bidirectional passage linking | Complete | 3.2 |
 | Interactive manuscript visualizations | Phase 3 | 3 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |

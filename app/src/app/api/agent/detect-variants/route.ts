@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { passage_reference, passage_ids } = body;
+    const { passage_reference, passage_ids, force } = body;
 
     if (!passage_reference && (!Array.isArray(passage_ids) || passage_ids.length < 2)) {
       return NextResponse.json(
@@ -118,6 +118,52 @@ export async function POST(request: NextRequest) {
         ...p,
         manuscript_title: p.manuscripts.title,
       }));
+    }
+
+    // Cache check: look for a previous detection run with these passages
+    if (!force) {
+      const sortedIds = passages.map((p) => p.id).sort();
+      const { data: previousRun } = await admin
+        .from("variant_detection_runs")
+        .select("id, variants_found, created_at, metadata")
+        .eq("passage_reference", passage_reference ?? passages[0]?.reference ?? "custom")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (previousRun) {
+        const prevIds = ((previousRun.metadata as Record<string, unknown>)?.passage_ids_sorted as string[] | undefined) ?? [];
+        const idsMatch = JSON.stringify(prevIds) === JSON.stringify(sortedIds);
+
+        if (idsMatch) {
+          const { data: cachedVariants } = await admin
+            .from("variants")
+            .select("*, variant_readings(*, manuscripts(id, title, original_language))")
+            .eq("detection_run_id", previousRun.id);
+
+          console.log(`[detect-variants] CACHE HIT run=${previousRun.id} variants=${cachedVariants?.length ?? 0}`);
+
+          return NextResponse.json({
+            variants: (cachedVariants ?? []).map((v) => ({
+              passage_reference: v.passage_reference,
+              description: v.description,
+              readings: ((v.variant_readings as unknown as { manuscript_id: string; reading_text: string; apparatus_notes: string | null; manuscripts: { title: string; id: string } | null }[]) ?? []).map((r) => ({
+                manuscript_title: r.manuscripts?.title ?? "",
+                manuscript_id: r.manuscript_id,
+                reading_text: r.reading_text,
+                apparatus_notes: r.apparatus_notes ?? "",
+              })),
+              significance: (v.metadata as Record<string, unknown>)?.significance ?? "minor",
+              analysis: (v.metadata as Record<string, unknown>)?.analysis ?? "",
+            })),
+            passages_compared: passages.length,
+            cached: true,
+            detection_run_id: previousRun.id,
+            cached_at: previousRun.created_at,
+            usage: { tokens_input: 0, tokens_output: 0, estimated_cost_usd: 0, ai_model: "cached" },
+          });
+        }
+      }
     }
 
     // Pre-check: if all passages have identical text, skip the AI call entirely
@@ -305,7 +351,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { variants } = body as { variants: DetectedVariant[] };
+    const { variants, passage_reference, passage_ids, ai_model } = body as {
+      variants: DetectedVariant[];
+      passage_reference?: string;
+      passage_ids?: string[];
+      ai_model?: string;
+    };
 
     if (!Array.isArray(variants) || variants.length === 0) {
       return NextResponse.json(
@@ -315,22 +366,44 @@ export async function PUT(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+
+    const sortedPassageIds = (passage_ids ?? []).sort();
+    const ref = passage_reference ?? variants[0]?.passage_reference ?? "unknown";
+
+    const { data: run } = await admin
+      .from("variant_detection_runs")
+      .insert({
+        passage_reference: ref,
+        passage_ids: sortedPassageIds,
+        model: ai_model ?? "unknown",
+        variants_found: variants.length,
+        metadata: { passage_ids_sorted: sortedPassageIds },
+        created_by: user.id,
+      } as Record<string, unknown>)
+      .select("id")
+      .single<{ id: string }>();
+
+    const runId = run?.id ?? null;
+
     let variantsCreated = 0;
     let readingsCreated = 0;
 
     for (const v of variants) {
+      const insertData: Record<string, unknown> = {
+        passage_reference: v.passage_reference,
+        description: v.description,
+        metadata: {
+          significance: v.significance,
+          analysis: v.analysis,
+          detected_by: "variant_detection_agent",
+        },
+        created_by: user.id,
+      };
+      if (runId) insertData.detection_run_id = runId;
+
       const { data: variant, error: vErr } = await admin
         .from("variants")
-        .insert({
-          passage_reference: v.passage_reference,
-          description: v.description,
-          metadata: {
-            significance: v.significance,
-            analysis: v.analysis,
-            detected_by: "variant_detection_agent",
-          },
-          created_by: user.id,
-        } as Record<string, unknown>)
+        .insert(insertData)
         .select("id")
         .single<Pick<Variant, "id">>();
 
@@ -360,6 +433,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       variants_created: variantsCreated,
       readings_created: readingsCreated,
+      detection_run_id: runId,
     });
   } catch (err) {
     console.error("PUT /api/agent/detect-variants error:", err);

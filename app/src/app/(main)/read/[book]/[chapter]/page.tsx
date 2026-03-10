@@ -129,6 +129,18 @@ async function loadChapterData(bookDecoded: string, chapterNum: number) {
   return results;
 }
 
+async function loadChapterVariants(bookDecoded: string, chapterNum: number) {
+  const admin = createAdminClient();
+  const refPattern = `${bookDecoded} ${chapterNum}%`;
+
+  const { data: variants } = await admin
+    .from("variants")
+    .select("id, passage_reference, description, metadata")
+    .ilike("passage_reference", refPattern);
+
+  return variants ?? [];
+}
+
 async function loadAvailableChapters(bookDecoded: string) {
   const admin = createAdminClient();
   const { data: passages } = await admin
@@ -188,10 +200,18 @@ export default async function ChapterPage({ params }: PageProps) {
 
   if (!bookDecoded || isNaN(chapterNum)) notFound();
 
-  const [results, availableChapters] = await Promise.all([
+  const [results, availableChapters, chapterVariants] = await Promise.all([
     loadChapterData(bookDecoded, chapterNum),
     loadAvailableChapters(bookDecoded),
+    loadChapterVariants(bookDecoded, chapterNum),
   ]);
+
+  const variantsByRef = new Map<string, typeof chapterVariants>();
+  for (const v of chapterVariants) {
+    const existing = variantsByRef.get(v.passage_reference) ?? [];
+    existing.push(v);
+    variantsByRef.set(v.passage_reference, existing);
+  }
 
   if (!results || results.length === 0) {
     return (
@@ -311,14 +331,33 @@ export default async function ChapterPage({ params }: PageProps) {
                 </pre>
               </details>
 
-              {/* Link to full translation page */}
-              <div className="mt-3 border-t border-gray-100 pt-3">
+              {/* Variant indicator + link to full translation page */}
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
                 <Link
                   href={`/manuscripts/${r.manuscript.id}/passages/${r.passage.id}/translate`}
                   className="text-xs font-medium text-primary-700 hover:underline"
                 >
                   View full evidence chain &rarr;
                 </Link>
+                {(() => {
+                  const passageVariants = variantsByRef.get(r.passage.reference);
+                  if (!passageVariants?.length) return null;
+                  const majorCount = passageVariants.filter(
+                    (v) => (v.metadata as Record<string, unknown> | null)?.significance === "major"
+                  ).length;
+                  return (
+                    <Link
+                      href={`/variants/${passageVariants[0].id}`}
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                      </svg>
+                      {passageVariants.length} variant{passageVariants.length !== 1 ? "s" : ""}
+                      {majorCount > 0 && ` (${majorCount} major)`}
+                    </Link>
+                  );
+                })()}
               </div>
             </div>
           </article>

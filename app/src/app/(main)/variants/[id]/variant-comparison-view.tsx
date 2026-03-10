@@ -10,6 +10,8 @@ interface ReadingWithManuscript extends VariantReading {
     id: string;
     title: string;
     original_language: string;
+    estimated_date_start?: number | null;
+    estimated_date_end?: number | null;
   } | null;
 }
 
@@ -168,6 +170,69 @@ function Panel({
   );
 }
 
+function formatDateRange(start?: number | null, end?: number | null): string {
+  if (!start && !end) return "";
+  const suffix = (y: number) => (y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`);
+  if (start && end && start !== end) return `${suffix(start)}–${suffix(end)}`;
+  return suffix(start ?? end!);
+}
+
+function AttestationSection({ readings }: { readings: ReadingWithManuscript[] }) {
+  const normalizedGroups = new Map<string, ReadingWithManuscript[]>();
+  for (const r of readings) {
+    const key = r.reading_text.replace(/\s+/g, " ").trim();
+    const group = normalizedGroups.get(key);
+    if (group) group.push(r);
+    else normalizedGroups.set(key, [r]);
+  }
+
+  const groups = [...normalizedGroups.entries()]
+    .map(([text, members]) => ({ text, members, count: members.length }))
+    .sort((a, b) => b.count - a.count);
+
+  const majorityCount = groups[0]?.count ?? 0;
+
+  return (
+    <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4">
+      <h3 className="mb-3 text-sm font-semibold text-gray-900">
+        Attestation Summary
+      </h3>
+      <div className="space-y-4">
+        {groups.map((group, gi) => {
+          const isMajority = group.count === majorityCount && groups.length > 1;
+          return (
+            <div key={gi} className={`rounded-lg border p-3 ${isMajority ? "border-primary-200 bg-primary-50/40" : "border-gray-100 bg-gray-50/40"}`}>
+              <div className="mb-2 flex items-center gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${isMajority ? "bg-primary-100 text-primary-700" : "bg-gray-200 text-gray-600"}`}>
+                  {isMajority ? "Majority" : "Minority"} &middot; {group.count} ms{group.count !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <p className="mb-2 font-mono text-xs leading-relaxed text-gray-700">
+                &ldquo;{group.text.length > 200 ? group.text.slice(0, 200) + "…" : group.text}&rdquo;
+              </p>
+              <ul className="space-y-1">
+                {group.members.map((m) => (
+                  <li key={m.id} className="flex items-center gap-2 text-xs text-gray-600">
+                    <span className="h-1 w-1 shrink-0 rounded-full bg-gray-400" />
+                    <span className="font-medium text-gray-800">
+                      {m.manuscripts?.title ?? "Unknown"}
+                    </span>
+                    {m.manuscripts && (
+                      <span className="text-gray-400">
+                        {formatDateRange(m.manuscripts.estimated_date_start, m.manuscripts.estimated_date_end)}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function VariantComparisonView({
   variant,
   readings,
@@ -203,15 +268,18 @@ export function VariantComparisonView({
     );
   }
 
-  if (readings.length === 2) {
-    return <TwoColumnLayout readings={readings} />;
-  }
-
   return (
-    <MultiColumnLayout
-      readings={readings}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-    />
+    <>
+      {readings.length === 2 ? (
+        <TwoColumnLayout readings={readings} />
+      ) : (
+        <MultiColumnLayout
+          readings={readings}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      )}
+      <AttestationSection readings={readings} />
+    </>
   );
 }

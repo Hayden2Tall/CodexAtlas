@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { TranslationWorkspace } from "./translation-workspace";
-import type { Passage, Manuscript, Translation, TranslationVersion, EvidenceRecord, Review } from "@/lib/types";
+import type { Passage, Manuscript, Translation, TranslationVersion, EvidenceRecord, Review, Variant } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ id: string; passageId: string }>;
@@ -99,6 +100,13 @@ export default async function TranslatePage({ params }: PageProps) {
         .returns<(Review & { users: { display_name: string | null } | null })[]>()
     : { data: [] as (Review & { users: { display_name: string | null } | null })[] };
 
+  const { data: relatedVariants } = await supabase
+    .from("variants")
+    .select("id, passage_reference, description, metadata")
+    .eq("passage_reference", passage.reference)
+    .order("created_at", { ascending: false })
+    .returns<Pick<Variant, "id" | "passage_reference" | "description" | "metadata">[]>();
+
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthenticated = !!user;
 
@@ -133,6 +141,34 @@ export default async function TranslatePage({ params }: PageProps) {
         reviews={reviews ?? []}
         isAuthenticated={isAuthenticated}
       />
+
+      {relatedVariants && relatedVariants.length > 0 && (
+        <div className="mt-8 rounded-lg border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 text-sm font-semibold text-gray-900">
+            Textual Variants at This Reference
+          </h2>
+          <ul className="space-y-2">
+            {relatedVariants.map((v) => {
+              const sig = (v.metadata as Record<string, unknown> | null)?.significance;
+              return (
+                <li key={v.id} className="flex items-center gap-3">
+                  <Link
+                    href={`/variants/${v.id}`}
+                    className="text-sm text-primary-700 hover:text-primary-900 hover:underline"
+                  >
+                    {v.description || v.passage_reference}
+                  </Link>
+                  {typeof sig === "string" && (
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset ${sig === "major" ? "bg-red-50 text-red-700 ring-red-200" : sig === "orthographic" ? "bg-gray-50 text-gray-600 ring-gray-200" : "bg-yellow-50 text-yellow-700 ring-yellow-200"}`}>
+                      {sig}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

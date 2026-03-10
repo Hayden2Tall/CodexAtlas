@@ -39,6 +39,72 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-10 — Phase 3.2: Variant System Enhancement
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Phase 3.1 delivered the public exploration surface. The variant detection system from Phase 2 was functional but lacked run tracking, re-detection guards, and browsable exploration. Variants were listed in a flat, unsorted table with no way to filter, search, or group by book. The passage and variant systems were disconnected — readers couldn't navigate between them.
+
+**Key Deliverables:**
+
+1. **Variant Detection Runs (Migration 024):**
+   - New `variant_detection_runs` table tracks each detection execution with passage IDs, model, and variant count
+   - `detection_run_id` column added to `variants` table for linking
+   - Indexes on `passage_reference` and `detection_run_id` for efficient lookups
+   - RLS policies: public read, admin insert
+
+2. **Detect-Variants API Versioning:**
+   - POST cache check: queries previous runs with matching passage IDs, returns cached results with `cached: true` flag
+   - `force` parameter bypasses cache for explicit re-detection
+   - PUT handler creates a `variant_detection_runs` row and links new variants via `detection_run_id`
+   - Response includes `detection_run_id` for client tracking
+
+3. **Variant Exploration UI:**
+   - Variants listing page rewritten with book-grouped layout using shared `BOOK_ORDER`
+   - Client-side filtering: significance filter (all/major/minor/orthographic), search by reference or description
+   - Variant cards show passage reference, description, reading count, significance badge, creation date
+   - Counts displayed per filter category
+
+4. **Attestation Display:**
+   - New `AttestationSection` component below diff view on variant detail page
+   - Groups readings by normalized text, identifies majority vs minority
+   - Shows manuscript dates alongside each attestation for chronological context
+   - Majority reading highlighted with primary color
+
+5. **Bidirectional Linking:**
+   - **Translate page → Variants:** Server-side query for variants matching passage reference, displayed as linked list with significance badges
+   - **Variant detail → Passages:** Source passages section with links to translation workspace per manuscript
+   - **Chapter reading view → Variants:** Variant indicator badges showing count and major variant count per passage
+   - Scholarly analysis panel on variant detail showing `metadata.analysis` field
+
+**Files Changed:**
+- `scripts/migrations/024_create_variant_detection_runs.sql` (created)
+- `app/src/app/api/agent/detect-variants/route.ts` (cache check, run tracking, force param)
+- `app/src/app/(main)/variants/page.tsx` (rewritten with book grouping)
+- `app/src/app/(main)/variants/variant-filters.tsx` (created — client-side filter component)
+- `app/src/app/(main)/variants/[id]/page.tsx` (source passages, significance badge, analysis panel)
+- `app/src/app/(main)/variants/[id]/variant-comparison-view.tsx` (attestation section)
+- `app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/page.tsx` (related variants section)
+- `app/src/app/(main)/read/[book]/[chapter]/page.tsx` (variant indicator badges)
+
+**Rationale:**
+Scholars need to see which manuscripts agree on readings, navigate between variant evidence and source passages, and browse variants systematically by book and significance. Run tracking prevents duplicate detections and enables re-detection workflows.
+
+**Consequences:**
+- Variant detection results are now cacheable and browsable by run
+- The variant system is bidirectionally linked to passages and the reading view
+- Migration 024 must be run in Supabase before variant versioning features work in production
+- Attestation display groups readings by text, making majority/minority analysis visible at a glance
+
+**Related Documents:**
+- [ROADMAP.md](./ROADMAP.md) — Phase 3.2 items marked complete
+- [DATA_MODEL.md](./DATA_MODEL.md) — `variant_detection_runs` table documented
+
+---
+
 ### 2026-03-10 — Phase 3.1: Public Exploration Surface
 
 **Type:** milestone

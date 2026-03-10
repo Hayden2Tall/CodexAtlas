@@ -200,7 +200,7 @@ CodexAtlas/
 │       │   │   ├── manuscripts/  —     Manuscript browsing, detail, passages, translation
 │       │   │   ├── read/         —     Scripture browser, chapter reading, comparison (Phase 3.1)
 │       │   │   ├── search/       —     Public full-text search
-│       │   │   ├── variants/     —     Variant exploration
+│       │   │   ├── variants/     —     Variant exploration, attestation, book-grouped filters (Phase 3.2)
 │       │   │   └── evidence/     —     Evidence explorer
 │       │   ├── api/
 │       │   │   ├── agent/        —     AI agent endpoints (discover, import, translate, detect, OCR)
@@ -224,7 +224,7 @@ CodexAtlas/
 ├── prompts/                      — Agent task packet templates
 ├── summaries/                    — Compressed architecture summaries for agent context
 ├── scripts/
-│   ├── migrations/               — SQL migration files (001-023)
+│   ├── migrations/               — SQL migration files (001-024)
 │   ├── preprocess-sinaiticus.mjs — One-time Codex Sinaiticus XML preprocessing
 │   └── preprocess-dss.mjs       — One-time Dead Sea Scrolls preprocessing
 └── README.md
