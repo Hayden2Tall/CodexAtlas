@@ -78,12 +78,20 @@ export const NTVMR_MANUSCRIPTS: Record<string, number> = {
   "codex washingtonianus": 20032,
   washingtonianus: 20032,
   "codex regius": 20019,
-  p46: 10046,
-  p66: 10066,
-  p75: 10075,
   p45: 10045,
+  "papyrus 45": 10045, "papyrus 45 (p45)": 10045,
+  p46: 10046,
+  "papyrus 46": 10046, "papyrus 46 (p46)": 10046,
   p47: 10047,
+  "papyrus 47": 10047, "papyrus 47 (p47)": 10047,
+  p52: 10052,
+  "papyrus 52": 10052, "papyrus 52 (p52)": 10052,
+  p66: 10066,
+  "papyrus 66": 10066, "papyrus 66 (p66)": 10066,
   p72: 10072,
+  "papyrus 72": 10072, "papyrus 72 (p72)": 10072,
+  p75: 10075,
+  "papyrus 75": 10075, "papyrus 75 (p75)": 10075,
 };
 
 /** Book name → SBL abbreviation (NT books only; shared by NTVMR + SBLGNT). */
@@ -129,19 +137,51 @@ export function parseBookAndChapter(
 }
 
 /**
- * Returns true when at least 15 % of the text is in the expected script
- * (Greek or Hebrew). Used to reject AI refusals and wrong-language text.
+ * Script-detection patterns keyed by ISO 639-3 language code.
+ * Each regex matches characters from the expected script.
+ */
+const SCRIPT_PATTERNS: Record<string, RegExp> = {
+  grc: /[\u0370-\u03FF\u1F00-\u1FFF]/g,         // Greek
+  heb: /[\u0590-\u05FF]/g,                        // Hebrew
+  lat: /[a-zA-ZÀ-ÖØ-öø-ÿ]/g,                     // Latin
+  syc: /[\u0700-\u074F]/g,                         // Syriac
+  cop: /[\u2C80-\u2CFF]/g,                         // Coptic
+  gez: /[\u1200-\u137F]/g,                         // Ethiopic (Ge'ez)
+  arm: /[\u0530-\u058F]/g,                         // Armenian
+  geo: /[\u10A0-\u10FF]/g,                         // Georgian
+  ara: /[\u0600-\u06FF]/g,                         // Arabic
+};
+
+/**
+ * Returns true when at least 15 % of the text is in the expected script.
+ * Used to reject AI refusals and wrong-language text.
+ * For unknown languages, returns true (benefit of the doubt).
  */
 export function textHasCorrectScript(
   text: string,
   lang: string
 ): boolean {
-  const grc = (text.match(/[\u0370-\u03FF\u1F00-\u1FFF]/g) || []).length;
-  const heb = (text.match(/[\u0590-\u05FF]/g) || []).length;
-  if (lang === "grc") return grc > text.length * 0.15;
-  if (lang === "heb") return heb > text.length * 0.15;
-  return true;
+  const pattern = SCRIPT_PATTERNS[lang];
+  if (!pattern) return true;
+  const matches = (text.match(pattern) || []).length;
+  return matches > text.length * 0.15;
 }
+
+/** Languages supported by the bolls.life API (Greek + Hebrew editions only). */
+export const BOLLS_LIFE_LANGUAGES = new Set(["grc", "heb"]);
+
+/** Human-readable language names. */
+export const LANGUAGE_NAMES: Record<string, string> = {
+  grc: "Koine Greek",
+  heb: "Biblical Hebrew",
+  lat: "Latin",
+  syc: "Syriac",
+  cop: "Coptic",
+  gez: "Ge'ez (Ethiopic)",
+  arm: "Armenian",
+  geo: "Georgian",
+  ara: "Arabic",
+};
 
 // ---------------------------------------------------------------------------
 // NTVMR HTML → plain Greek text

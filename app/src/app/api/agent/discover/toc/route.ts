@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
+    console.log(`[toc] START title="${title}" lang="${original_language ?? "grc"}" manuscriptId=${manuscript_id ?? "none"}`);
+
     // Get existing passages for this manuscript to mark what's already imported
     let existingRefs: string[] = [];
     if (manuscript_id) {
@@ -62,9 +64,10 @@ export async function POST(request: NextRequest) {
       existingRefs = (passages ?? []).map(
         (p: { reference: string }) => p.reference.toLowerCase().trim()
       );
+      console.log(`[toc] Found ${existingRefs.length} existing passages: [${existingRefs.slice(0, 10).join(", ")}${existingRefs.length > 10 ? "..." : ""}]`);
     }
 
-    const aiModel = "claude-sonnet-4-20250514";
+    const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildTocPrompt(title, original_language ?? "grc");
 
     const controller = new AbortController();
@@ -121,7 +124,7 @@ export async function POST(request: NextRequest) {
     const books = parseBookListResponse(rawContent);
 
     if (!books || books.length === 0) {
-      console.error("Failed to parse book list. Length:", rawContent.length, "Start:", rawContent.slice(0, 300));
+      console.error(`[toc] PARSE_FAIL title="${title}" rawLen=${rawContent.length} raw=${rawContent.slice(0, 400)}`);
       return NextResponse.json(
         {
           error: "Could not parse manuscript contents",
@@ -132,7 +135,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[toc] PARSED ${books.length} books: ${books.map(b => `${b.book}(ch${b.chapter_start}-${b.chapter_start + b.chapters - 1}, ${b.notes || "no notes"})`).join(", ")}`);
+
     const sections = expandBooksToSections(books);
+    console.log(`[toc] EXPANDED to ${sections.length} sections: [${sections.slice(0, 8).map(s => s.reference).join(", ")}${sections.length > 8 ? "..." : ""}]`);
 
     const results = sections.map((s) => ({
       ...s,
@@ -189,7 +195,7 @@ export async function POST(request: NextRequest) {
 }
 
 function buildTocPrompt(title: string, language: string): string {
-  return `You are a manuscript research assistant. Given a manuscript, list every BOOK or MAJOR SECTION it contains. Do NOT list individual chapters — just the book/section names.
+  return `You are a manuscript research assistant. Given a manuscript, list every BOOK or MAJOR SECTION it contains.
 
 Manuscript: "${title}"
 Original language code: "${language}"
@@ -200,18 +206,20 @@ Respond ONLY with a JSON array (no markdown fences, no extra text):
   {
     "book": "Book or section name (e.g., 'Matthew', 'Genesis', '1 Corinthians', 'Epistle of Barnabas')",
     "chapters": 28,
+    "chapter_start": 1,
     "is_biblical": true,
     "notes": "Complete/partial/fragmentary"
   }
 ]
 
 Rules:
-- List every book or major section in the manuscript
-- "chapters" is the number of chapters the manuscript contains for that book (not the canonical total if the manuscript is fragmentary)
-- "is_biblical" is true for books in the Hebrew Bible, Greek Septuagint, or New Testament canon; false for apocryphal, pseudepigraphal, or other texts
-- Order in the manuscript's canonical sequence
-- For non-chapter-based texts (letters, poems, folios), use 1 for chapters and set is_biblical to false
-- Be concise — just the book list, no descriptions needed`;
+- "chapters" is how many chapters this manuscript contains for that book. For fragmentary manuscripts that only contain part of a book, set this to the number of chapters actually present.
+- "chapter_start" is the first chapter number present in this manuscript for that book. Default is 1. For example, if only chapters 18-21 of John survive, set chapter_start to 18 and chapters to 4.
+- CRITICAL: For fragmentary manuscripts containing only part of one chapter, set chapters to 1 and chapter_start to the actual chapter number. Example: Papyrus 52 contains a fragment of John 18, so: {"book":"John","chapters":1,"chapter_start":18,"is_biblical":true,"notes":"fragmentary, John 18:31-33,37-38 only"}
+- "is_biblical" is true for books in the Hebrew Bible, Greek Septuagint, or New Testament canon
+- For single-chapter biblical books (Philemon, Jude, Obadiah, 2 John, 3 John), set chapters to 1 and chapter_start to 1
+- For non-chapter-based texts (letters, poems, folios), set chapters to 1
+- Order in the manuscript's canonical sequence`;
 }
 
 // Biblical book chapter counts (canonical)
@@ -238,32 +246,45 @@ const BIBLICAL_CHAPTERS: Record<string, number> = {
 interface BookEntry {
   book: string;
   chapters: number;
+  chapter_start: number;
   is_biblical: boolean;
   notes: string;
 }
+
+// Known single-chapter biblical books — reference is just the book name
+const SINGLE_CHAPTER_BOOKS = new Set([
+  "Obadiah", "Philemon", "2 John", "3 John", "Jude",
+]);
 
 function expandBooksToSections(books: BookEntry[]): TocSection[] {
   const sections: TocSection[] = [];
 
   for (const entry of books) {
-    const chapterCount = entry.is_biblical
-      ? Math.min(entry.chapters, BIBLICAL_CHAPTERS[entry.book] ?? entry.chapters)
+    const canonicalMax = BIBLICAL_CHAPTERS[entry.book] ?? 0;
+    const chapterCount = entry.is_biblical && canonicalMax > 0
+      ? Math.min(entry.chapters, canonicalMax)
       : entry.chapters;
+    const startCh = entry.chapter_start || 1;
 
-    if (chapterCount <= 1) {
+    // Single-chapter books: reference is just the book name
+    if (SINGLE_CHAPTER_BOOKS.has(entry.book) || (!entry.is_biblical && chapterCount <= 1 && canonicalMax === 0)) {
       sections.push({
         reference: entry.book,
         description: entry.notes || "",
         estimated_verses: 25,
       });
-    } else {
-      for (let ch = 1; ch <= chapterCount; ch++) {
-        sections.push({
-          reference: `${entry.book} ${ch}`,
-          description: ch === 1 ? (entry.notes || "") : "",
-          estimated_verses: entry.book === "Psalms" ? 10 : 25,
-        });
-      }
+      continue;
+    }
+
+    // Multi-chapter books (or fragments of them): always include chapter number
+    const endCh = startCh + chapterCount - 1;
+    for (let ch = startCh; ch <= endCh; ch++) {
+      if (entry.is_biblical && canonicalMax > 0 && ch > canonicalMax) break;
+      sections.push({
+        reference: `${entry.book} ${ch}`,
+        description: ch === startCh ? (entry.notes || "") : "",
+        estimated_verses: entry.book === "Psalms" ? 10 : 25,
+      });
     }
   }
 
@@ -315,7 +336,8 @@ function validateBooks(arr: Record<string, unknown>[]): BookEntry[] {
     .filter((b) => typeof b.book === "string" && b.book.length > 0)
     .map((b) => ({
       book: String(b.book),
-      chapters: typeof b.chapters === "number" ? b.chapters : 1,
+      chapters: typeof b.chapters === "number" && b.chapters > 0 ? b.chapters : 1,
+      chapter_start: typeof b.chapter_start === "number" && b.chapter_start > 0 ? b.chapter_start : 1,
       is_biblical: b.is_biblical === true,
       notes: typeof b.notes === "string" ? b.notes : "",
     }));
