@@ -79,25 +79,40 @@ export async function POST(request: NextRequest) {
       reference
     );
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: aiModel,
-        max_tokens: 8192,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 50000);
+
+    let anthropicRes: Response;
+    try {
+      anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: aiModel,
+          max_tokens: 8192,
+          messages: [{ role: "user", content: prompt }],
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+      return NextResponse.json(
+        { error: isTimeout ? "Claude API timed out" : "Claude API unreachable" },
+        { status: 502 }
+      );
+    }
+    clearTimeout(timeout);
 
     if (!anthropicRes.ok) {
       const detail = await anthropicRes.text();
       console.error("Anthropic API error:", anthropicRes.status, detail);
       return NextResponse.json(
-        { error: "Text retrieval service unavailable" },
+        { error: `Claude API error: ${anthropicRes.status}` },
         { status: 502 }
       );
     }
@@ -130,45 +145,62 @@ export async function POST(request: NextRequest) {
       // Raw text response — use as-is
     }
 
-    // Save passage
-    const { data: passage, error: pErr } = await admin
-      .from("passages")
-      .insert({
-        manuscript_id,
-        reference: reference.trim(),
-        sequence_order: sequence_order ?? null,
-        original_text: originalText,
-        transcription_method: "ai_reconstructed",
-        created_by: user.id,
-        metadata: {
-          ingested_by: "full_import_agent",
-          passage_description: description || null,
-          ai_model: aiModel,
-          tokens_used: tokensInput + tokensOutput,
-        },
-      } as Record<string, unknown>)
-      .select("id")
-      .single<Pick<Passage, "id">>();
+    // Handle [UNAVAILABLE] — text not available for this section
+    if (originalText === "[UNAVAILABLE]" || originalText.startsWith("[UNAVAILABLE")) {
+      return NextResponse.json({
+        passage_id: null,
+        skipped: true,
+        reason: "Text not available for this section",
+      });
+    }
 
-    if (pErr || !passage) {
-      console.error("Passage creation failed:", pErr);
+    // Save passage — wrap in try/catch for better error info
+    try {
+      const { data: passage, error: pErr } = await admin
+        .from("passages")
+        .insert({
+          manuscript_id,
+          reference: reference.trim(),
+          sequence_order: sequence_order ?? null,
+          original_text: originalText,
+          transcription_method: "ai_reconstructed",
+          created_by: user.id,
+          metadata: {
+            ingested_by: "full_import_agent",
+            passage_description: description || null,
+            ai_model: aiModel,
+            tokens_used: tokensInput + tokensOutput,
+          },
+        } as Record<string, unknown>)
+        .select("id")
+        .single<Pick<Passage, "id">>();
+
+      if (pErr || !passage) {
+        console.error("Passage creation failed:", pErr);
+        return NextResponse.json(
+          { error: `DB error: ${pErr?.message ?? "unknown"}` },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        passage_id: passage.id,
+        skipped: false,
+        text_length: originalText.length,
+        usage: {
+          tokens_input: tokensInput,
+          tokens_output: tokensOutput,
+          estimated_cost_usd: costUsd,
+          ai_model: aiModel,
+        },
+      });
+    } catch (dbErr) {
+      console.error("Passage insert exception:", dbErr);
       return NextResponse.json(
-        { error: "Failed to save passage" },
+        { error: `Insert failed: ${dbErr instanceof Error ? dbErr.message : "unknown"}` },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({
-      passage_id: passage.id,
-      skipped: false,
-      text_length: originalText.length,
-      usage: {
-        tokens_input: tokensInput,
-        tokens_output: tokensOutput,
-        estimated_cost_usd: costUsd,
-        ai_model: aiModel,
-      },
-    });
   } catch (err) {
     console.error("POST /api/agent/discover/section-text error:", err);
     return NextResponse.json(

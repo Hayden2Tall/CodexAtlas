@@ -7,6 +7,7 @@ interface TocSection {
   description: string;
   estimated_verses: number;
   already_imported: boolean;
+  sequence_order?: number;
 }
 
 interface SectionResult {
@@ -15,6 +16,7 @@ interface SectionResult {
   textLength?: number;
   cost?: number;
   error?: string;
+  reason?: string;
 }
 
 type ImportPhase = "idle" | "loading-toc" | "selecting" | "importing" | "complete";
@@ -164,6 +166,7 @@ export function FullImportPanel({ manuscripts }: Props) {
             next.set(section.reference, {
               reference: section.reference,
               status: "skipped",
+              reason: data.reason ?? "Already exists",
             });
             return next;
           });
@@ -377,12 +380,17 @@ export function FullImportPanel({ manuscripts }: Props) {
                           Importing
                         </span>
                       ) : result?.status === "skipped" ? (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600">
-                          Skipped
+                        <span
+                          className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600"
+                          title={result.reason ?? "Already exists"}
+                        >
+                          {result.reason === "Text not available for this section"
+                            ? "Unavailable"
+                            : "Skipped"}
                         </span>
                       ) : result?.status === "failed" ? (
                         <span
-                          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600"
+                          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 cursor-help"
                           title={result.error}
                         >
                           Failed
@@ -445,6 +453,27 @@ export function FullImportPanel({ manuscripts }: Props) {
                   className="rounded-md border border-red-300 px-4 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                 >
                   Cancel
+                </button>
+              )}
+              {phase === "complete" && failedCount > 0 && (
+                <button
+                  onClick={() => {
+                    const failedRefs = new Set(
+                      Array.from(results.entries())
+                        .filter(([, r]) => r.status === "failed")
+                        .map(([ref]) => ref)
+                    );
+                    setSelected(failedRefs);
+                    setPhase("selecting");
+                    setResults((prev) => {
+                      const next = new Map(prev);
+                      for (const ref of failedRefs) next.delete(ref);
+                      return next;
+                    });
+                  }}
+                  className="rounded-md bg-amber-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors"
+                >
+                  Retry {failedCount} Failed
                 </button>
               )}
               {phase === "complete" && ms && (
