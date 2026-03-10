@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
-import type { UserRole, User, AgentTask } from "@/lib/types";
+import type { UserRole, User } from "@/lib/types";
 
 export const maxDuration = 60;
 
@@ -72,17 +72,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const aiModel = "claude-sonnet-4-20250514";
+    const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildDiscoveryPrompt(query.trim(), maxResults);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50000);
+    const MAX_ATTEMPTS = 2;
+    const TIMEOUT_MS = 25_000;
+    let rawContent: string | undefined;
+    let tokensInput = 0;
+    let tokensOutput = 0;
 
-    let anthropicRes: Response;
-    try {
-      anthropicRes = await fetch(
-        "https://api.anthropic.com/v1/messages",
-        {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      let anthropicRes: Response;
+      try {
+        anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -91,35 +96,54 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             model: aiModel,
-            max_tokens: 8192,
+            max_tokens: 3000,
             messages: [{ role: "user", content: prompt }],
           }),
           signal: controller.signal,
+        });
+      } catch (fetchErr) {
+        clearTimeout(timer);
+        const isTimeout =
+          fetchErr instanceof Error && fetchErr.name === "AbortError";
+        if (isTimeout && attempt < MAX_ATTEMPTS) {
+          console.log(
+            `[discover] Attempt ${attempt} timed out, retrying...`
+          );
+          continue;
         }
-      );
-    } catch (fetchErr) {
-      clearTimeout(timeout);
-      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
-      return NextResponse.json(
-        { error: isTimeout ? "Discovery timed out — try a more specific query" : "Discovery service unreachable" },
-        { status: 502 }
-      );
-    }
-    clearTimeout(timeout);
+        return NextResponse.json(
+          {
+            error: isTimeout
+              ? "Discovery timed out — try a more specific query"
+              : "Discovery service unreachable",
+          },
+          { status: 502 }
+        );
+      }
+      clearTimeout(timer);
 
-    if (!anthropicRes.ok) {
-      const detail = await anthropicRes.text();
-      console.error("Anthropic API error:", anthropicRes.status, detail);
-      return NextResponse.json(
-        { error: `Discovery service error (${anthropicRes.status})` },
-        { status: 502 }
-      );
+      if (!anthropicRes.ok) {
+        const detail = await anthropicRes.text();
+        console.error("Anthropic API error:", anthropicRes.status, detail);
+        if (attempt < MAX_ATTEMPTS && anthropicRes.status >= 500) {
+          console.log(
+            `[discover] Attempt ${attempt} got ${anthropicRes.status}, retrying...`
+          );
+          continue;
+        }
+        return NextResponse.json(
+          { error: `Discovery service error (${anthropicRes.status})` },
+          { status: 502 }
+        );
+      }
+
+      const aiResult = await anthropicRes.json();
+      rawContent = aiResult.content?.[0]?.text;
+      tokensInput += aiResult.usage?.input_tokens ?? 0;
+      tokensOutput += aiResult.usage?.output_tokens ?? 0;
+      break;
     }
 
-    const aiResult = await anthropicRes.json();
-    const rawContent: string | undefined = aiResult.content?.[0]?.text;
-    const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
-    const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
     const costUsd = estimateCostUsd(aiModel, tokensInput, tokensOutput);
 
     if (!rawContent) {
@@ -195,46 +219,19 @@ export async function POST(request: NextRequest) {
 }
 
 function buildDiscoveryPrompt(query: string, maxResults: number): string {
-  return `You are a manuscript research assistant specializing in ancient and medieval texts. Given a research query, suggest real, historically documented manuscripts that match the criteria.
+  return `You are a manuscript research assistant. Given a query, suggest real, historically documented manuscripts.
 
-Research query: "${query}"
+Query: "${query}"
 
-Respond ONLY with a JSON array (no markdown fences, no extra text) of up to ${maxResults} manuscript suggestions. Each object must have exactly these fields:
+Respond ONLY with a JSON array (no markdown, no commentary) of up to ${maxResults} manuscripts:
 
-[
-  {
-    "title": "Full scholarly title of the manuscript",
-    "original_language": "ISO 639-3 code (e.g., grc, hbo, lat, syc, cop, ara, akk, got, arm, geo, eth, san)",
-    "estimated_date_start": 100,
-    "estimated_date_end": 200,
-    "origin_location": "Place of origin if known",
-    "archive_location": "Current repository",
-    "archive_identifier": "Catalog or shelf number",
-    "description": "Brief scholarly description",
-    "historical_context": "Historical significance and provenance",
-    "suggested_passages": [
-      {
-        "reference": "Standard scholarly reference for this passage unit",
-        "original_text": "Full original-language text for this passage unit",
-        "description": "What this passage contains and its scholarly significance"
-      }
-    ],
-    "confidence_notes": "What is well-established vs uncertain about this entry"
-  }
-]
+[{"title":"Full scholarly title","original_language":"ISO 639-3 code (grc, hbo, lat, syc, cop, etc.)","estimated_date_start":100,"estimated_date_end":200,"origin_location":"Place of origin","archive_location":"Current repository","archive_identifier":"Catalog/shelf number","description":"Brief scholarly description (1-2 sentences)","historical_context":"Historical significance (1-2 sentences)","suggested_passages":[{"reference":"Genesis 1","description":"Brief note on content"}],"confidence_notes":"What is established vs uncertain"}]
 
-CRITICAL passage guidelines:
-- Each passage must be a SUBSTANTIAL, meaningful scholarly unit — an entire chapter, a complete pericope, a full folio, or a significant textual section. NEVER suggest individual verses or single lines.
-- For biblical manuscripts: use whole chapters (e.g., "Genesis 1", "John 1", "Matthew 5-7") or recognized pericopes (e.g., "The Prologue of John", "The Sermon on the Mount").
-- For non-biblical texts: use natural divisions like folios, sections, or titled segments.
-- Include 2-5 passages per manuscript, each covering a significant portion of text.
-- For original_text: ALWAYS provide the COMPLETE text in the original language/script for each passage unit. For well-known manuscripts (biblical codices, Dead Sea Scrolls, classical texts), use standard critical editions (NA28, BHS, etc.) as your source. Provide the full text of the chapter or pericope, not just the opening line. Only use null for genuinely unpublished or fragmentary texts where the content is unknown.
-
-Other guidelines:
-- Only suggest manuscripts that are historically documented and well-attested
-- Dates should be integers representing years (positive for CE, negative for BCE)
-- confidence_notes should clearly distinguish established facts from scholarly speculation
-- Prefer well-known, important manuscripts with good available scholarship`;
+Rules:
+- Only real, historically documented, well-attested manuscripts
+- Passages: use whole chapters or major sections (e.g. "Genesis 1", "Matthew 5-7"), 2-5 per manuscript. Do NOT include original_text — our pipeline fetches that separately.
+- Dates: integers, negative for BCE
+- Keep descriptions concise`;
 }
 
 function parseDiscoveryResponse(raw: string): DiscoveredManuscript[] | null {
