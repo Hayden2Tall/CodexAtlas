@@ -101,148 +101,159 @@ export async function POST(request: NextRequest) {
       console.log(`[section-text] ${reference}: no existing passage found — will create new`);
     }
 
-    const aiModel = "claude-haiku-4-5-20251001";
+    const MODELS = [
+      "claude-haiku-4-5-20251001",
+      "claude-sonnet-4-20250514",
+    ] as const;
+
     const { system, user: userMsg } = buildSectionTextPrompt(
       manuscript_title,
       original_language ?? "grc",
       reference
     );
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50000);
-
-    let anthropicRes: Response;
-    try {
-      anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.ANTHROPIC_API_KEY!,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          max_tokens: 8192,
-          system,
-          messages: [{ role: "user", content: userMsg }],
-        }),
-        signal: controller.signal,
-      });
-    } catch (fetchErr) {
-      clearTimeout(timeout);
-      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
-      return NextResponse.json(
-        { error: isTimeout ? "Claude API timed out" : "Claude API unreachable" },
-        { status: 502 }
-      );
-    }
-    clearTimeout(timeout);
-
-    if (!anthropicRes.ok) {
-      const detail = await anthropicRes.text();
-      console.error("Anthropic API error:", anthropicRes.status, detail);
-
-      const isContentFilter = detail.includes("content filtering policy");
-      return NextResponse.json(
-        {
-          error: isContentFilter
-            ? `Content filter blocked (${anthropicRes.status})`
-            : `Claude API error: ${anthropicRes.status}`,
-        },
-        { status: 502 }
-      );
-    }
-
-    let aiResult;
-    try {
-      aiResult = await anthropicRes.json();
-    } catch (jsonErr) {
-      console.error("Failed to parse Anthropic response as JSON:", jsonErr);
-      return NextResponse.json(
-        { error: "Malformed response from Claude API" },
-        { status: 502 }
-      );
-    }
-
-    const rawContent: string | undefined = aiResult.content?.[0]?.text;
-    const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
-    const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
-    const costUsd = estimateCostUsd(aiModel, tokensInput, tokensOutput);
-
-    if (!rawContent || rawContent.trim().length === 0) {
-      console.error("Empty AI response. Stop reason:", aiResult.stop_reason, "Model:", aiResult.model);
-      return NextResponse.json(
-        { error: `Empty response (stop_reason: ${aiResult.stop_reason ?? "unknown"})` },
-        { status: 502 }
-      );
-    }
-
-    // Claude may wrap the text in JSON, markdown fences, or return raw text
-    let originalText = rawContent.trim();
-
-    // Strip markdown code fences if present
-    originalText = originalText
-      .replace(/^```(?:[\w-]*)?\s*\n?/i, "")
-      .replace(/\n?\s*```\s*$/, "")
-      .trim();
-
-    try {
-      const parsed = JSON.parse(originalText);
-      if (typeof parsed === "string") {
-        originalText = parsed;
-      } else if (parsed.text) {
-        originalText = parsed.text;
-      } else if (parsed.original_text) {
-        originalText = parsed.original_text;
-      }
-    } catch {
-      // Raw text response — use as-is
-    }
-
-    // Log the first 200 chars of what Claude returned for debugging
-    console.log(
-      `[section-text] ${reference}: ${originalText.length} chars, starts: "${originalText.slice(0, 200).replace(/\n/g, " ")}"`
-    );
-
-    // Handle [UNAVAILABLE] — section truly doesn't exist
-    if (
-      originalText === "[UNAVAILABLE]" ||
-      originalText.startsWith("[UNAVAILABLE]") ||
-      originalText.includes("[UNAVAILABLE]")
-    ) {
-      return NextResponse.json({
-        passage_id: null,
-        skipped: true,
-        reason: "Unavailable: section does not exist in this manuscript",
-      });
-    }
-
-    // Reject English refusal responses regardless of length.
-    // Claude Haiku often returns 1000+ char polite refusals.
     const refusalPattern = /^(I |Sorry|Unfortunately|I'm |I appreciate|This |The text|I cannot|I don't|I need to|Thank you|While I|As an AI)/i;
-    if (refusalPattern.test(originalText)) {
-      console.log(`[section-text] ${reference}: rejected as English refusal (${originalText.length} chars): "${originalText.slice(0, 200)}"`);
-      return NextResponse.json({
-        passage_id: null,
-        skipped: true,
-        reason: `AI refused — will retry. "${originalText.slice(0, 80)}..."`,
-      });
+
+    let originalText = "";
+    let aiModel = MODELS[0];
+    let tokensInput = 0;
+    let tokensOutput = 0;
+    let costUsd = 0;
+
+    for (const model of MODELS) {
+      aiModel = model;
+      console.log(`[section-text] ${reference}: trying ${model}`);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 50000);
+
+      let anthropicRes: Response;
+      try {
+        anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.ANTHROPIC_API_KEY!,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 8192,
+            system,
+            messages: [{ role: "user", content: userMsg }],
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+        if (model !== MODELS[MODELS.length - 1]) {
+          console.log(`[section-text] ${reference}: ${model} ${isTimeout ? "timed out" : "unreachable"}, escalating`);
+          continue;
+        }
+        return NextResponse.json(
+          { error: isTimeout ? "Claude API timed out" : "Claude API unreachable" },
+          { status: 502 }
+        );
+      }
+      clearTimeout(timeout);
+
+      if (!anthropicRes.ok) {
+        const detail = await anthropicRes.text();
+        console.error(`[section-text] ${reference}: ${model} API error ${anthropicRes.status}:`, detail);
+        if (model !== MODELS[MODELS.length - 1]) {
+          console.log(`[section-text] ${reference}: escalating to next model`);
+          continue;
+        }
+        const isContentFilter = detail.includes("content filtering policy");
+        return NextResponse.json(
+          {
+            error: isContentFilter
+              ? `Content filter blocked (${anthropicRes.status})`
+              : `Claude API error: ${anthropicRes.status}`,
+          },
+          { status: 502 }
+        );
+      }
+
+      let aiResult;
+      try {
+        aiResult = await anthropicRes.json();
+      } catch {
+        if (model !== MODELS[MODELS.length - 1]) continue;
+        return NextResponse.json(
+          { error: "Malformed response from Claude API" },
+          { status: 502 }
+        );
+      }
+
+      const rawContent: string | undefined = aiResult.content?.[0]?.text;
+      tokensInput += aiResult.usage?.input_tokens ?? 0;
+      tokensOutput += aiResult.usage?.output_tokens ?? 0;
+      costUsd += estimateCostUsd(model, aiResult.usage?.input_tokens ?? 0, aiResult.usage?.output_tokens ?? 0);
+
+      if (!rawContent || rawContent.trim().length === 0) {
+        if (model !== MODELS[MODELS.length - 1]) continue;
+        return NextResponse.json(
+          { error: `Empty response (stop_reason: ${aiResult.stop_reason ?? "unknown"})` },
+          { status: 502 }
+        );
+      }
+
+      let text = rawContent.trim();
+      text = text
+        .replace(/^```(?:[\w-]*)?\s*\n?/i, "")
+        .replace(/\n?\s*```\s*$/, "")
+        .trim();
+
+      try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed === "string") text = parsed;
+        else if (parsed.text) text = parsed.text;
+        else if (parsed.original_text) text = parsed.original_text;
+      } catch { /* raw text */ }
+
+      console.log(
+        `[section-text] ${reference} (${model}): ${text.length} chars, starts: "${text.slice(0, 150).replace(/\n/g, " ")}"`
+      );
+
+      if (text.includes("[UNAVAILABLE]")) {
+        return NextResponse.json({
+          passage_id: null,
+          skipped: true,
+          reason: "Unavailable: section does not exist in this manuscript",
+        });
+      }
+
+      if (refusalPattern.test(text)) {
+        console.log(`[section-text] ${reference}: ${model} refused, escalating`);
+        if (model !== MODELS[MODELS.length - 1]) continue;
+        return NextResponse.json({
+          passage_id: null,
+          skipped: true,
+          reason: `AI refused on all models: "${text.slice(0, 80)}..."`,
+        });
+      }
+
+      if (!textHasCorrectScript(text)) {
+        console.log(`[section-text] ${reference}: ${model} wrong script, escalating`);
+        if (model !== MODELS[MODELS.length - 1]) continue;
+        return NextResponse.json({
+          passage_id: null,
+          skipped: true,
+          reason: `Wrong script on all models`,
+        });
+      }
+
+      originalText = text;
+      break;
     }
 
-    // Validate that the response contains characters from the expected script.
-    const greekChars = (originalText.match(/[\u0370-\u03FF\u1F00-\u1FFF]/g) || []).length;
-    const hebrewChars = (originalText.match(/[\u0590-\u05FF]/g) || []).length;
-    const totalChars = originalText.length;
-
-    const hasExpectedScript = textHasCorrectScript(originalText);
-
-    if (!hasExpectedScript) {
-      console.log(`[section-text] ${reference}: wrong script — expected ${lang}, got ${greekChars} Greek / ${hebrewChars} Hebrew chars out of ${totalChars}. First 200: "${originalText.slice(0, 200)}"`);
-      return NextResponse.json({
-        passage_id: null,
-        skipped: true,
-        reason: `Wrong script: response is not in ${lang === "grc" ? "Greek" : lang === "heb" ? "Hebrew" : lang}`,
-      });
+    if (!originalText) {
+      return NextResponse.json(
+        { error: "All models failed to produce valid text" },
+        { status: 502 }
+      );
     }
 
     // Save passage — update existing empty record or insert new one
