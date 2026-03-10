@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BatchTranslatePanel } from "./batch-translate-panel";
+import { DiscoveryPanel } from "./discovery-panel";
 import { TaskList } from "./task-list";
 import type { AgentTask } from "@/lib/types";
 
@@ -15,8 +16,11 @@ interface Props {
   initialTasks: AgentTask[];
 }
 
+type Tab = "operations" | "tasks";
+
 export function AdminDashboard({ stats, initialTasks }: Props) {
   const [tasks, setTasks] = useState<AgentTask[]>(initialTasks);
+  const [activeTab, setActiveTab] = useState<Tab>("operations");
 
   function handleTaskCreated(task: AgentTask) {
     setTasks((prev) => [task, ...prev]);
@@ -35,12 +39,21 @@ export function AdminDashboard({ stats, initialTasks }: Props) {
   const totalTokensIn = tasks.reduce((sum, t) => sum + t.tokens_input, 0);
   const totalTokensOut = tasks.reduce((sum, t) => sum + t.tokens_output, 0);
 
+  const costByType = tasks.reduce<Record<string, number>>((acc, t) => {
+    acc[t.task_type] = (acc[t.task_type] ?? 0) + Number(t.estimated_cost_usd);
+    return acc;
+  }, {});
+
+  const activeTasks = tasks.filter(
+    (t) => t.status === "running" || t.status === "queued"
+  );
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Agent task management, batch operations, and cost monitoring.
+          Agent task management, content pipeline, and cost monitoring.
         </p>
       </div>
 
@@ -57,7 +70,7 @@ export function AdminDashboard({ stats, initialTasks }: Props) {
         <h2 className="text-sm font-semibold text-gray-700">
           Agent Cost Summary
         </h2>
-        <div className="mt-3 grid grid-cols-3 gap-4">
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <p className="text-xs text-gray-500">Total Cost</p>
             <p className="text-lg font-semibold text-gray-900">
@@ -76,20 +89,81 @@ export function AdminDashboard({ stats, initialTasks }: Props) {
               {formatTokens(totalTokensOut)}
             </p>
           </div>
+          <div>
+            <p className="text-xs text-gray-500">Active Tasks</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {activeTasks.length}
+            </p>
+          </div>
         </div>
+
+        {/* Cost breakdown by type */}
+        {Object.keys(costByType).length > 0 && (
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <p className="text-xs font-medium text-gray-500">Cost by Type</p>
+            <div className="mt-1.5 flex flex-wrap gap-3">
+              {Object.entries(costByType)
+                .sort(([, a], [, b]) => b - a)
+                .map(([type, cost]) => (
+                  <span key={type} className="text-xs text-gray-600">
+                    <span className="font-medium">{TYPE_LABELS[type] ?? type}:</span>{" "}
+                    ${cost.toFixed(4)}
+                  </span>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Batch translate */}
-      <BatchTranslatePanel
-        onTaskCreated={handleTaskCreated}
-        onTaskUpdated={handleTaskUpdated}
-      />
+      {/* Tab navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-6">
+          <button
+            onClick={() => setActiveTab("operations")}
+            className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+              activeTab === "operations"
+                ? "border-primary-700 text-primary-700"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            }`}
+          >
+            Agent Operations
+          </button>
+          <button
+            onClick={() => setActiveTab("tasks")}
+            className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+              activeTab === "tasks"
+                ? "border-primary-700 text-primary-700"
+                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            }`}
+          >
+            Task History ({tasks.length})
+          </button>
+        </nav>
+      </div>
 
-      {/* Task list */}
-      <TaskList tasks={tasks} />
+      {/* Tab content */}
+      {activeTab === "operations" && (
+        <div className="space-y-8">
+          <DiscoveryPanel />
+          <BatchTranslatePanel
+            onTaskCreated={handleTaskCreated}
+            onTaskUpdated={handleTaskUpdated}
+          />
+        </div>
+      )}
+
+      {activeTab === "tasks" && <TaskList tasks={tasks} />}
     </div>
   );
 }
+
+const TYPE_LABELS: Record<string, string> = {
+  batch_translate: "Translation",
+  discover_manuscript: "Discovery",
+  ocr_process: "OCR",
+  detect_variants: "Variants",
+  custom: "Custom",
+};
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
