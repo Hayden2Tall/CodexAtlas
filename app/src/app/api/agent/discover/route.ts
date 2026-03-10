@@ -75,28 +75,43 @@ export async function POST(request: NextRequest) {
     const aiModel = "claude-sonnet-4-20250514";
     const prompt = buildDiscoveryPrompt(query.trim(), maxResults);
 
-    const anthropicRes = await fetch(
-      "https://api.anthropic.com/v1/messages",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.ANTHROPIC_API_KEY!,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          max_tokens: 8192,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 50000);
+
+    let anthropicRes: Response;
+    try {
+      anthropicRes = await fetch(
+        "https://api.anthropic.com/v1/messages",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.ANTHROPIC_API_KEY!,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: aiModel,
+            max_tokens: 8192,
+            messages: [{ role: "user", content: prompt }],
+          }),
+          signal: controller.signal,
+        }
+      );
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+      return NextResponse.json(
+        { error: isTimeout ? "Discovery timed out — try a more specific query" : "Discovery service unreachable" },
+        { status: 502 }
+      );
+    }
+    clearTimeout(timeout);
 
     if (!anthropicRes.ok) {
       const detail = await anthropicRes.text();
       console.error("Anthropic API error:", anthropicRes.status, detail);
       return NextResponse.json(
-        { error: "Discovery service unavailable" },
+        { error: `Discovery service error (${anthropicRes.status})` },
         { status: 502 }
       );
     }

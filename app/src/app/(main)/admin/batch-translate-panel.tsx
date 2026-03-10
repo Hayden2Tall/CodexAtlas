@@ -246,6 +246,24 @@ export function BatchTranslatePanel({ onTaskCreated, onTaskUpdated }: Props) {
     setIsPaused(false);
   }
 
+  async function handleRetryFailed() {
+    const failedPassageIds = new Set(
+      results.filter((r) => !r.success).map((r) => r.passageId)
+    );
+    const failedPassages = pending.filter((p) => failedPassageIds.has(p.id));
+    if (failedPassages.length === 0) return;
+
+    setResults((prev) => prev.filter((r) => r.success));
+    cancelRef.current = false;
+    pauseRef.current = false;
+    setIsRunning(true);
+    setStatusMessage(`Retrying ${failedPassages.length} failed passages...`);
+
+    if (taskId) {
+      await runBatch(taskId, failedPassages);
+    }
+  }
+
   function handlePause() {
     pauseRef.current = true;
     setIsPaused(true);
@@ -339,6 +357,15 @@ export function BatchTranslatePanel({ onTaskCreated, onTaskUpdated }: Props) {
             className="rounded-md border border-red-300 bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
           >
             Cancel
+          </button>
+        )}
+
+        {!isRunning && !isStarting && failCount > 0 && (
+          <button
+            onClick={handleRetryFailed}
+            className="rounded-md bg-amber-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors"
+          >
+            Retry {failCount} Failed
           </button>
         )}
 
