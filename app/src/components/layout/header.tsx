@@ -9,6 +9,7 @@ import { Logo } from "@/components/brand/logo";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
+  { href: "/read", label: "Read" },
   { href: "/manuscripts", label: "Manuscripts" },
   { href: "/search", label: "Search" },
   { href: "/admin", label: "Admin" },

@@ -9,9 +9,32 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { passageId } = await params;
+  const { id: manuscriptId, passageId } = await params;
+  const supabase = await createClient();
+
+  const { data: passage } = await supabase
+    .from("passages")
+    .select("reference")
+    .eq("id", passageId)
+    .eq("manuscript_id", manuscriptId)
+    .single<{ reference: string }>();
+
+  const { data: manuscript } = await supabase
+    .from("manuscripts")
+    .select("title")
+    .eq("id", manuscriptId)
+    .single<{ title: string }>();
+
+  const ref = passage?.reference ?? passageId;
+  const ms = manuscript?.title ?? "Manuscript";
+  const title = `${ref} (${ms}) — CodexAtlas`;
+  const description = `Translation and evidence chain for ${ref} from ${ms}. AI-assisted translation with transparent source provenance.`;
+
   return {
-    title: `Translate ${passageId} — CodexAtlas`,
+    title,
+    description,
+    openGraph: { title, description, siteName: "CodexAtlas", type: "article" },
+    twitter: { card: "summary", title, description },
   };
 }
 
