@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const aiModel = "claude-3-5-haiku-20241022";
+    const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildSectionTextPrompt(
       manuscript_title,
       original_language ?? "grc",
