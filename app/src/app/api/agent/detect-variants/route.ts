@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
     const allIdentical = normalizedTexts.every((t) => t === normalizedTexts[0]);
 
     if (allIdentical) {
+      console.log(`[detect-variants] IDENTICAL text across ${passages.length} passages — skipping AI`);
       const sameSource = passages.every(
         (p) =>
           (p.metadata as Record<string, unknown> | null)?.ingested_by === "bible_api" ||
@@ -152,54 +153,77 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const aiModel = "claude-sonnet-4-20250514";
+    const aiModel = "claude-haiku-4-5-20251001";
     const prompt = buildVariantPrompt(passages);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50000);
+    console.log(`[detect-variants] START ref="${passage_reference ?? "custom"}" passages=${passages.length} model=${aiModel}`);
+    console.log(`[detect-variants] Input text lengths: ${passages.map(p => `${p.manuscript_title}=${(p.original_text ?? "").length}`).join(", ")}`);
 
-    let anthropicRes: Response;
-    try {
-      anthropicRes = await fetch(
-        "https://api.anthropic.com/v1/messages",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.ANTHROPIC_API_KEY!,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: aiModel,
-            max_tokens: 8192,
-            messages: [{ role: "user", content: prompt }],
-          }),
-          signal: controller.signal,
+    const MAX_ATTEMPTS = 2;
+    const TIMEOUT_MS = 30_000;
+    let rawContent: string | undefined;
+    let tokensInput = 0;
+    let tokensOutput = 0;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      let anthropicRes: Response;
+      try {
+        anthropicRes = await fetch(
+          "https://api.anthropic.com/v1/messages",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.ANTHROPIC_API_KEY!,
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: aiModel,
+              max_tokens: 4000,
+              messages: [{ role: "user", content: prompt }],
+            }),
+            signal: controller.signal,
+          }
+        );
+      } catch (fetchErr) {
+        clearTimeout(timer);
+        const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+        if (isTimeout && attempt < MAX_ATTEMPTS) {
+          console.log(`[detect-variants] Attempt ${attempt} timed out, retrying...`);
+          continue;
         }
-      );
-    } catch (fetchErr) {
-      clearTimeout(timeout);
-      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
-      return NextResponse.json(
-        { error: isTimeout ? "Variant detection timed out" : "Variant detection service unreachable" },
-        { status: 502 }
-      );
-    }
-    clearTimeout(timeout);
+        console.error(`[detect-variants] ${isTimeout ? "TIMEOUT" : "UNREACHABLE"} after ${attempt} attempt(s)`);
+        return NextResponse.json(
+          { error: isTimeout ? "Variant detection timed out — try again" : "Variant detection service unreachable" },
+          { status: 502 }
+        );
+      }
+      clearTimeout(timer);
 
-    if (!anthropicRes.ok) {
-      const detail = await anthropicRes.text();
-      console.error("Anthropic API error:", anthropicRes.status, detail);
-      return NextResponse.json(
-        { error: "Variant detection service unavailable" },
-        { status: 502 }
-      );
+      if (!anthropicRes.ok) {
+        const detail = await anthropicRes.text();
+        console.error(`[detect-variants] API error ${anthropicRes.status}:`, detail.slice(0, 300));
+        if (anthropicRes.status >= 500 && attempt < MAX_ATTEMPTS) {
+          console.log(`[detect-variants] 5xx, retrying...`);
+          continue;
+        }
+        return NextResponse.json(
+          { error: `Variant detection service error (${anthropicRes.status})` },
+          { status: 502 }
+        );
+      }
+
+      const aiResult = await anthropicRes.json();
+      rawContent = aiResult.content?.[0]?.text;
+      tokensInput = aiResult.usage?.input_tokens ?? 0;
+      tokensOutput = aiResult.usage?.output_tokens ?? 0;
+      console.log(`[detect-variants] AI response: ${tokensInput} in / ${tokensOutput} out, ${rawContent?.length ?? 0} chars`);
+      break;
     }
 
-    const aiResult = await anthropicRes.json();
-    const rawContent: string | undefined = aiResult.content?.[0]?.text;
-    const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
-    const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
     const costUsd = estimateCostUsd(aiModel, tokensInput, tokensOutput);
 
     if (!rawContent) {
@@ -209,18 +233,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const detected = parseVariantResponse(rawContent, passages);
+    const detected = parseVariantResponse(rawContent);
 
     if (!detected) {
-      console.error(
-        "Failed to parse variant response:",
-        rawContent.slice(0, 500)
-      );
+      console.error(`[detect-variants] PARSE_FAIL: raw=${rawContent?.slice(0, 500)}`);
       return NextResponse.json(
         { error: "Could not parse variant results" },
         { status: 502 }
       );
     }
+
+    console.log(`[detect-variants] DONE: ${detected.length} variants (${detected.filter(v => v.significance === "major").length} major, ${detected.filter(v => v.significance === "minor").length} minor, ${detected.filter(v => v.significance === "orthographic").length} ortho) cost=$${costUsd.toFixed(4)}`);
 
     await admin
       .from("agent_tasks")
@@ -261,7 +284,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("POST /api/agent/detect-variants error:", err);
+    console.error("[detect-variants] UNHANDLED_ERROR:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -347,51 +370,39 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+const MAX_PASSAGE_CHARS = 6000;
+
 function buildVariantPrompt(
   passages: (Passage & { manuscript_title: string })[]
 ): string {
   const passageBlocks = passages
-    .map(
-      (p) =>
-        `Manuscript: "${p.manuscript_title}" (ID: ${p.manuscript_id})\nReference: ${p.reference}\nText:\n"""\n${p.original_text}\n"""`
-    )
+    .map((p) => {
+      const text = (p.original_text ?? "").length > MAX_PASSAGE_CHARS
+        ? (p.original_text ?? "").slice(0, MAX_PASSAGE_CHARS) + "\n[...truncated]"
+        : p.original_text;
+      return `Manuscript: "${p.manuscript_title}" (ID: ${p.manuscript_id})\nReference: ${p.reference}\nText:\n"""\n${text}\n"""`;
+    })
     .join("\n\n---\n\n");
 
-  return `You are a textual critic specializing in ancient manuscript comparison. Analyze these parallel passages from different manuscripts and identify textual variants.
+  return `You are a textual critic. Compare these parallel passages and identify the most significant textual variants.
 
 ${passageBlocks}
 
-Compare all passages and identify every textual variant (differences in wording, spelling, word order, additions, omissions). Respond ONLY with a JSON array (no markdown fences, no extra text):
+Identify textual variants (differences in wording, word order, additions, omissions, spelling). Focus on the most significant ones first. Respond ONLY with a JSON array (no markdown, no commentary):
 
-[
-  {
-    "passage_reference": "The specific reference point of the variant",
-    "description": "Clear description of what differs",
-    "readings": [
-      {
-        "manuscript_title": "Name of the manuscript",
-        "manuscript_id": "UUID of the manuscript",
-        "reading_text": "The specific text at this variant point",
-        "apparatus_notes": "Critical apparatus notation"
-      }
-    ],
-    "significance": "major|minor|orthographic",
-    "analysis": "Scholarly analysis of the variant — likely origin, which reading may be original, etc."
-  }
-]
+[{"passage_reference":"specific verse/location","description":"what differs","readings":[{"manuscript_title":"Name","manuscript_id":"UUID","reading_text":"text at this point","apparatus_notes":"brief note"}],"significance":"major|minor|orthographic","analysis":"brief scholarly analysis"}]
 
-Classification guide:
-- "major": Changes meaning (different words, additions/omissions of clauses)
-- "minor": Affects nuance (word order, synonyms, grammatical variations)
-- "orthographic": Spelling differences with no semantic impact
+- "major": changes meaning (different words, additions/omissions)
+- "minor": affects nuance (word order, synonyms, grammar)
+- "orthographic": spelling only
 
-Include all manuscripts in each reading entry even if they agree — this documents the full attestation. If no variants are found, return an empty array [].`;
+Include all manuscripts in each reading. Return [] if no variants found.`;
 }
 
 function parseVariantResponse(
-  raw: string,
-  _passages: (Passage & { manuscript_title: string })[]
+  raw: string | undefined
 ): DetectedVariant[] | null {
+  if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return validateVariants(parsed);
