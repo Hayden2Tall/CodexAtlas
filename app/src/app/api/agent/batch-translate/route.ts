@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const targetLanguage: string = body.target_language ?? "English";
     const manuscriptId: string | undefined = body.manuscript_id;
+    // When true, include already-translated passages so they can be re-translated
+    const includeTranslated: boolean = body.include_translated === true;
 
     const admin = createAdminClient();
 
@@ -99,14 +101,16 @@ export async function POST(request: NextRequest) {
       (existingTranslations ?? []).map((t: { passage_id: string }) => t.passage_id)
     );
 
-    const pendingPassages = allPassages.filter(
-      (p) => !translatedPassageIds.has(p.id)
-    );
+    const pendingPassages = includeTranslated
+      ? allPassages
+      : allPassages.filter((p) => !translatedPassageIds.has(p.id));
 
     if (pendingPassages.length === 0) {
       return NextResponse.json({
         task: null,
         pending_passages: [],
+        already_translated: translatedPassageIds.size,
+        total_passages: allPassages.length,
         message: `All ${allPassages.length} passages already translated to ${targetLanguage}`,
       });
     }
@@ -140,7 +144,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       task,
-      pending_passages: pendingPassages,
+      pending_passages: pendingPassages.map((p) => ({
+        ...p,
+        is_translated: translatedPassageIds.has(p.id),
+      })),
       total_passages: allPassages.length,
       already_translated: translatedPassageIds.size,
     }, { status: 201 });

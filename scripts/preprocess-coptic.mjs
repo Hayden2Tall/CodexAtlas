@@ -62,12 +62,25 @@ const GITHUB_HEADERS = {
 
 /**
  * Parse a CoNLL-U file and return the word tokens as a single text string.
- * Column index 1 (FORM) is the Coptic word.
+ * Column index 1 (FORM) is the primary Coptic word token; some Coptic Scriptorium
+ * files store the form as "_" with the actual text in a MISC attribute (Orig= or norm=).
+ *
+ * Also validates that the content is actually CoNLL-U — GitHub rate-limited responses
+ * return an HTML page (200 OK) that contains no valid tokens.
  *
  * @param {string} content - Raw CoNLL-U file content
- * @returns {string} - Space-joined word tokens
+ * @returns {string} - Space-joined word tokens, or "" if content is invalid
  */
 export function parseConllu(content) {
+  if (!content || content.length < 10) return "";
+
+  // Sanity check: valid CoNLL-U starts with a '#' comment line or a digit token ID.
+  // HTML error pages start with '<' or 'Rate limit'. Reject non-CoNLL-U content.
+  const firstNonEmpty = content.trimStart().charAt(0);
+  if (firstNonEmpty !== "#" && firstNonEmpty !== "1" && !/^\d/.test(content.trimStart())) {
+    return "";
+  }
+
   const words = [];
   for (const rawLine of content.split("\n")) {
     const line = rawLine.trim();
@@ -80,7 +93,16 @@ export function parseConllu(content) {
     const id = cols[0];
     if (id.includes("-") || id.includes(".")) continue;
 
-    const form = cols[1].trim();
+    // Try FORM first (col index 1).
+    // Some Coptic Scriptorium CoNLL-U+ files store "_" for FORM with the actual
+    // Coptic Unicode in a MISC attribute (Orig=, orig=, norm=, or Norm=).
+    let form = cols[1]?.trim();
+    if (!form || form === "_") {
+      const misc = cols[9]?.trim() ?? "";
+      const origMatch = misc.match(/(?:Orig|orig|norm|Norm)=([^|]+)/);
+      if (origMatch) form = origMatch[1].trim();
+    }
+
     if (form && form !== "_") words.push(form);
   }
   return words.join(" ");
@@ -157,7 +179,14 @@ async function main() {
 
     const text = parseConllu(content);
     if (!text) {
-      console.warn(`  WARN ${name}: no words extracted`);
+      // Distinguish rate-limit HTML from genuinely empty chapters
+      const isHtml = content.trimStart().startsWith("<") || content.includes("rate limit");
+      if (isHtml) {
+        console.warn(`  WARN ${name}: response looks like HTML (rate limit?). Set GITHUB_TOKEN to avoid this.`);
+      } else {
+        console.warn(`  WARN ${name}: no words extracted`);
+      }
+      fileErrors++;
       continue;
     }
 

@@ -117,6 +117,10 @@ export function FullImportPanel({ manuscripts }: Props) {
     setSelected(new Set(importable.map((s) => s.reference)));
   };
 
+  const selectAllIncludingImported = () => {
+    setSelected(new Set(sections.map((s) => s.reference)));
+  };
+
   const selectNone = () => setSelected(new Set());
 
   const startImport = useCallback(async () => {
@@ -126,7 +130,7 @@ export function FullImportPanel({ manuscripts }: Props) {
     setTotalImportCost(0);
 
     const toImport = sections
-      .filter((s) => selected.has(s.reference) && !s.already_imported)
+      .filter((s) => selected.has(s.reference))
       .map((s, i) => ({ ...s, sequence_order: i + 1 }));
 
     const initResults = new Map<string, SectionResult>();
@@ -168,6 +172,7 @@ export function FullImportPanel({ manuscripts }: Props) {
               reference: section.reference,
               description: section.description,
               sequence_order: section.sequence_order,
+              force_reimport: section.already_imported ? true : undefined,
             }),
           });
 
@@ -367,13 +372,22 @@ export function FullImportPanel({ manuscripts }: Props) {
 
             {/* Select all / none */}
             {phase === "selecting" && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={selectAll}
                   className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
                 >
                   Select all new
                 </button>
+                {sections.some((s) => s.already_imported) && (
+                  <button
+                    onClick={selectAllIncludingImported}
+                    className="rounded border border-amber-200 px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-50"
+                    title="Re-imports will overwrite existing text with a fresh fetch"
+                  >
+                    Select all + re-import
+                  </button>
+                )}
                 <button
                   onClick={selectNone}
                   className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
@@ -382,6 +396,11 @@ export function FullImportPanel({ manuscripts }: Props) {
                 </button>
                 <span className="ml-auto text-xs text-gray-400">
                   {selected.size} selected
+                  {sections.filter(s => s.already_imported && selected.has(s.reference)).length > 0 && (
+                    <span className="ml-1 text-amber-500">
+                      ({sections.filter(s => s.already_imported && selected.has(s.reference)).length} re-import)
+                    </span>
+                  )}
                 </span>
               </div>
             )}
@@ -406,7 +425,6 @@ export function FullImportPanel({ manuscripts }: Props) {
                         checked={isChecked}
                         onChange={() => toggleSection(s.reference)}
                         disabled={
-                          s.already_imported ||
                           phase === "importing" ||
                           phase === "complete"
                         }

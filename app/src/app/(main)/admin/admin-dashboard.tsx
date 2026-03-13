@@ -167,6 +167,7 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
           <DiscoveryPanel />
           <FullImportPanel manuscripts={manuscripts} />
           <BatchTranslatePanel
+            manuscripts={manuscripts}
             onTaskCreated={handleTaskCreated}
             onTaskUpdated={handleTaskUpdated}
           />

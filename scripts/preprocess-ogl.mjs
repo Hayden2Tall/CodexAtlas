@@ -145,9 +145,26 @@ async function listXmlFiles(dir) {
   const res = await fetch(url, { headers: GITHUB_HEADERS });
   if (!res.ok) return [];
   const items = await res.json();
-  return items
+
+  const xmlFiles = items
     .filter((item) => item.type === "file" && item.name.endsWith(".xml"))
     .map((item) => ({ name: item.name, downloadUrl: item.download_url }));
+
+  // OGL data has TWO levels of nesting: data/{work_dir}/{sub_dir}/{file}.xml
+  // Recurse into any subdirectories found at the first level.
+  const subdirs = items.filter((item) => item.type === "dir");
+  for (const subdir of subdirs) {
+    const subUrl = `${GITHUB_API}/repos/${OWNER}/${REPO}/contents/${DATA_PATH}/${dir}/${subdir.name}`;
+    const subRes = await fetch(subUrl, { headers: GITHUB_HEADERS });
+    if (!subRes.ok) continue;
+    const subItems = await subRes.json();
+    const subXmls = subItems
+      .filter((item) => item.type === "file" && item.name.endsWith(".xml"))
+      .map((item) => ({ name: item.name, downloadUrl: item.download_url }));
+    xmlFiles.push(...subXmls);
+  }
+
+  return xmlFiles;
 }
 
 async function fetchText(url) {
