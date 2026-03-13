@@ -179,14 +179,19 @@ async function main() {
 
     const text = parseConllu(content);
     if (!text) {
-      // Distinguish rate-limit HTML from genuinely empty chapters
-      const isHtml = content.trimStart().startsWith("<") || content.includes("rate limit");
-      if (isHtml) {
-        console.warn(`  WARN ${name}: response looks like HTML (rate limit?). Set GITHUB_TOKEN to avoid this.`);
+      // Many sahidica.nt_CONLLU files are empty placeholders (2 bytes — just newlines).
+      // Only Mark and 1 Corinthians currently have annotated content upstream.
+      const isEmpty = content.trim().length === 0;
+      const isHtml = !isEmpty && (content.trimStart().startsWith("<") || content.includes("rate limit"));
+      if (isEmpty) {
+        // Silently skip — known upstream placeholder, not an error
+      } else if (isHtml) {
+        console.warn(`  WARN ${name}: HTML response (rate limit?). Ensure GITHUB_TOKEN is set.`);
+        fileErrors++;
       } else {
         console.warn(`  WARN ${name}: no words extracted`);
+        fileErrors++;
       }
-      fileErrors++;
       continue;
     }
 

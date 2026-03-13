@@ -196,7 +196,9 @@ async function main() {
   const allRows = [];
   let workErrors = 0;
 
-  for (const dir of workDirs) {
+  for (let wi = 0; wi < workDirs.length; wi++) {
+    const dir = workDirs[wi];
+    process.stdout.write(`\r  [${wi + 1}/${workDirs.length}] ${dir.padEnd(30)} rows so far: ${allRows.length}`);
     try {
       const files = await listXmlFiles(dir);
       if (files.length === 0) continue;
@@ -240,7 +242,7 @@ async function main() {
   }
 
   console.log(
-    `\nExtracted ${allRows.length} section rows (${workErrors} work errors).`
+    `\n\nExtracted ${allRows.length} section rows (${workErrors} work errors).`
   );
 
   if (allRows.length === 0) {
