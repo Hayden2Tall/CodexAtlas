@@ -142,7 +142,8 @@ async function main() {
   // 1. Find all distinct (source, manuscript_name) pairs in manuscript_source_texts.
   // Paginate in chunks of 10,000 to avoid Supabase's default 1,000-row cap.
   const groups = new Map(); // "source|manuscript_name" → { source, manuscript_name }
-  const PAGE_SIZE = 10000;
+  // Supabase PostgREST caps responses at 1,000 rows per request by default.
+  const PAGE_SIZE = 1000;
   let offset = 0;
 
   while (true) {

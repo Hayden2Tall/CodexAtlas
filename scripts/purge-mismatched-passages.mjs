@@ -183,14 +183,26 @@ async function main() {
 
     const translationIds = (translations ?? []).map((t) => t.id);
 
-    // Delete translation_versions
+    let tvCount = 0;
+
     if (translationIds.length > 0) {
-      const { error: tvErr, count: tvCount } = await supabase
+      // Break circular FK: translations.current_version_id → translation_versions.id
+      // Must NULL this out before deleting translation_versions.
+      const { error: nullErr } = await supabase
+        .from("translations")
+        .update({ current_version_id: null })
+        .in("id", translationIds);
+      if (nullErr) {
+        console.error("Error nulling current_version_id:", nullErr.message);
+      }
+
+      // Delete translation_versions
+      const { error: tvErr, count: tvDeleted } = await supabase
         .from("translation_versions")
         .delete({ count: "exact" })
         .in("translation_id", translationIds);
       if (tvErr) console.error("Error deleting translation_versions:", tvErr.message);
-      else totalTvDeleted += tvCount ?? 0;
+      else { tvCount = tvDeleted ?? 0; totalTvDeleted += tvCount; }
     }
 
     // Delete translations
@@ -211,7 +223,7 @@ async function main() {
 
     console.log(
       `  Batch ${Math.ceil((i + 1) / BATCH)}: deleted ${pCount ?? 0} passages, ` +
-      `${tCount ?? 0} translations, ${tvCount ?? 0} translation_versions`
+      `${tCount ?? 0} translations, ${tvCount} translation_versions`
     );
   }
 
