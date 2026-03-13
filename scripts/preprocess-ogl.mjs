@@ -250,12 +250,27 @@ async function main() {
     process.exit(0);
   }
 
+  // Deduplicate by (source, manuscript_name, book, chapter) — keep longest text.
+  // Some OGL works have multiple XML files that produce the same section numbers.
+  const deduped = new Map();
+  for (const row of allRows) {
+    const key = `${row.source}|${row.manuscript_name}|${row.book}|${row.chapter}`;
+    const existing = deduped.get(key);
+    if (!existing || row.text.length > existing.text.length) {
+      deduped.set(key, row);
+    }
+  }
+  const dedupedRows = Array.from(deduped.values());
+  if (dedupedRows.length < allRows.length) {
+    console.log(`Deduplicated to ${dedupedRows.length} rows (removed ${allRows.length - dedupedRows.length} duplicates).`);
+  }
+
   let inserted = 0;
   let errors = 0;
   const BATCH_SIZE = 50;
 
-  for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
-    const batch = allRows.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+    const batch = dedupedRows.slice(i, i + BATCH_SIZE);
 
     const { error } = await supabase
       .from("manuscript_source_texts")

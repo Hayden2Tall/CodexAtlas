@@ -139,27 +139,37 @@ for (const entry of Object.values(SOURCE_REGISTRY)) {
 }
 
 async function main() {
-  // 1. Find all distinct (source, manuscript_name) pairs in manuscript_source_texts
-  let query = supabase
-    .from("manuscript_source_texts")
-    .select("source, manuscript_name")
-    .order("source");
-
-  if (filterSource) {
-    query = query.eq("source", filterSource);
-  }
-
-  const { data: allRows, error: fetchErr } = await query;
-  if (fetchErr || !allRows) {
-    console.error("Failed to fetch manuscript_source_texts:", fetchErr?.message);
-    process.exit(1);
-  }
-
-  // Deduplicate
+  // 1. Find all distinct (source, manuscript_name) pairs in manuscript_source_texts.
+  // Paginate in chunks of 10,000 to avoid Supabase's default 1,000-row cap.
   const groups = new Map(); // "source|manuscript_name" → { source, manuscript_name }
-  for (const row of allRows) {
-    const key = `${row.source}|${row.manuscript_name}`;
-    if (!groups.has(key)) groups.set(key, { source: row.source, manuscriptName: row.manuscript_name });
+  const PAGE_SIZE = 10000;
+  let offset = 0;
+
+  while (true) {
+    let query = supabase
+      .from("manuscript_source_texts")
+      .select("source, manuscript_name")
+      .order("source")
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (filterSource) {
+      query = query.eq("source", filterSource);
+    }
+
+    const { data: page, error: fetchErr } = await query;
+    if (fetchErr) {
+      console.error("Failed to fetch manuscript_source_texts:", fetchErr.message);
+      process.exit(1);
+    }
+    if (!page || page.length === 0) break;
+
+    for (const row of page) {
+      const key = `${row.source}|${row.manuscript_name}`;
+      if (!groups.has(key)) groups.set(key, { source: row.source, manuscriptName: row.manuscript_name });
+    }
+
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
 
   console.log(`Found ${groups.size} distinct (source, manuscript_name) group(s).\n`);
