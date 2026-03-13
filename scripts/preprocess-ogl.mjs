@@ -70,7 +70,7 @@ export function parseOglTei(xml, workTitle) {
   const sectionMap = new Map(); // section number → string[]
 
   // Try typed divs with n= attribute first
-  const divRe = /<div\b[^>]*type="(?:chapter|section|book)"[^>]*n="(\d+)"[^>]*>/g;
+  const divRe = /<div\b[^>]*type="(?:chapter|section|book|textpart)"[^>]*n="(\d+)"[^>]*>/g;
   const positions = [];
   let m;
   while ((m = divRe.exec(xml)) !== null) {

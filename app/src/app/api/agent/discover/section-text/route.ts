@@ -493,8 +493,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Legacy paths (should not occur with new chain, but kept for safety)
         const isManuscriptSpecific = ["sinaiticus-project", "dss", "leningrad-wlc"].includes(sourceType);
-        transcriptionMethod = isManuscriptSpecific ? "scholarly_transcription"
-          : sourceType === "ai" ? "ai_reconstructed" : "standard_edition";
+        transcriptionMethod = isManuscriptSpecific ? "scholarly_transcription" : "standard_edition";
       }
 
       const chainSummary = chain.map(s => ({
@@ -521,22 +520,22 @@ export async function POST(request: NextRequest) {
         metadata.transcription_source = "INTF NTVMR";
         metadata.ga_number = detail.ga_number;
         metadata.doc_id = detail.doc_id;
-      } else if (sourceType === "sinaiticus-project") {
-        // Legacy: kept for backwards compat
+      } else if ((sourceType as string) === "sinaiticus-project") {
+        // Legacy: kept for backwards compat with existing passage metadata
         metadata.ingested_by = "sinaiticus_project";
         metadata.transcription_source = "Codex Sinaiticus Project";
-      } else if (sourceType === "dss") {
+      } else if ((sourceType as string) === "dss") {
         metadata.ingested_by = "etcbc_dss";
         metadata.transcription_source = "ETCBC Dead Sea Scrolls";
         metadata.scroll_id = sourceDetail;
-      } else if (sourceType === "leningrad-wlc") {
+      } else if ((sourceType as string) === "leningrad-wlc") {
         metadata.ingested_by = "bible_api";
         metadata.transcription_source = "Westminster Leningrad Codex";
         metadata.edition_source = "WLC";
-      } else if (sourceType === "sblgnt") {
+      } else if ((sourceType as string) === "sblgnt") {
         metadata.ingested_by = "sblgnt";
         metadata.edition_source = "SBLGNT";
-      } else if (sourceType === "bible-api") {
+      } else if ((sourceType as string) === "bible-api") {
         metadata.ingested_by = "bible_api";
         metadata.edition_source = sourceDetail;
       } else {

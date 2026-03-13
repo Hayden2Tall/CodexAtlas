@@ -117,12 +117,12 @@ function isV3(manifest: IiifManifest): manifest is IiifV3Manifest {
 }
 
 function stringLabel(
-  raw: string | { "@value": string }[] | Record<string, string[]> | undefined
+  raw: string | string[] | { "@value": string }[] | Record<string, string[]> | undefined
 ): string | null {
   if (!raw) return null;
   if (typeof raw === "string") return raw.trim() || null;
   if (Array.isArray(raw)) {
-    const first = raw[0];
+    const first = raw[0] as string | { "@value": string } | undefined;
     if (!first) return null;
     return typeof first === "string"
       ? first.trim()

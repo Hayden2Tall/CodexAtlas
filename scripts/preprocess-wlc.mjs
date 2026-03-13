@@ -105,7 +105,7 @@ export function parseOsisBook(xml) {
 
   // Strategy: collect all w/seg/divineName elements per verse, group by chapter.
   // Each word is in a <w lemma="..." morph="...">HEBREW</w> or <seg>HEBREW</seg>
-  const verseRe = /osisID="[^."]+"\.(\d+)\.\d+"/g;
+  const verseRe = /osisID="[^.]+\.(\d+)\.\d+"/g;
   let m;
 
   // Collect verse start positions with chapter numbers
@@ -249,7 +249,10 @@ async function main() {
   );
 }
 
-main().catch((err) => {
-  console.error("Fatal:", err);
-  process.exit(1);
-});
+// Only run when executed directly, not when imported by preprocess-oshb.mjs
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+}
