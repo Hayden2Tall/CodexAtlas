@@ -39,6 +39,51 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-12 — Ingestion System Rework: Source Registry, IIIF Harvest, Remove AI Fallback
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+The 6-step text source fallback chain was architecturally misleading. When importing most manuscripts, the chain silently fell through to standard critical editions (SBLGNT, bolls.life WLC/LXX) or AI-generated text — neither of which represents the specific manuscript being imported. Passages were labeled with a specific manuscript title but contained a different text entirely. DSS imports always failed due to a `.single()` Supabase query bug. AI generation caused frequent timeouts and introduced unverifiable text into the corpus.
+
+**Decision:**
+Replace the 6-step fallback chain with a clean three-tier system:
+1. **Source Registry** — Pre-cataloged open-access corpora with pre-built CLI preprocessors. No AI in the import path. Corpora: Codex Sinaiticus (existing), ETCBC DSS (fixed), Westminster Leningrad Codex, SBLGNT (preloaded), Tyndale House GNT, Coptic Scriptorium, Open Scriptures Hebrew Bible, OpenGreekAndLatin First1KGreek.
+2. **NTVMR API** — Retained as the only remaining live API source for GA-mapped NT manuscripts.
+3. **IIIF Metadata Harvest** — Fetch manuscript records (metadata + image URLs) from major IIIF institutions (e-codices, Vatican DigiVatLib, British Library). OCR triggered on demand per manuscript.
+
+The bolls.life API and AI text generation are removed from the import chain. Their code is retained in the file (§5.1 no deletion) but no longer called. Existing mismatched passages are flagged in the UI with a source mismatch warning banner rather than deleted. A "Re-import from authoritative source" button is added to the passage detail page.
+
+**Rationale:**
+- Standard edition text imported under a specific manuscript title is factually wrong — it misrepresents what that manuscript actually says.
+- Pre-loading corpora into `manuscript_source_texts` is faster, cheaper, and more reliable than AI/API fallbacks.
+- IIIF harvest provides thousands of manuscript records at zero OCR cost; text is added on demand.
+- Removing AI from the import hot path eliminates the primary timeout source.
+
+**Consequences:**
+- Manuscripts without an authoritative source return `no_source` instead of AI-generated text. This is honest and correct behavior.
+- The discovery → TOC → section-by-section ceremony is deprecated as the primary import path for known corpora.
+- Existing passages with `transcription_method = 'standard_edition'` or `'ai_reconstructed'` on non-edition manuscripts are flagged in the UI but not deleted.
+- New `transcription_method = 'iiif_metadata'` added for IIIF-harvested stub passages (migration 025).
+- New indexes on `manuscript_source_texts` for registry source lookups (migration 026).
+
+**Affected Files:**
+- `app/src/app/api/agent/discover/section-text/route.ts` — chain refactored
+- `app/src/lib/utils/text-sources.ts` — DSS_BOOK_ALIASES added, chunking utils
+- `app/src/lib/utils/source-registry.ts` — new file
+- `app/src/lib/services/iiif.ts` — new file
+- `scripts/preprocess-wlc.mjs`, `preprocess-sblgnt.mjs`, `preprocess-thgnt.mjs`, `preprocess-coptic.mjs`, `preprocess-oshb.mjs`, `preprocess-ogl.mjs` — new preprocessors
+- `scripts/migrations/025_add_iiif_transcription_method.sql`, `026_add_registry_source_index.sql`
+- `app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/text-provenance.tsx` — mismatch banner + re-import button
+- `app/src/app/(main)/admin/` — new Registry and IIIF Harvest panels
+
+**Related Documents:**
+- `docs/design/ingestion-rework-2026.md` (feature design doc, plan: stateless-forging-willow)
+
+---
+
 ### 2026-03-10 — Phase 3.4: Interactive Visualizations
 
 **Type:** milestone

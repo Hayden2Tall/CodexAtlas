@@ -110,6 +110,16 @@ export default async function TranslatePage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthenticated = !!user;
 
+  const { data: userProfile } = user
+    ? await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single<{ role: string }>()
+    : { data: null };
+
+  const userRole = userProfile?.role ?? null;
+
   return (
     <div>
       <nav className="mb-6 flex items-center text-sm text-gray-500">
@@ -140,6 +150,7 @@ export default async function TranslatePage({ params }: PageProps) {
         evidenceRecords={evidenceRecords ?? []}
         reviews={reviews ?? []}
         isAuthenticated={isAuthenticated}
+        userRole={userRole}
       />
 
       {relatedVariants && relatedVariants.length > 0 && (

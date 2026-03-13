@@ -1,7 +1,7 @@
 # CodexAtlas Data Model Specification
 
 > **Database:** Supabase (PostgreSQL)
-> **Last Updated:** 2026-03-10
+> **Last Updated:** 2026-03-12
 > **Status:** Canonical Reference
 
 This document defines the complete data model for CodexAtlas, an open-source AI-assisted research platform for ancient religious manuscripts. It is intended to be precise enough for a developer to implement the schema directly.
@@ -41,11 +41,24 @@ The root entity representing a single physical or reconstructed manuscript.
 | `archive_identifier` | `TEXT` | | Catalog number within the holding institution. |
 | `description` | `TEXT` | | Free-form scholarly description. |
 | `historical_context` | `TEXT` | | Historical and cultural context of the manuscript. |
-| `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Extensible metadata (provenance chain, conservation notes, digitization details). |
+| `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Extensible metadata (provenance chain, conservation notes, digitization details). See §2.1a for IIIF-harvested fields. |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Row creation time. |
 | `updated_at` | `TIMESTAMPTZ` | | Last modification time. |
 | `created_by` | `UUID` | `REFERENCES users(id)` | User who created the record. |
 | `archived_at` | `TIMESTAMPTZ` | | Soft-delete timestamp. `NULL` means active. |
+
+#### 2.1a `manuscripts.metadata` — IIIF-Harvested Fields
+
+When a manuscript record is created by the IIIF harvest pipeline (`POST /api/iiif/harvest`), the following keys are written into `manuscripts.metadata`:
+
+| Key | Type | Description |
+|---|---|---|
+| `iiif_manifest_url` | `string` | Canonical IIIF Presentation API manifest URL. Used for deduplication and image retrieval. |
+| `iiif_institution` | `string` | Harvesting institution key (e.g., `"e-codices"`, `"vatican"`, `"british-library"`). |
+| `page_count` | `number` | Number of pages (canvases) in the manifest. |
+| `thumbnail_url` | `string \| null` | Thumbnail image URL extracted from the manifest. |
+
+---
 
 ### 2.2 `manuscript_images`
 
@@ -74,7 +87,7 @@ A discrete textual unit within a manuscript, identified by a canonical reference
 | `reference` | `TEXT` | `NOT NULL` | Canonical reference string (e.g., `"Genesis 1:1"`, `"P.Oxy. 5101 col. ii.3-7"`). |
 | `sequence_order` | `INTEGER` | | Ordering index within the manuscript for sequential reading. |
 | `original_text` | `TEXT` | | Transcribed text in the original language. |
-| `transcription_method` | `TEXT` | | How the text was obtained: `'manual'`, `'ocr_auto'`, `'ocr_reviewed'`, `'ai_reconstructed'`, `'ai_imported'`, `'standard_edition'`, `'scholarly_transcription'`. |
+| `transcription_method` | `TEXT` | | How the text was obtained: `'manual'`, `'ocr_auto'`, `'ocr_reviewed'`, `'ai_reconstructed'`, `'ai_imported'`, `'standard_edition'`, `'scholarly_transcription'`, `'iiif_metadata'`. |
 | `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Extensible metadata (paleographic notes, lacunae descriptions). |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Row creation time. |
 | `updated_at` | `TIMESTAMPTZ` | | Last modification time. |
@@ -298,12 +311,12 @@ Tracks all AI agent-initiated tasks: batch translations, manuscript discovery, O
 
 ### 2.17 `manuscript_source_texts`
 
-Preprocessed manuscript transcription data from external scholarly sources (Codex Sinaiticus Project, ETCBC Dead Sea Scrolls). Populated by one-time offline preprocessing scripts, not by the application at runtime.
+Preprocessed manuscript transcription data from external scholarly sources. Populated by one-time offline CLI preprocessor scripts (`scripts/preprocess-*.mjs`), not by the application at runtime. Each source has a dedicated preprocessor and is registered in `app/src/lib/utils/source-registry.ts`.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Unique identifier. |
-| `source` | `TEXT` | `NOT NULL` | Data source identifier: `'sinaiticus_project'`, `'etcbc_dss'`. |
+| `source` | `TEXT` | `NOT NULL` | Data source identifier. See table below. |
 | `manuscript_name` | `TEXT` | `NOT NULL` | Display name of the manuscript or scroll. |
 | `book` | `TEXT` | `NOT NULL` | Biblical book name (e.g., "Genesis", "Isaiah"). |
 | `chapter` | `INTEGER` | `NOT NULL` | Chapter number within the book. |
@@ -312,6 +325,27 @@ Preprocessed manuscript transcription data from external scholarly sources (Code
 | `created_at` | `TIMESTAMPTZ` | `DEFAULT now()` | Row creation time. |
 
 **Unique constraint:** `UNIQUE(source, manuscript_name, book, chapter)` — prevents duplicate entries for the same text unit.
+
+**Performance indexes** (migration 026):
+```sql
+CREATE INDEX idx_mst_source_only ON manuscript_source_texts (source);
+CREATE INDEX idx_mst_source_book  ON manuscript_source_texts (source, book);
+```
+
+#### `manuscript_source_texts.source` Values
+
+| `source` | Corpus | Language | Coverage | Transcription Method | Preprocessor |
+|---|---|---|---|---|---|
+| `sinaiticus_project` | Codex Sinaiticus Project (TEI XML) | `grc` | Full Bible | `scholarly_transcription` | `preprocess-sinaiticus.mjs` |
+| `etcbc_dss` | ETCBC Dead Sea Scrolls (Text-Fabric) | `heb` | OT | `scholarly_transcription` | `preprocess-dss.mjs` |
+| `wlc` | Westminster Leningrad Codex (OSIS XML) | `heb` | OT | `scholarly_transcription` | `preprocess-wlc.mjs` |
+| `sblgnt` | SBL Greek New Testament (plain text) | `grc` | NT | `standard_edition` | `preprocess-sblgnt.mjs` |
+| `thgnt` | Tyndale House GNT (TSV) | `grc` | NT | `standard_edition` | `preprocess-thgnt.mjs` |
+| `coptic_scriptorium` | Coptic Scriptorium — Sahidic NT (TEI XML) | `cop` | Mixed | `scholarly_transcription` | `preprocess-coptic.mjs` |
+| `oshb` | Open Scriptures Hebrew Bible (OSIS XML) | `heb` | OT | `standard_edition` | `preprocess-oshb.mjs` |
+| `first1k_greek` | OpenGreekAndLatin First1KGreek (TEI XML) | `grc` | Patristic | `scholarly_transcription` | `preprocess-ogl.mjs` |
+
+> **Note:** For `first1k_greek`, the `book` column stores the work title (e.g., `"Ignatius - To the Ephesians"`) and `chapter` stores the section number, not a biblical chapter.
 
 ---
 
@@ -716,7 +750,9 @@ scripts/migrations/
 ├── 020_add_ai_transcription_methods.sql
 ├── 021_add_standard_edition_transcription_method.sql
 ├── 022_add_scholarly_transcription_method.sql
-└── 023_create_manuscript_source_texts.sql
+├── 023_create_manuscript_source_texts.sql
+├── 025_add_iiif_transcription_method.sql
+└── 026_add_registry_source_index.sql
 ```
 
 ### Principles

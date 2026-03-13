@@ -52,7 +52,15 @@ export type RelationshipType =
   | "derivative"
   | "shared_source"
   | "hypothetical";
-export type TranscriptionMethod = "manual" | "ocr_auto" | "ocr_reviewed";
+export type TranscriptionMethod =
+  | "manual"
+  | "ocr_auto"
+  | "ocr_reviewed"
+  | "ai_reconstructed"
+  | "ai_imported"
+  | "standard_edition"
+  | "scholarly_transcription"
+  | "iiif_metadata";
 export type OcrStatus = "pending" | "processing" | "completed" | "failed";
 export type AgentTaskType =
   | "batch_translate"

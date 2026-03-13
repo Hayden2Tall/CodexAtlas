@@ -19,6 +19,10 @@ export interface SourceChainStep {
 }
 
 export const SOURCE_LABELS: Record<string, string> = {
+  // New unified registry source (replaces sinaiticus-project, dss, leningrad-wlc, sblgnt individual steps)
+  registry: "Source Registry (pre-cataloged open-access corpus)",
+  "no_source": "No authoritative source found",
+  // Legacy labels — kept for backwards compat with existing passage metadata
   "sinaiticus-project": "Codex Sinaiticus Project (manuscript-specific XML transcription)",
   ntvmr: "INTF NTVMR (manuscript-specific scholarly transcription, NT only)",
   dss: "ETCBC Dead Sea Scrolls (manuscript-specific OT fragments)",
@@ -115,6 +119,124 @@ export const LENINGRAD_TITLES = new Set([
   "firkovich b 19a",
   "leningradensis",
 ]);
+
+/**
+ * Known standard-edition manuscript titles. Used by the mismatch warning UI
+ * to suppress false positives when a manuscript IS a standard edition.
+ */
+export const KNOWN_EDITION_TITLES = new Set([
+  "sblgnt",
+  "sbl greek new testament",
+  "westminster leningrad codex",
+  "codex leningradensis",
+  "leningrad codex",
+  "firkovich b 19a",
+  "leningradensis",
+  "lxx",
+  "septuagint",
+  "textus receptus",
+  "byzantine text",
+  "open scriptures hebrew bible",
+  "oshb",
+  "tyndale house gnt",
+  "thgnt",
+]);
+
+/**
+ * Aliases for DSS book names to canonical display names stored in
+ * manuscript_source_texts by preprocess-dss.mjs.
+ * Maps lowercase query forms → exact stored book name.
+ */
+export const DSS_BOOK_ALIASES: Record<string, string> = {
+  // Genesis
+  gen: "Genesis", genesis: "Genesis",
+  // Exodus
+  exod: "Exodus", exodus: "Exodus",
+  // Leviticus
+  lev: "Leviticus", leviticus: "Leviticus",
+  // Numbers
+  num: "Numbers", numbers: "Numbers",
+  // Deuteronomy
+  deut: "Deuteronomy", deuteronomy: "Deuteronomy",
+  // Joshua
+  josh: "Joshua", joshua: "Joshua",
+  // Judges
+  judg: "Judges", judges: "Judges",
+  // Ruth
+  ruth: "Ruth",
+  // Samuel
+  "1 sam": "1 Samuel", "1 samuel": "1 Samuel", "1sam": "1 Samuel",
+  "2 sam": "2 Samuel", "2 samuel": "2 Samuel", "2sam": "2 Samuel",
+  // Kings
+  "1 kgs": "1 Kings", "1 kings": "1 Kings", "1kgs": "1 Kings",
+  "2 kgs": "2 Kings", "2 kings": "2 Kings", "2kgs": "2 Kings",
+  // Chronicles
+  "1 chr": "1 Chronicles", "1 chronicles": "1 Chronicles", "1chr": "1 Chronicles",
+  "2 chr": "2 Chronicles", "2 chronicles": "2 Chronicles", "2chr": "2 Chronicles",
+  // Ezra / Nehemiah
+  ezra: "Ezra", neh: "Nehemiah", nehemiah: "Nehemiah",
+  // Esther
+  esth: "Esther", esther: "Esther",
+  // Job
+  job: "Job",
+  // Psalms
+  ps: "Psalms", psa: "Psalms", psalm: "Psalms", psalms: "Psalms",
+  // Proverbs
+  prov: "Proverbs", proverbs: "Proverbs",
+  // Ecclesiastes
+  eccl: "Ecclesiastes", ecclesiastes: "Ecclesiastes", qoh: "Ecclesiastes",
+  // Song of Solomon
+  song: "Song of Solomon", "song of songs": "Song of Solomon",
+  "song of solomon": "Song of Solomon", cant: "Song of Solomon",
+  // Isaiah
+  isa: "Isaiah", isaiah: "Isaiah",
+  // Jeremiah
+  jer: "Jeremiah", jeremiah: "Jeremiah",
+  // Lamentations
+  lam: "Lamentations", lamentations: "Lamentations",
+  // Ezekiel
+  ezek: "Ezekiel", ezekiel: "Ezekiel",
+  // Daniel
+  dan: "Daniel", daniel: "Daniel",
+  // Minor prophets
+  hos: "Hosea", hosea: "Hosea",
+  joel: "Joel",
+  amos: "Amos",
+  obad: "Obadiah", obadiah: "Obadiah",
+  jonah: "Jonah", jon: "Jonah",
+  mic: "Micah", micah: "Micah",
+  nah: "Nahum", nahum: "Nahum",
+  hab: "Habakkuk", habakkuk: "Habakkuk",
+  zeph: "Zephaniah", zephaniah: "Zephaniah",
+  hag: "Haggai", haggai: "Haggai",
+  zech: "Zechariah", zechariah: "Zechariah",
+  mal: "Malachi", malachi: "Malachi",
+};
+
+/**
+ * Normalise a book name from a passage reference to the canonical display name
+ * stored in manuscript_source_texts by preprocess-dss.mjs.
+ * Returns the canonical name, or the original (title-cased) if not found.
+ */
+export function normaliseDssBookName(rawBook: string): string {
+  const key = rawBook.toLowerCase().trim();
+  return DSS_BOOK_ALIASES[key] ?? rawBook.trim();
+}
+
+// ---------------------------------------------------------------------------
+// Chunking / truncation utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Truncate text to at most maxChars characters, preserving whole words where
+ * possible. Used to guard against oversized NTVMR responses before storage.
+ */
+export function truncateToMaxChars(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const truncated = text.slice(0, maxChars);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > maxChars * 0.8 ? truncated.slice(0, lastSpace) : truncated;
+}
 
 // ---------------------------------------------------------------------------
 // Parsing helpers

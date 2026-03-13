@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Passage } from "@/lib/types";
+import { KNOWN_EDITION_TITLES } from "@/lib/utils/text-sources";
 
 interface SourceChainStep {
   step: number;
@@ -11,6 +13,21 @@ interface SourceChainStep {
   ms?: number;
 }
 
+interface TextProvenanceProps {
+  passage: Passage;
+  manuscriptTitle: string;
+  manuscriptLanguage: string;
+  userRole: string | null;
+}
+
+const MISMATCH_METHODS = new Set([
+  "standard_edition",
+  "ai_reconstructed",
+  "ai_imported",
+]);
+
+const ADMIN_ROLES = new Set(["admin", "editor"]);
+
 const SOURCE_DISPLAY: Record<
   string,
   { label: string; description: string; tier: "manuscript" | "edition" | "ai" }
@@ -18,6 +35,11 @@ const SOURCE_DISPLAY: Record<
   "sinaiticus-project": {
     label: "Codex Sinaiticus Project",
     description: "Manuscript-specific transcription from the Codex Sinaiticus Project XML (CC BY-NC-SA 3.0)",
+    tier: "manuscript",
+  },
+  registry: {
+    label: "Source Registry",
+    description: "Pre-cataloged open-access corpus loaded from the CodexAtlas Source Registry",
     tier: "manuscript",
   },
   ntvmr: {
@@ -44,6 +66,11 @@ const SOURCE_DISPLAY: Record<
     label: "Standard Edition",
     description: "Standard scholarly edition text (LXX, Textus Receptus, or WLC) via the bolls.life Bible API",
     tier: "edition",
+  },
+  iiif_metadata: {
+    label: "IIIF Metadata",
+    description: "Manuscript record harvested from a IIIF institution; text pending OCR",
+    tier: "manuscript",
   },
   ai: {
     label: "AI Generated",
@@ -88,29 +115,89 @@ function getTranscriptionLabel(method: string | null): string | null {
       return "OCR (automatic)";
     case "ocr_reviewed":
       return "OCR (reviewed)";
+    case "iiif_metadata":
+      return "IIIF metadata stub";
     default:
       return null;
   }
 }
 
-export function TextProvenance({ passage }: { passage: Passage }) {
+export function TextProvenance({
+  passage,
+  manuscriptTitle,
+  userRole,
+}: TextProvenanceProps) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
+  const [isReimporting, setIsReimporting] = useState(false);
+  const [reimportError, setReimportError] = useState<string | null>(null);
+  const [reimportSuccess, setReimportSuccess] = useState(false);
 
   const meta = passage.metadata as Record<string, unknown> | null;
   const sourceChain = meta?.source_chain as SourceChainStep[] | undefined;
   const successStep = sourceChain?.find((s) => s.result === "success");
   const sourceKey = successStep?.source;
   const sourceInfo = sourceKey ? SOURCE_DISPLAY[sourceKey] : null;
-  const transcriptionLabel = getTranscriptionLabel(
-    passage.transcription_method
-  );
+  const transcriptionLabel = getTranscriptionLabel(passage.transcription_method);
 
-  if (!sourceChain && !transcriptionLabel) return null;
+  const isKnownEdition = KNOWN_EDITION_TITLES.has(manuscriptTitle.toLowerCase().trim());
+  const isMismatch =
+    !isKnownEdition &&
+    passage.transcription_method != null &&
+    MISMATCH_METHODS.has(passage.transcription_method);
+
+  const canReimport =
+    ADMIN_ROLES.has(userRole ?? "") &&
+    passage.transcription_method !== "scholarly_transcription" &&
+    passage.transcription_method !== "ocr_reviewed" &&
+    passage.transcription_method !== "manual";
+
+  async function handleReimport() {
+    setIsReimporting(true);
+    setReimportError(null);
+    setReimportSuccess(false);
+    try {
+      const res = await fetch("/api/agent/discover/section-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          manuscript_id: passage.manuscript_id,
+          manuscript_title: manuscriptTitle,
+          reference: passage.reference,
+          force_reimport: true,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "Re-import failed");
+      }
+      setReimportSuccess(true);
+      router.refresh();
+    } catch (err) {
+      setReimportError(err instanceof Error ? err.message : "Re-import failed");
+    } finally {
+      setIsReimporting(false);
+    }
+  }
+
+  if (!sourceChain && !transcriptionLabel && !isMismatch) return null;
 
   const tier = sourceInfo?.tier ?? "edition";
 
   return (
     <div className="border-t border-gray-100">
+      {/* Source mismatch warning */}
+      {isMismatch && (
+        <div className="mx-5 my-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          <p className="font-medium">Text source mismatch</p>
+          <p className="mt-0.5">
+            This text came from a standard critical edition, not this specific
+            manuscript&rsquo;s unique transcription. Use &ldquo;Re-import&rdquo; to
+            fetch an authoritative source.
+          </p>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -147,20 +234,14 @@ export function TextProvenance({ passage }: { passage: Passage }) {
           {/* Primary source */}
           {sourceInfo && (
             <div className="mb-3">
-              <p className="font-medium text-gray-700">
-                {sourceInfo.label}
-              </p>
-              <p className="mt-0.5 text-gray-500">
-                {sourceInfo.description}
-              </p>
+              <p className="font-medium text-gray-700">{sourceInfo.label}</p>
+              <p className="mt-0.5 text-gray-500">{sourceInfo.description}</p>
             </div>
           )}
 
           {transcriptionLabel && !sourceInfo && (
             <div className="mb-3">
-              <p className="font-medium text-gray-700">
-                {transcriptionLabel}
-              </p>
+              <p className="font-medium text-gray-700">{transcriptionLabel}</p>
             </div>
           )}
 
@@ -174,10 +255,7 @@ export function TextProvenance({ passage }: { passage: Passage }) {
                 {sourceChain.map((step) => {
                   const ri = RESULT_ICON[step.result] ?? RESULT_ICON.no_data;
                   return (
-                    <div
-                      key={step.step}
-                      className="flex items-start gap-2"
-                    >
+                    <div key={step.step} className="flex items-start gap-2">
                       <span
                         className={`inline-block w-3.5 shrink-0 text-center font-mono ${ri.color}`}
                       >
@@ -201,6 +279,31 @@ export function TextProvenance({ passage }: { passage: Passage }) {
             <p className="text-gray-400">
               No source chain data available for this passage.
             </p>
+          )}
+
+          {/* Re-import button (admin/editor only) */}
+          {canReimport && (
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              {reimportSuccess ? (
+                <p className="text-green-600">
+                  Re-import queued. Page will refresh with updated source data.
+                </p>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleReimport}
+                    disabled={isReimporting}
+                    className="rounded-md bg-primary-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isReimporting ? "Re-importing…" : "Re-import from authoritative source"}
+                  </button>
+                  {reimportError && (
+                    <p className="mt-1.5 text-red-600">{reimportError}</p>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       )}

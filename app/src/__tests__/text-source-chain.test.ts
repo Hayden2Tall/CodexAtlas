@@ -9,6 +9,9 @@ import {
   textHasCorrectScript,
   parseNtvmrHtml,
   parseSblgntChapter,
+  DSS_BOOK_ALIASES,
+  normaliseDssBookName,
+  KNOWN_EDITION_TITLES,
 } from "@/lib/utils/text-sources";
 
 // ---------------------------------------------------------------------------
@@ -274,5 +277,74 @@ describe("SOURCE_LABELS", () => {
     expect(SOURCE_LABELS["sinaiticus-project"]).toContain("manuscript-specific");
     expect(SOURCE_LABELS["bible-api"]).toContain("standard edition");
     expect(SOURCE_LABELS["ai"]).toContain("AI");
+  });
+
+  it("includes new registry and no_source labels", () => {
+    expect(SOURCE_LABELS["registry"]).toBeDefined();
+    expect(SOURCE_LABELS["no_source"]).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DSS_BOOK_ALIASES and normaliseDssBookName (E4)
+// ---------------------------------------------------------------------------
+describe("DSS_BOOK_ALIASES", () => {
+  it("maps common Hebrew book abbreviations to canonical names", () => {
+    expect(DSS_BOOK_ALIASES["isa"]).toBe("Isaiah");
+    expect(DSS_BOOK_ALIASES["gen"]).toBe("Genesis");
+    expect(DSS_BOOK_ALIASES["ps"]).toBe("Psalms");
+    expect(DSS_BOOK_ALIASES["psa"]).toBe("Psalms");
+    expect(DSS_BOOK_ALIASES["psalm"]).toBe("Psalms");
+    expect(DSS_BOOK_ALIASES["psalms"]).toBe("Psalms");
+    expect(DSS_BOOK_ALIASES["isaiah"]).toBe("Isaiah");
+    expect(DSS_BOOK_ALIASES["genesis"]).toBe("Genesis");
+  });
+});
+
+describe("normaliseDssBookName", () => {
+  it("normalises abbreviations to canonical display names", () => {
+    expect(normaliseDssBookName("Isa")).toBe("Isaiah");
+    expect(normaliseDssBookName("ISA")).toBe("Isaiah");
+    expect(normaliseDssBookName("isa")).toBe("Isaiah");
+    expect(normaliseDssBookName("Gen")).toBe("Genesis");
+    expect(normaliseDssBookName("Ps")).toBe("Psalms");
+    expect(normaliseDssBookName("Psa")).toBe("Psalms");
+  });
+
+  it("returns full names unchanged (idempotent)", () => {
+    expect(normaliseDssBookName("Isaiah")).toBe("Isaiah");
+    expect(normaliseDssBookName("Genesis")).toBe("Genesis");
+    expect(normaliseDssBookName("Psalms")).toBe("Psalms");
+  });
+
+  it("passes through unknown names unchanged", () => {
+    expect(normaliseDssBookName("UnknownBook")).toBe("UnknownBook");
+  });
+
+  it("trims whitespace", () => {
+    expect(normaliseDssBookName("  isa  ")).toBe("Isaiah");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// KNOWN_EDITION_TITLES
+// ---------------------------------------------------------------------------
+describe("KNOWN_EDITION_TITLES", () => {
+  it("contains all expected standard edition titles", () => {
+    expect(KNOWN_EDITION_TITLES.has("sblgnt")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("sbl greek new testament")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("westminster leningrad codex")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("lxx")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("septuagint")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("textus receptus")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("oshb")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("tyndale house gnt")).toBe(true);
+    expect(KNOWN_EDITION_TITLES.has("thgnt")).toBe(true);
+  });
+
+  it("does not contain specific manuscript titles", () => {
+    expect(KNOWN_EDITION_TITLES.has("codex sinaiticus")).toBe(false);
+    expect(KNOWN_EDITION_TITLES.has("codex vaticanus")).toBe(false);
+    expect(KNOWN_EDITION_TITLES.has("p46")).toBe(false);
   });
 });

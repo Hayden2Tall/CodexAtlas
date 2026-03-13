@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { fetchManifest, listPages } from "@/lib/services/iiif";
 import type {
   UserRole,
   User,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { image_id, image_base64, manuscript_id, page_reference } = body;
+    const { image_id, image_base64, iiif_page_index, manuscript_id, page_reference } = body;
 
     if (!manuscript_id) {
       return NextResponse.json(
@@ -72,9 +73,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!image_id && !image_base64) {
+    if (!image_id && !image_base64 && iiif_page_index == null) {
       return NextResponse.json(
-        { error: "Either image_id or image_base64 is required" },
+        { error: "One of image_id, image_base64, or iiif_page_index is required" },
         { status: 400 }
       );
     }
@@ -83,9 +84,9 @@ export async function POST(request: NextRequest) {
 
     const { data: manuscript } = await admin
       .from("manuscripts")
-      .select("id, title, original_language")
+      .select("id, title, original_language, metadata")
       .eq("id", manuscript_id)
-      .single<Pick<Manuscript, "id" | "title" | "original_language">>();
+      .single<Pick<Manuscript, "id" | "title" | "original_language" | "metadata">>();
 
     if (!manuscript) {
       return NextResponse.json(
@@ -103,6 +104,33 @@ export async function POST(request: NextRequest) {
       const mediaType = detectMediaType(image_base64);
       const cleanBase64 = image_base64.replace(/^data:image\/\w+;base64,/, "");
       imageSource = { type: "base64", media_type: mediaType, data: cleanBase64 };
+    } else if (iiif_page_index != null) {
+      // Fetch page image URL from the manuscript's IIIF manifest
+      const meta = manuscript.metadata as Record<string, unknown> | null;
+      const iiifManifestUrl = meta?.iiif_manifest_url as string | undefined;
+      if (!iiifManifestUrl) {
+        return NextResponse.json(
+          { error: "Manuscript has no IIIF manifest URL. Run IIIF harvest first." },
+          { status: 400 }
+        );
+      }
+      try {
+        const manifest = await fetchManifest(iiifManifestUrl);
+        const pages = listPages(manifest);
+        const pageIdx = Number(iiif_page_index);
+        if (pageIdx < 0 || pageIdx >= pages.length) {
+          return NextResponse.json(
+            { error: `iiif_page_index ${pageIdx} out of range (0–${pages.length - 1})` },
+            { status: 400 }
+          );
+        }
+        imageSource = { type: "url", url: pages[pageIdx].imageUrl };
+      } catch (err) {
+        return NextResponse.json(
+          { error: `Failed to fetch IIIF manifest: ${err instanceof Error ? err.message : String(err)}` },
+          { status: 502 }
+        );
+      }
     } else {
       const { data: imageRecord } = await admin
         .from("manuscript_images")

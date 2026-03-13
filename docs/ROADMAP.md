@@ -259,13 +259,59 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] `/visualize/stemma` — SVG directed graph for manuscript lineage, informative empty state when no lineage data exists, edge styling by relationship type
 - [x] "Visualize" link added to header and mobile navigation
 
-### 3.5 Performance + Infrastructure (Priority: Medium)
+### 3.5 Performance + Infrastructure (Priority: Medium) — Partially Complete
 
-- [ ] Vercel ISR for popular manuscript and passage pages
+- [x] Vercel ISR added to read, visualize, and landing pages (60s revalidation)
+- [x] ISR fixes for stale stat data on public pages
 - [ ] Database query optimization for large passage sets
 - [ ] Image optimization pipeline for manuscript images
 - [ ] PWA offline reading cache for previously viewed content
 - [ ] Push notifications via Firebase (translation complete, new review, variant detected)
+
+### 3.9 Ingestion System Rework (Priority: High) — Complete (2026-03-12)
+
+**Goal:** Replace the ceremony-heavy, misleading 6-step import chain with a clean 3-tier system that sources data from authoritative open-access corpora, not AI generation or standard edition fallbacks.
+
+#### A — Data Integrity
+- [x] Audit SQL (`scripts/audit/audit-source-mismatch.sql`) — identifies passages with standard editions attributed to specific manuscripts
+- [x] Source mismatch warning banner in translation workspace (amber alert when `standard_edition`/`ai_reconstructed` text appears on a non-edition manuscript)
+- [x] Re-import button (admin/editor only) with `force_reimport` API flag — triggers fresh import bypassing the existing-text skip
+- [x] DSS `.single()` bug fix — replaced with `.order().reduce()` to handle multiple scroll attestations for same book/chapter
+- [x] DSS book name normalisation — `DSS_BOOK_ALIASES` map + `normaliseDssBookName()` function
+
+#### B — Source Registry + Corpus Importers
+- [x] `app/src/lib/utils/source-registry.ts` — typed registry config with `findRegistrySource()` and `getRegistryEntry()` lookup functions
+- [x] Migration 025 — adds `iiif_metadata` to `passages_transcription_method_check` constraint
+- [x] Migration 026 — adds `idx_mst_source_only` and `idx_mst_source_book` indexes for registry lookups
+- [x] `scripts/preprocess-wlc.mjs` — Westminster Leningrad Codex (OSIS XML, 39 OT books, public domain)
+- [x] `scripts/preprocess-sblgnt.mjs` — SBLGNT preloader (plain text, 27 NT books, CC BY 4.0)
+- [x] `scripts/preprocess-thgnt.mjs` — Tyndale House GNT (TSV, CC BY 4.0)
+- [x] `scripts/preprocess-coptic.mjs` — Coptic Scriptorium Sahidic NT (TEI XML, CC BY 4.0)
+- [x] `scripts/preprocess-oshb.mjs` — Open Scriptures Hebrew Bible (OSIS XML, CC BY 4.0)
+- [x] `scripts/preprocess-ogl.mjs` — OpenGreekAndLatin First1KGreek (TEI XML, patristic)
+- [x] Section-text chain refactored: Step 1 = registry DB lookup, Step 2 = NTVMR live API, Step 3 = no_source (no bolls.life, no AI fallback)
+- [x] Source Registry admin panel with row count and last-imported status per source
+- [x] `GET /api/agent/registry/status` API endpoint
+
+#### C — IIIF Metadata Harvest
+- [x] `app/src/lib/services/iiif.ts` — IIIF v2/v3 manifest service (fetchManifest, extractManuscriptMetadata, listPages, fetchCollection) + IIIF_INSTITUTIONS registry
+- [x] `POST /api/iiif/harvest` — batch metadata import with pagination, dry_run, force_update options
+- [x] IIIF Harvest admin panel with institution selector, dry-run checkbox, progress display
+- [x] Admin dashboard: Registry and IIIF Harvest tabs added
+- [x] OCR route extended with `iiif_page_index` parameter — fetches page image directly from IIIF manifest
+
+#### D — Reliability
+- [x] `truncateToMaxChars()` guard on NTVMR responses (50,000 char limit)
+- [x] Adaptive rate limiting in full-import panel (100ms for registry sources, 1,500ms for NTVMR)
+
+#### E — Tests + Documentation
+- [x] `app/src/__tests__/preprocessors.test.ts` — unit tests for parseOsisBook, parseSblgntChapter, parseCopticTei
+- [x] `app/src/__tests__/iiif-service.test.ts` — unit tests for v2/v3 metadata extraction and page listing
+- [x] `app/src/__tests__/source-registry.test.ts` — unit tests for all registry lookup functions and entry integrity
+- [x] DSS alias and KNOWN_EDITION_TITLES tests added to `text-source-chain.test.ts`
+- [x] `TranscriptionMethod` type updated with all 8 valid values
+- [x] `docs/agent-context/ingestion-system-2026.md` — compressed architecture summary for future agents
+- [x] `docs/design/ingestion-rework-2026.md` — feature design document (§8.2)
 
 ### 3.6 Accessibility + i18n (Priority: Standard)
 

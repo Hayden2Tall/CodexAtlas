@@ -7,6 +7,8 @@ import { FullImportPanel } from "./full-import-panel";
 import { OcrPanel } from "./ocr-panel";
 import { VariantPanel } from "./variant-panel";
 import { TaskList } from "./task-list";
+import { SourceRegistryPanel } from "./source-registry-panel";
+import { IiifHarvestPanel } from "./iiif-harvest-panel";
 import type { AgentTask } from "@/lib/types";
 
 interface ManuscriptOption {
@@ -34,7 +36,7 @@ interface Props {
   passagesForVariants: PassageOption[];
 }
 
-type Tab = "operations" | "tasks";
+type Tab = "operations" | "registry" | "iiif" | "tasks";
 
 export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVariants }: Props) {
   const [tasks, setTasks] = useState<AgentTask[]>(initialTasks);
@@ -65,6 +67,13 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
   const activeTasks = tasks.filter(
     (t) => t.status === "running" || t.status === "queued"
   );
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "operations", label: "Agent Operations" },
+    { id: "registry", label: "Source Registry" },
+    { id: "iiif", label: "IIIF Harvest" },
+    { id: "tasks", label: `Task History (${tasks.length})` },
+  ];
 
   return (
     <div className="space-y-8">
@@ -136,26 +145,19 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
       {/* Tab navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-6">
-          <button
-            onClick={() => setActiveTab("operations")}
-            className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
-              activeTab === "operations"
-                ? "border-primary-700 text-primary-700"
-                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-            }`}
-          >
-            Agent Operations
-          </button>
-          <button
-            onClick={() => setActiveTab("tasks")}
-            className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
-              activeTab === "tasks"
-                ? "border-primary-700 text-primary-700"
-                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-            }`}
-          >
-            Task History ({tasks.length})
-          </button>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? "border-primary-700 text-primary-700"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </nav>
       </div>
 
@@ -172,6 +174,10 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
           <VariantPanel passages={passagesForVariants} />
         </div>
       )}
+
+      {activeTab === "registry" && <SourceRegistryPanel />}
+
+      {activeTab === "iiif" && <IiifHarvestPanel />}
 
       {activeTab === "tasks" && <TaskList tasks={tasks} />}
     </div>

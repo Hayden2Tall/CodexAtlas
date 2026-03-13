@@ -152,6 +152,7 @@ export function FullImportPanel({ manuscripts }: Props) {
 
       const MAX_RETRIES = 2;
       let lastReason = "";
+      let lastSourceUsed: string | undefined;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         if (cancelRef.current) break;
@@ -209,6 +210,7 @@ export function FullImportPanel({ manuscripts }: Props) {
           } else if (res.ok) {
             const cost = data.usage?.estimated_cost_usd ?? 0;
             runningCost += cost;
+            lastSourceUsed = data.source_used as string | undefined;
             setTotalImportCost(runningCost);
             setResults((prev) => {
               const next = new Map(prev);
@@ -260,9 +262,10 @@ export function FullImportPanel({ manuscripts }: Props) {
         }
       }
 
-      // Rate limit: 1.5s between calls
+      // Adaptive rate limit: registry sources (DB lookups) are fast; NTVMR needs a delay
       if (i < toImport.length - 1 && !cancelRef.current) {
-        await new Promise((r) => setTimeout(r, 1500));
+        const delayMs = lastSourceUsed === "registry" ? 100 : 1500;
+        await new Promise((r) => setTimeout(r, delayMs));
       }
     }
 

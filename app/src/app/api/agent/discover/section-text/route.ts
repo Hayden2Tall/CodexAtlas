@@ -13,7 +13,10 @@ import {
   parseNtvmrHtml,
   parseSblgntChapter,
   SOURCE_LABELS,
+  normaliseDssBookName,
+  truncateToMaxChars,
 } from "@/lib/utils/text-sources";
+import { findRegistrySource } from "@/lib/utils/source-registry";
 import type { SourceChainStep } from "@/lib/utils/text-sources";
 import type { UserRole, User, Passage } from "@/lib/types";
 
@@ -51,7 +54,8 @@ async function fetchFromNtvmr(
     const html = await res.text();
     if (!html || html.length < 100) return null;
 
-    const text = parseNtvmrHtml(html);
+    const rawText = parseNtvmrHtml(html);
+    const text = truncateToMaxChars(rawText, 50000);
     if (text.length < 50) {
       console.log(`[section-text] NTVMR: parsed text too short (${text.length} chars)`);
       return null;
@@ -201,28 +205,41 @@ async function fetchFromDss(
     console.log(`[section-text] DSS: cannot parse reference "${reference}"`);
     return null;
   }
-  const bookName = match[1].trim();
+  // Normalise to canonical stored book name (fixes alias mismatch from ETCBC preprocessor)
+  const bookName = normaliseDssBookName(match[1].trim());
   const chapter = parseInt(match[2], 10);
 
   try {
-    const { data, error } = await admin
+    // Use limit(1) instead of single() — multiple DSS scrolls can attest the
+    // same book/chapter. Pick the row with the most text (most complete attestation).
+    const { data: rows, error } = await admin
       .from("manuscript_source_texts")
       .select("text, manuscript_name")
       .eq("source", "etcbc_dss")
       .ilike("book", bookName)
       .eq("chapter", chapter)
-      .single();
+      .order("text", { ascending: false });
 
     if (error) {
       console.log(`[section-text] DSS: DB query error for "${bookName}" ch${chapter}:`, error.message);
       return null;
     }
-    if (!data?.text || data.text.length < 50) {
-      console.log(`[section-text] DSS: ${data ? `text too short (${data.text?.length ?? 0} chars)` : "no row"} for "${bookName}" ch${chapter}`);
+    if (!rows || rows.length === 0) {
+      console.log(`[section-text] DSS: no rows for "${bookName}" ch${chapter}`);
       return null;
     }
-    console.log(`[section-text] DSS: found ${data.text.length} chars for "${bookName}" ch${chapter} (${data.manuscript_name})`);
-    return { text: data.text, scrollId: data.manuscript_name };
+
+    // Pick the row with the longest text (most complete scroll attestation)
+    const best = rows.reduce((a, b) =>
+      (a.text?.length ?? 0) >= (b.text?.length ?? 0) ? a : b
+    );
+
+    if (!best.text || best.text.length < 50) {
+      console.log(`[section-text] DSS: text too short (${best.text?.length ?? 0} chars) for "${bookName}" ch${chapter}`);
+      return null;
+    }
+    console.log(`[section-text] DSS: found ${best.text.length} chars for "${bookName}" ch${chapter} (${best.manuscript_name}, ${rows.length} scroll(s) attested)`);
+    return { text: best.text, scrollId: best.manuscript_name };
   } catch (err) {
     console.log(`[section-text] DSS: error:`, err instanceof Error ? err.message : err);
     return null;
@@ -267,6 +284,7 @@ export async function POST(request: NextRequest) {
       reference,
       description,
       sequence_order,
+      force_reimport,
     } = body;
 
     if (!manuscript_id || !reference || !manuscript_title) {
@@ -304,13 +322,17 @@ export async function POST(request: NextRequest) {
         textHasCorrectScript(p.original_text)
     );
 
-    if (existingComplete) {
+    if (existingComplete && !force_reimport) {
       console.log(`[section-text][${requestId}] SKIP existing passage ${existingComplete.id} has ${existingComplete.original_text?.length ?? 0} chars of valid ${lang} text`);
       return NextResponse.json({
         passage_id: existingComplete.id,
         skipped: true,
         reason: `Already imported (${existingComplete.original_text?.length ?? 0} chars)`,
       });
+    }
+
+    if (existingComplete && force_reimport) {
+      console.log(`[section-text][${requestId}] FORCE REIMPORT for passage ${existingComplete.id}`);
     }
 
     const existingToUpdate = existing?.[0] ?? null;
@@ -322,17 +344,23 @@ export async function POST(request: NextRequest) {
     }
 
     // === TEXT SOURCE CHAIN (with reasoning) ===
-    type TextSource = "sinaiticus-project" | "ntvmr" | "dss" | "leningrad-wlc" | "sblgnt" | "bible-api" | "ai";
+    // New 3-step chain:
+    //   1. Source Registry DB lookup  (covers all pre-cataloged open-access corpora)
+    //   2. NTVMR live API             (NT manuscripts with a GA mapping only)
+    //   3. no_source                  (return skipped — no AI, no bolls.life fallback)
+    // Note: fetchFromBibleApi() and fetchFromAiModels() are kept below but not called.
+    type TextSource = "registry" | "ntvmr" | "no_source"
+      // Legacy values kept for backwards-compat display of existing passage metadata:
+      | "sinaiticus-project" | "dss" | "leningrad-wlc" | "sblgnt" | "bible-api" | "ai";
     let originalText = "";
-    let sourceType: TextSource = "ai";
+    let sourceType: TextSource = "no_source";
     let sourceDetail = "";
-    let tokensInput = 0;
-    let tokensOutput = 0;
-    let costUsd = 0;
+    const tokensInput = 0;
+    const tokensOutput = 0;
+    const costUsd = 0;
     const chain: SourceChainStep[] = [];
 
     const titleLower = manuscript_title.toLowerCase().trim();
-    const isSinaiticus = titleLower.includes("sinaiticus");
     const isLeningrad = LENINGRAD_TITLES.has(titleLower);
     const bookMatch = reference.match(/^(.+?)\s+(\d+)$/);
     const bookNameLower = bookMatch?.[1]?.toLowerCase().trim() ?? reference.toLowerCase().trim();
@@ -343,35 +371,66 @@ export async function POST(request: NextRequest) {
       console.log(`[section-text][${requestId}] WARN: reference "${reference}" has no chapter number — source lookups that require "Book N" format will be skipped`);
     }
 
-    console.log(`[section-text][${requestId}] CONTEXT: sinaiticus=${isSinaiticus} leningrad=${isLeningrad} nt=${isNtBook} hasChapter=${hasChapter} book="${bookNameLower}" bolls=${BOLLS_LIFE_LANGUAGES.has(lang)}`);
+    const registryEntry = findRegistrySource(manuscript_title, lang);
+    console.log(`[section-text][${requestId}] CONTEXT: registry=${registryEntry?.id ?? "none"} leningrad=${isLeningrad} nt=${isNtBook} hasChapter=${hasChapter} book="${bookNameLower}"`);
 
-
-    // STEP 1: Codex Sinaiticus Project
+    // STEP 1: Source Registry DB lookup
     {
-      if (!isSinaiticus) {
-        chain.push({ step: 1, source: "sinaiticus-project", attempted: false, result: "not_applicable", reason: `Not Codex Sinaiticus`, durationMs: 0 });
+      if (!registryEntry) {
+        chain.push({ step: 1, source: "registry", attempted: false, result: "not_applicable", reason: `No registry entry for "${manuscript_title}"`, durationMs: 0 });
       } else if (!hasChapter) {
-        chain.push({ step: 1, source: "sinaiticus-project", attempted: false, result: "not_applicable", reason: `Reference "${reference}" has no chapter number`, durationMs: 0 });
+        chain.push({ step: 1, source: "registry", attempted: false, result: "not_applicable", reason: `Reference "${reference}" has no chapter number`, durationMs: 0 });
       } else {
+        const bookName = bookMatch![1].trim();
+        const chapter = parseInt(bookMatch![2], 10);
         const t0 = Date.now();
-        const sinResult = await fetchFromSinaiticusProject(admin, reference);
+
+        // For DSS, normalise the book name first to match stored display names
+        const queryBook = registryEntry.id === "dss"
+          ? normaliseDssBookName(bookName)
+          : bookName;
+
+        // Use multiple rows for DSS (multiple scrolls may attest same book/chapter)
+        const { data: rows, error } = await admin
+          .from("manuscript_source_texts")
+          .select("text, manuscript_name")
+          .eq("source", registryEntry.sourceId)
+          .ilike("book", queryBook)
+          .eq("chapter", chapter)
+          .order("text", { ascending: false });
+
         const ms = Date.now() - t0;
-        if (sinResult && textHasCorrectScript(sinResult.text)) {
-          chain.push({ step: 1, source: "sinaiticus-project", attempted: true, result: "success", reason: `Found ${sinResult.text.length} chars of manuscript-specific transcription`, durationMs: ms });
-          originalText = sinResult.text;
-          sourceType = "sinaiticus-project";
-          console.log(`[section-text][${requestId}] STEP1 sinaiticus-project → SUCCESS (${sinResult.text.length} chars)`);
-        } else if (sinResult) {
-          chain.push({ step: 1, source: "sinaiticus-project", attempted: true, result: "wrong_script", reason: "Data found but text is in wrong script", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP1 sinaiticus-project → wrong_script`);
+
+        if (error) {
+          chain.push({ step: 1, source: "registry", attempted: true, result: "no_data", reason: `DB error: ${error.message}`, durationMs: ms });
+          console.log(`[section-text][${requestId}] STEP1 registry → DB error: ${error.message}`);
+        } else if (!rows || rows.length === 0) {
+          chain.push({ step: 1, source: "registry", attempted: true, result: "no_data", reason: `No rows for source="${registryEntry.sourceId}" book="${queryBook}" ch=${chapter} — run scripts/${registryEntry.preprocessorScript}`, durationMs: ms });
+          console.log(`[section-text][${requestId}] STEP1 registry → no_data (${registryEntry.sourceId})`);
         } else {
-          chain.push({ step: 1, source: "sinaiticus-project", attempted: true, result: "no_data", reason: "No data — run scripts/preprocess-sinaiticus.mjs", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP1 sinaiticus-project → no_data`);
+          // Pick row with most text (handles multiple DSS scrolls)
+          const best = rows.reduce((a, b) =>
+            (a.text?.length ?? 0) >= (b.text?.length ?? 0) ? a : b
+          );
+          if (!best.text || best.text.length < 50) {
+            chain.push({ step: 1, source: "registry", attempted: true, result: "no_data", reason: `Text too short (${best.text?.length ?? 0} chars)`, durationMs: ms });
+            console.log(`[section-text][${requestId}] STEP1 registry → text too short`);
+          } else if (!textHasCorrectScript(best.text)) {
+            chain.push({ step: 1, source: "registry", attempted: true, result: "wrong_script", reason: "Data found but in wrong script", durationMs: ms });
+            console.log(`[section-text][${requestId}] STEP1 registry → wrong_script`);
+          } else {
+            const attestedBy = rows.length > 1 ? ` (${rows.length} attestations, using longest)` : "";
+            chain.push({ step: 1, source: "registry", attempted: true, result: "success", reason: `${registryEntry.displayName}: ${best.text.length} chars${attestedBy}`, durationMs: ms });
+            originalText = best.text;
+            sourceType = "registry";
+            sourceDetail = registryEntry.sourceId;
+            console.log(`[section-text][${requestId}] STEP1 registry → SUCCESS (${registryEntry.sourceId}, ${best.text.length} chars)`);
+          }
         }
       }
     }
 
-    // STEP 2: NTVMR
+    // STEP 2: NTVMR (live API — NT manuscripts with GA mapping only)
     if (!originalText) {
       const docId = NTVMR_MANUSCRIPTS[titleLower];
       if (!docId) {
@@ -400,125 +459,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // STEP 3: Dead Sea Scrolls (Hebrew OT only)
+    // STEP 3: no_source — no bolls.life fallback, no AI fallback
     if (!originalText) {
-      if (lang !== "heb") {
-        chain.push({ step: 3, source: "dss", attempted: false, result: "not_applicable", reason: `Language "${langName}" — DSS is Hebrew OT only`, durationMs: 0 });
-      } else if (isNtBook) {
-        chain.push({ step: 3, source: "dss", attempted: false, result: "not_applicable", reason: `"${bookMatch?.[1] ?? reference}" is NT — DSS is OT only`, durationMs: 0 });
-      } else if (!hasChapter) {
-        chain.push({ step: 3, source: "dss", attempted: false, result: "not_applicable", reason: `Reference "${reference}" has no chapter number`, durationMs: 0 });
-      } else {
-        const t0 = Date.now();
-        const dssResult = await fetchFromDss(admin, reference);
-        const ms = Date.now() - t0;
-        if (dssResult && textHasCorrectScript(dssResult.text)) {
-          chain.push({ step: 3, source: "dss", attempted: true, result: "success", reason: `${dssResult.scrollId}: ${dssResult.text.length} chars`, durationMs: ms });
-          originalText = dssResult.text;
-          sourceType = "dss";
-          sourceDetail = dssResult.scrollId;
-          console.log(`[section-text][${requestId}] STEP3 dss → SUCCESS (${dssResult.text.length} chars)`);
-        } else if (dssResult) {
-          chain.push({ step: 3, source: "dss", attempted: true, result: "wrong_script", reason: "DSS data found but wrong script", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP3 dss → wrong_script`);
-        } else {
-          chain.push({ step: 3, source: "dss", attempted: true, result: "no_data", reason: "Book/chapter not in DSS corpus", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP3 dss → no_data`);
-        }
-      }
-    }
-
-    // STEP 4: SBLGNT (Greek NT critical edition)
-    if (!originalText) {
-      if (lang !== "grc") {
-        chain.push({ step: 4, source: "sblgnt", attempted: false, result: "not_applicable", reason: `Language is ${langName} — SBLGNT is Greek only`, durationMs: 0 });
-      } else if (!isNtBook) {
-        chain.push({ step: 4, source: "sblgnt", attempted: false, result: "not_applicable", reason: `"${bookMatch?.[1] ?? reference}" is not NT — SBLGNT is NT-only`, durationMs: 0 });
-      } else if (!hasChapter) {
-        chain.push({ step: 4, source: "sblgnt", attempted: false, result: "not_applicable", reason: `Reference "${reference}" has no chapter number`, durationMs: 0 });
-      } else {
-        const t0 = Date.now();
-        const sblResult = await fetchFromSblgnt(reference);
-        const ms = Date.now() - t0;
-        if (sblResult && textHasCorrectScript(sblResult.text)) {
-          chain.push({ step: 4, source: "sblgnt", attempted: true, result: "success", reason: `${sblResult.text.length} chars of SBLGNT critical edition`, durationMs: ms });
-          originalText = sblResult.text;
-          sourceType = "sblgnt";
-          sourceDetail = "SBLGNT";
-          console.log(`[section-text][${requestId}] STEP4 sblgnt → SUCCESS (${sblResult.text.length} chars)`);
-        } else {
-          chain.push({ step: 4, source: "sblgnt", attempted: true, result: "no_data", reason: "SBLGNT file not found or chapter not present", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP4 sblgnt → no_data`);
-        }
-      }
-    }
-
-    // STEP 5: bolls.life standard edition (Greek/Hebrew only)
-    if (!originalText) {
-      if (!BOLLS_LIFE_LANGUAGES.has(lang)) {
-        chain.push({ step: 5, source: "bible-api", attempted: false, result: "not_applicable", reason: `bolls.life only supports Greek/Hebrew, not ${langName}`, durationMs: 0 });
-        console.log(`[section-text][${requestId}] STEP5 bolls.life → not_applicable (${lang})`);
-      } else if (!hasChapter) {
-        chain.push({ step: 5, source: "bible-api", attempted: false, result: "not_applicable", reason: `Reference "${reference}" has no chapter number`, durationMs: 0 });
-      } else {
-        const t0 = Date.now();
-        const apiResult = await fetchFromBibleApi(lang, reference);
-        const ms = Date.now() - t0;
-        if (apiResult && textHasCorrectScript(apiResult.text)) {
-          if (isLeningrad && apiResult.edition === "WLC") {
-            chain.push({ step: 5, source: "leningrad-wlc", attempted: true, result: "success", reason: `WLC recognized as Leningrad Codex — ${apiResult.text.length} chars`, durationMs: ms });
-            originalText = apiResult.text;
-            sourceType = "leningrad-wlc";
-            sourceDetail = "WLC";
-            console.log(`[section-text][${requestId}] STEP5 leningrad-wlc → SUCCESS (${apiResult.text.length} chars)`);
-          } else {
-            chain.push({ step: 5, source: "bible-api", attempted: true, result: "success", reason: `${apiResult.edition} standard edition — ${apiResult.text.length} chars (not manuscript-specific)`, durationMs: ms });
-            originalText = apiResult.text;
-            sourceType = "bible-api";
-            sourceDetail = apiResult.edition;
-            console.log(`[section-text][${requestId}] STEP5 bolls.life → SUCCESS (${apiResult.edition}, ${apiResult.text.length} chars)`);
-          }
-        } else if (apiResult) {
-          chain.push({ step: 5, source: "bible-api", attempted: true, result: "wrong_script", reason: "bolls.life returned text but wrong script", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP5 bolls.life → wrong_script`);
-        } else {
-          chain.push({ step: 5, source: "bible-api", attempted: true, result: "no_data", reason: "bolls.life API unavailable or book/chapter not found", durationMs: ms });
-          console.log(`[section-text][${requestId}] STEP5 bolls.life → no_data`);
-        }
-      }
-    }
-
-    // STEP 6: AI models (final fallback)
-    if (!originalText) {
-      console.log(`[section-text][${requestId}] STEP6 falling back to AI for "${reference}" (${langName})`);
-      const t0 = Date.now();
-      const aiText = await fetchFromAiModels(
-        manuscript_title, lang, reference, textHasCorrectScript
-      );
-      const ms = Date.now() - t0;
-
-      if (aiText.error) {
-        chain.push({ step: 6, source: "ai", attempted: true, result: "no_data", reason: aiText.error, durationMs: ms });
-        console.log(`[section-text][${requestId}] CHAIN COMPLETE — ALL FAILED`, chain.map(s => `${s.step}:${s.source}=${s.result}`).join(", "));
-        if (aiText.skipped) {
-          return NextResponse.json({
-            passage_id: null,
-            skipped: true,
-            reason: aiText.error,
-            source_chain: chain,
-          });
-        }
-        return NextResponse.json({ error: aiText.error, source_chain: chain }, { status: 502 });
-      }
-
-      chain.push({ step: 6, source: "ai", attempted: true, result: "success", reason: `${aiText.model}: ${aiText.text.length} chars (AI-generated, not manuscript-specific)`, durationMs: ms });
-      originalText = aiText.text;
-      sourceType = "ai";
-      sourceDetail = aiText.model;
-      tokensInput = aiText.tokensInput;
-      tokensOutput = aiText.tokensOutput;
-      costUsd = aiText.costUsd;
-      console.log(`[section-text][${requestId}] STEP6 ai → SUCCESS (${aiText.model}, ${aiText.text.length} chars)`);
+      chain.push({ step: 3, source: "no_source" as string, attempted: false, result: "skipped", reason: "No authoritative source available for this manuscript/reference combination", durationMs: 0 });
+      console.log(`[section-text][${requestId}] CHAIN COMPLETE — no_source`, chain.map(s => `${s.step}:${s.source}=${s.result}`).join(", "));
+      return NextResponse.json({
+        passage_id: null,
+        skipped: true,
+        reason: "no_authoritative_source",
+        source_chain: chain,
+      });
     }
 
     console.log(`[section-text][${requestId}] CHAIN COMPLETE → ${sourceType}`, chain.map(s => `${s.step}:${s.source}=${s.result}`).join(", "));
@@ -534,10 +484,18 @@ export async function POST(request: NextRequest) {
     try {
       let passageId: string;
 
-      const isManuscriptSpecific = ["sinaiticus-project", "ntvmr", "dss", "leningrad-wlc"].includes(sourceType);
-      const transcriptionMethod = isManuscriptSpecific
-        ? "scholarly_transcription"
-        : sourceType === "ai" ? "ai_reconstructed" : "standard_edition";
+      // Determine transcription_method based on source
+      let transcriptionMethod: string;
+      if (sourceType === "registry" && registryEntry) {
+        transcriptionMethod = registryEntry.transcriptionMethod;
+      } else if (sourceType === "ntvmr") {
+        transcriptionMethod = "scholarly_transcription";
+      } else {
+        // Legacy paths (should not occur with new chain, but kept for safety)
+        const isManuscriptSpecific = ["sinaiticus-project", "dss", "leningrad-wlc"].includes(sourceType);
+        transcriptionMethod = isManuscriptSpecific ? "scholarly_transcription"
+          : sourceType === "ai" ? "ai_reconstructed" : "standard_edition";
+      }
 
       const chainSummary = chain.map(s => ({
         step: s.step,
@@ -553,15 +511,20 @@ export async function POST(request: NextRequest) {
         source_chain: chainSummary,
       };
 
-      if (sourceType === "sinaiticus-project") {
-        metadata.ingested_by = "sinaiticus_project";
-        metadata.transcription_source = "Codex Sinaiticus Project";
+      if (sourceType === "registry" && registryEntry) {
+        metadata.ingested_by = registryEntry.sourceId;
+        metadata.transcription_source = registryEntry.displayName;
+        metadata.registry_source_id = registryEntry.id;
       } else if (sourceType === "ntvmr") {
         const detail = JSON.parse(sourceDetail);
         metadata.ingested_by = "ntvmr";
         metadata.transcription_source = "INTF NTVMR";
         metadata.ga_number = detail.ga_number;
         metadata.doc_id = detail.doc_id;
+      } else if (sourceType === "sinaiticus-project") {
+        // Legacy: kept for backwards compat
+        metadata.ingested_by = "sinaiticus_project";
+        metadata.transcription_source = "Codex Sinaiticus Project";
       } else if (sourceType === "dss") {
         metadata.ingested_by = "etcbc_dss";
         metadata.transcription_source = "ETCBC Dead Sea Scrolls";
@@ -637,7 +600,7 @@ export async function POST(request: NextRequest) {
           tokens_input: tokensInput,
           tokens_output: tokensOutput,
           estimated_cost_usd: costUsd,
-          ai_model: sourceType === "ai" ? sourceDetail : sourceType,
+          source_detail: sourceDetail,
         },
       });
     } catch (dbErr) {

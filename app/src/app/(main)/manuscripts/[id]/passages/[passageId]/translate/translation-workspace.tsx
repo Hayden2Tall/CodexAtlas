@@ -30,6 +30,7 @@ interface TranslationWorkspaceProps {
   evidenceRecords: EvidenceRecord[];
   reviews: ReviewWithReviewer[];
   isAuthenticated: boolean;
+  userRole?: string | null;
 }
 
 const TARGET_LANGUAGES = [
@@ -50,6 +51,7 @@ export function TranslationWorkspace({
   evidenceRecords: initialEvidence,
   reviews: initialReviews,
   isAuthenticated,
+  userRole,
 }: TranslationWorkspaceProps) {
   const [translations, setTranslations] = useState(initialTranslations);
   const [versions, setVersions] = useState(initialVersions);
@@ -186,7 +188,12 @@ export function TranslationWorkspace({
               {passage.original_text}
             </pre>
           </div>
-          <TextProvenance passage={passage} />
+          <TextProvenance
+            passage={passage}
+            manuscriptTitle={manuscript.title}
+            manuscriptLanguage={manuscript.original_language}
+            userRole={userRole ?? null}
+          />
         </div>
 
         {/* Translation output */}
