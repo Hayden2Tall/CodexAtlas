@@ -39,6 +39,44 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-13 — Translation Quality & Reliability Rework
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+The translate route (`POST /api/translate`) used a single generic user-message prompt with no system prompt, no language-specific guidance, temperature defaulting to 1.0 (Anthropic API default — too variable for translation), and no retry logic. For ancient Hebrew passages (WLC, DSS), the prompt received the bare ISO code "heb" with no Masoretic guidance. Rate-limit errors (Anthropic 429) failed immediately with no retry, causing batch translation jobs to accumulate failures. No parallel texts were provided to the model despite the data being available in `manuscript_source_texts`.
+
+**Decision:**
+1. Extract all prompt-building logic to `app/src/lib/utils/translation-prompts.ts` (pure functions, fully unit testable).
+2. Add a strong scholarly system prompt establishing persona and JSON-only output constraint.
+3. Add per-language instruction blocks for Biblical Hebrew, Koine Greek, Patristic Greek, Coptic, Ge'ez, Classical Syriac, and Latin.
+4. Add per-corpus context injection from source registry IDs.
+5. Add deterministic parallel text injection — query `manuscript_source_texts` for the same book/chapter from a complementary source (WLC when translating DSS, etc.). Injected as reference only.
+6. Set `temperature: 0.2` for consistent scholarly output.
+7. Add retry wrapper — 429/529 retried up to 2 times (1s + 3s backoff).
+8. Add 1-retry in batch-translate-panel.tsx before marking a passage as failed.
+
+**Rationale:**
+- Prompt engineering + deterministic parallel injection achieves most of the benefit of RAG without vector database infrastructure. Parallel texts identified by direct reference lookup (O(1) DB query).
+- Fine-tuning deferred: requires hundreds of human-reviewed translations not yet available.
+- Temperature 0.2 is standard for deterministic scholarly tasks.
+- Retry logic eliminates the primary source of batch failures (rate limiting).
+
+**Consequences:**
+- Translation quality improves immediately for all ancient languages.
+- Prompt tokens increase ~400–600 per call; cost increase ~5–10%.
+- Batch translation of large corpora (WLC 929 passages) becomes reliable.
+
+**Files Affected:**
+- `app/src/lib/utils/translation-prompts.ts` (created)
+- `app/src/app/api/translate/route.ts` (modified)
+- `app/src/app/(main)/admin/batch-translate-panel.tsx` (modified)
+- `app/src/__tests__/translation-prompts.test.ts` (created)
+
+---
+
 ### 2026-03-13 — Corpus Browser Enhancement: All-Corpus Read View with Category Filtering
 
 **Type:** milestone

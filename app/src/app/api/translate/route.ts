@@ -2,11 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
-import type { UserRole, User, Passage, Manuscript, EvidenceRecord, Translation, TranslationVersion } from "@/lib/types";
+import {
+  TRANSLATION_SYSTEM_PROMPT,
+  buildTranslationPrompt,
+  parseTranslationResponse,
+  getCorpusDescription,
+  type ParallelText,
+} from "@/lib/utils/translation-prompts";
+import { extractBookName } from "@/lib/utils/book-order";
+import { truncateToMaxChars } from "@/lib/utils/text-sources";
+import type {
+  UserRole,
+  User,
+  Passage,
+  Manuscript,
+  EvidenceRecord,
+  Translation,
+  TranslationVersion,
+} from "@/lib/types";
 
 export const maxDuration = 60;
 
 const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "editor", "admin"];
+const AI_MODEL = "claude-sonnet-4-20250514";
+
+// Priority order for parallel text lookup — preferred source comes first.
+// Only sources with the same language as the passage are useful as parallels.
+const PARALLEL_SOURCE_PRIORITY: Record<string, string[]> = {
+  heb: ["wlc", "oshb", "etcbc_dss"],
+  grc: ["sinaiticus_project", "sblgnt", "thgnt"],
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,10 +83,7 @@ export async function POST(request: NextRequest) {
       .single<Passage>();
 
     if (passageError || !passage) {
-      return NextResponse.json(
-        { error: "Passage not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Passage not found" }, { status: 404 });
     }
 
     if (!passage.original_text) {
@@ -78,51 +100,62 @@ export async function POST(request: NextRequest) {
       .single<Manuscript>();
 
     if (msError || !manuscript) {
-      return NextResponse.json(
-        { error: "Manuscript not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Manuscript not found" }, { status: 404 });
     }
 
-    // ── Call Claude API ──────────────────────────────────────────────
-    const aiModel = "claude-sonnet-4-20250514";
-    const prompt = buildTranslationPrompt(
-      passage.original_text,
-      manuscript.original_language,
-      target_language,
-      manuscript.title,
-      manuscript.estimated_date_start,
-      manuscript.estimated_date_end,
-      manuscript.origin_location
+    // ── Parallel text lookup ─────────────────────────────────────────
+    const admin = createAdminClient();
+    const sourceId = (passage.metadata as Record<string, unknown> | null)
+      ?.ingested_by as string | undefined;
+
+    const parallelText = await fetchParallelText(
+      admin,
+      passage.reference,
+      sourceId,
+      manuscript.original_language
     );
 
+    // ── Build prompt ─────────────────────────────────────────────────
+    const prompt = buildTranslationPrompt({
+      originalText: passage.original_text,
+      originalLanguage: manuscript.original_language,
+      targetLanguage: target_language,
+      manuscriptTitle: manuscript.title,
+      dateStart: manuscript.estimated_date_start,
+      dateEnd: manuscript.estimated_date_end,
+      origin: manuscript.origin_location,
+      transcriptionMethod: passage.transcription_method,
+      sourceId,
+      parallelText,
+    });
+
+    // ── Call Claude API (with retry) ─────────────────────────────────
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50000);
+    const timeout = setTimeout(() => controller.abort(), 50_000);
 
     let anthropicRes: Response;
     try {
-      anthropicRes = await fetch(
-        "https://api.anthropic.com/v1/messages",
+      anthropicRes = await callAnthropicWithRetry(
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.ANTHROPIC_API_KEY!,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: aiModel,
-            max_tokens: 4096,
-            messages: [{ role: "user", content: prompt }],
-          }),
-          signal: controller.signal,
-        }
+          model: AI_MODEL,
+          max_tokens: 4096,
+          temperature: 0.2,
+          system: TRANSLATION_SYSTEM_PROMPT,
+          messages: [{ role: "user", content: prompt }],
+        },
+        process.env.ANTHROPIC_API_KEY!,
+        controller.signal
       );
     } catch (fetchErr) {
       clearTimeout(timeout);
-      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
+      const isTimeout =
+        fetchErr instanceof Error && fetchErr.name === "AbortError";
       return NextResponse.json(
-        { error: isTimeout ? "Translation timed out — try a shorter passage" : "Translation service unreachable" },
+        {
+          error: isTimeout
+            ? "Translation timed out — try a shorter passage"
+            : "Translation service unreachable",
+        },
         { status: 502 }
       );
     }
@@ -142,7 +175,7 @@ export async function POST(request: NextRequest) {
 
     const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
     const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
-    const costUsd = estimateCostUsd(aiModel, tokensInput, tokensOutput);
+    const costUsd = estimateCostUsd(AI_MODEL, tokensInput, tokensOutput);
 
     if (!rawContent) {
       return NextResponse.json(
@@ -161,8 +194,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Persist to Supabase (admin client bypasses RLS) ──────────────
-    const admin = createAdminClient();
+    // ── Persist to Supabase ──────────────────────────────────────────
 
     // 1. Evidence record
     const { data: evidenceRecord, error: evErr } = await admin
@@ -172,7 +204,7 @@ export async function POST(request: NextRequest) {
         entity_id: passage_id,
         source_manuscript_ids: [manuscript.id],
         translation_method: "ai_initial",
-        ai_model: aiModel,
+        ai_model: AI_MODEL,
         confidence_score: parsed.confidence_score,
         revision_reason: null,
         metadata: {
@@ -180,6 +212,8 @@ export async function POST(request: NextRequest) {
           key_decisions: parsed.key_decisions,
           target_language,
           original_language: manuscript.original_language,
+          source_id: sourceId,
+          had_parallel_text: parallelText !== null,
         },
       } as Record<string, unknown>)
       .select()
@@ -193,7 +227,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Find or create translation row for this passage + language
+    // 2. Find or create translation row
     let { data: translation } = await admin
       .from("translations")
       .select("*")
@@ -238,7 +272,7 @@ export async function POST(request: NextRequest) {
         version_number: versionNumber,
         translated_text: parsed.translated_text,
         translation_method: "ai_initial",
-        ai_model: aiModel,
+        ai_model: AI_MODEL,
         confidence_score: parsed.confidence_score,
         source_manuscript_ids: [manuscript.id],
         status: "published",
@@ -256,7 +290,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Point evidence record at the actual version
+    // 5. Point evidence record at actual version
     await admin
       .from("evidence_records")
       .update({ entity_id: version.id } as Record<string, unknown>)
@@ -276,111 +310,106 @@ export async function POST(request: NextRequest) {
         tokens_input: tokensInput,
         tokens_output: tokensOutput,
         estimated_cost_usd: costUsd,
-        ai_model: aiModel,
+        ai_model: AI_MODEL,
       },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Translation pipeline error:", msg, err);
-    return NextResponse.json(
-      { error: `Server error: ${msg}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: `Server error: ${msg}` }, { status: 500 });
   }
 }
 
-// ── Prompt builder ─────────────────────────────────────────────────────
+// ── Anthropic API call with retry ─────────────────────────────────────────────
 
-function buildTranslationPrompt(
-  originalText: string,
-  originalLanguage: string,
-  targetLanguage: string,
-  manuscriptTitle: string,
-  dateStart: number | null,
-  dateEnd: number | null,
-  origin: string | null
-): string {
-  const dateRange =
-    dateStart && dateEnd
-      ? `${dateStart}\u2013${dateEnd} CE`
-      : dateStart
-        ? `c.\u00A0${dateStart} CE`
-        : "unknown date";
+async function callAnthropicWithRetry(
+  reqBody: object,
+  apiKey: string,
+  signal: AbortSignal,
+  maxRetries = 2
+): Promise<Response> {
+  const RETRY_DELAYS_MS = [1000, 3000];
 
-  return `You are a scholarly translator of ancient manuscripts. You specialize in faithful, academically rigorous translations that preserve the nuance, structure, and meaning of the original text.
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(reqBody),
+      signal,
+    });
 
-Translate the following passage from ${originalLanguage} to ${targetLanguage}.
-
-Source manuscript: "${manuscriptTitle}"
-Estimated date: ${dateRange}
-Origin: ${origin ?? "unknown"}
-
-Original text:
-"""
-${originalText}
-"""
-
-Respond ONLY with a JSON object (no markdown fences, no extra text) containing exactly these fields:
-
-{
-  "translated_text": "The full scholarly translation",
-  "confidence_score": 0.85,
-  "translation_notes": "Brief scholarly notes on the translation approach and any difficulties",
-  "key_decisions": [
-    "Description of a significant translation choice and why you made it"
-  ]
-}
-
-Guidelines for the confidence_score (0\u20131):
-- 0.95+    : Standard text with well-known vocabulary and grammar
-- 0.80\u20130.94 : Minor ambiguities but strong scholarly consensus
-- 0.60\u20130.79 : Significant ambiguities or disputed readings
-- 0.30\u20130.59 : Fragmentary text or highly uncertain vocabulary
-- Below 0.30 : Largely speculative reconstruction`;
-}
-
-// ── Response parser ────────────────────────────────────────────────────
-
-interface ParsedTranslation {
-  translated_text: string;
-  confidence_score: number;
-  translation_notes: string;
-  key_decisions: string[];
-}
-
-function parseTranslationResponse(raw: string): ParsedTranslation | null {
-  try {
-    return validateParsed(JSON.parse(raw));
-  } catch {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        return validateParsed(JSON.parse(jsonMatch[0]));
-      } catch {
-        return null;
-      }
+    // Retry only on rate-limit / overload status codes
+    if ((res.status === 429 || res.status === 529) && attempt < maxRetries) {
+      const delayMs = RETRY_DELAYS_MS[attempt] ?? 3000;
+      console.warn(
+        `[translate] Anthropic ${res.status} on attempt ${attempt + 1}/${maxRetries + 1} — retrying in ${delayMs}ms`
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+      continue;
     }
-    return null;
+
+    return res;
   }
+
+  // Unreachable but satisfies TS
+  throw new Error("Retry loop exhausted");
 }
 
-function validateParsed(obj: Record<string, unknown>): ParsedTranslation | null {
-  if (typeof obj.translated_text !== "string" || !obj.translated_text) {
+// ── Parallel text lookup ──────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchParallelText(admin: any,
+  reference: string,
+  currentSourceId: string | undefined,
+  langCode: string
+): Promise<ParallelText | null> {
+  try {
+    const bookName = extractBookName(reference);
+    if (!bookName) return null;
+
+    // Parse chapter from reference (last number in string)
+    const chapterMatch = reference.match(/(\d+)\s*$/);
+    if (!chapterMatch) return null;
+    const chapter = parseInt(chapterMatch[1], 10);
+
+    // Determine which sources are useful parallels for this language
+    const prioritySources =
+      PARALLEL_SOURCE_PRIORITY[langCode.toLowerCase()] ?? [];
+    if (prioritySources.length === 0) return null;
+
+    const { data: rows } = await admin
+      .from("manuscript_source_texts")
+      .select("source, text")
+      .ilike("book", bookName)
+      .eq("chapter", chapter)
+      .neq("source", currentSourceId ?? "")
+      .in("source", prioritySources)
+      .limit(prioritySources.length);
+
+    if (!rows || rows.length === 0) return null;
+
+    // Pick the highest-priority source from what we got
+    let bestRow: { source: string; text: string } | null = null;
+    for (const srcId of prioritySources) {
+      const found = (rows as { source: string; text: string }[]).find(
+        (r) => r.source === srcId
+      );
+      if (found) { bestRow = found; break; }
+    }
+
+    if (!bestRow || !bestRow.text || bestRow.text.length <= 50) return null;
+
+    return {
+      sourceLabel: getCorpusDescription(bestRow.source),
+      text: truncateToMaxChars(bestRow.text, 3000),
+    };
+  } catch (err) {
+    // Parallel text is optional — log and continue without it
+    console.warn("[translate] fetchParallelText failed:", err);
     return null;
   }
-
-  return {
-    translated_text: obj.translated_text,
-    confidence_score:
-      typeof obj.confidence_score === "number"
-        ? Math.max(0, Math.min(1, obj.confidence_score))
-        : 0.5,
-    translation_notes:
-      typeof obj.translation_notes === "string"
-        ? obj.translation_notes
-        : "",
-    key_decisions: Array.isArray(obj.key_decisions)
-      ? obj.key_decisions.map(String)
-      : [],
-  };
 }

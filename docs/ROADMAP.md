@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-13
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b complete
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b complete · Phase 3.9c complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -324,6 +324,15 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] `browser-client.tsx` — client component with category tabs (All | OT | NT | Deuterocanonical | Ethiopian Canon | Early Church | Other), text search, and results count
 - [x] Read page title updated to "Manuscript Library"
 - [x] Unit tests: `app/src/__tests__/book-order.test.ts`
+
+### 3.9c Translation Quality & Reliability Rework — Complete (2026-03-13)
+
+**Goal:** Improve translation quality and reliability across all ancient languages by adding a scholarly system prompt, per-language instruction blocks, corpus context, deterministic parallel text injection, temperature control, and Anthropic API retry logic.
+
+- [x] `app/src/lib/utils/translation-prompts.ts` — pure functions: system prompt, language blocks (heb/grc/grc_patristic/cop/gez/syc/lat), corpus context, prompt builder, response parser
+- [x] `app/src/app/api/translate/route.ts` — system prompt added, temperature set to 0.2, retry wrapper (2 retries, 1s/3s backoff on 429/529), parallel text injection via `manuscript_source_texts`
+- [x] `app/src/app/(main)/admin/batch-translate-panel.tsx` — per-passage retry with "Retrying..." status indicator before marking failed
+- [x] `app/src/__tests__/translation-prompts.test.ts` — unit tests for all prompt-building and parsing functions
 
 ### 3.6 Accessibility + i18n (Priority: Standard)
 

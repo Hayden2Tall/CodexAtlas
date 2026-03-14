@@ -17,6 +17,7 @@ interface TranslationResult {
   passageId: string;
   reference: string;
   success: boolean;
+  retrying?: boolean;
   error?: string;
   tokensIn?: number;
   tokensOut?: number;
@@ -199,12 +200,27 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
       const passage = passages[i];
       setStatusMessage(`Translating ${i + 1}/${passages.length}: ${passage.reference}...`);
 
-      try {
-        const res = await fetch("/api/translate", {
+      const attemptTranslate = () =>
+        fetch("/api/translate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ passage_id: passage.id, target_language: targetLanguage }),
         });
+
+      try {
+        let res = await attemptTranslate();
+
+        if (!res.ok) {
+          // Retry once after 2 s
+          setStatusMessage(`Translating ${i + 1}/${passages.length}: ${passage.reference} — retrying...`);
+          setResults((prev) => {
+            const next = new Map(prev);
+            next.set(passage.id, { passageId: passage.id, reference: passage.reference, success: false, retrying: true });
+            return next;
+          });
+          await new Promise((r) => setTimeout(r, 2000));
+          res = await attemptTranslate();
+        }
 
         if (res.ok) {
           const data = await res.json();
@@ -397,6 +413,8 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
                     {result ? (
                       result.success ? (
                         <span className="text-xs text-green-600">Translated ${result.costUsd?.toFixed(4)}</span>
+                      ) : result.retrying ? (
+                        <span className="text-xs text-amber-500">Retrying...</span>
                       ) : (
                         <span className="text-xs text-red-500 max-w-[160px] truncate" title={result.error}>{result.error ?? "Failed"}</span>
                       )
