@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import Link from "next/link";
 import type {
   Passage,
   Manuscript,
@@ -81,6 +82,12 @@ export function TranslationWorkspace({
   const activeEvidence = activeVersion?.evidence_record_id
     ? evidenceRecords.find((e) => e.id === activeVersion.evidence_record_id)
     : null;
+
+  const compareHref = useMemo(() => {
+    const match = passage.reference.match(/^(.+?)\s+(\d+)/);
+    if (!match) return null;
+    return `/read/${encodeURIComponent(match[1].trim())}/${match[2]}/compare`;
+  }, [passage.reference]);
 
   async function handleTranslate() {
     setIsTranslating(true);
@@ -168,6 +175,17 @@ export function TranslationWorkspace({
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {compareHref && (
+        <div className="text-right">
+          <Link
+            href={compareHref}
+            className="text-xs text-primary-600 hover:underline"
+          >
+            Compare manuscripts for {passage.reference} &rarr;
+          </Link>
         </div>
       )}
 

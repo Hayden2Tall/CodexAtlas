@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-13
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b complete · Phase 3.9c complete
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b–3.9d complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -333,6 +333,18 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] `app/src/app/api/translate/route.ts` — system prompt added, temperature set to 0.2, retry wrapper (2 retries, 1s/3s backoff on 429/529), parallel text injection via `manuscript_source_texts`
 - [x] `app/src/app/(main)/admin/batch-translate-panel.tsx` — per-passage retry with "Retrying..." status indicator before marking failed
 - [x] `app/src/__tests__/translation-prompts.test.ts` — unit tests for all prompt-building and parsing functions
+
+### 3.9d Admin Bulk Operations + Mobile Back Button — Complete (2026-03-13)
+
+**Goal:** Expose contextual agent operations at every UI level (manuscript page, chapter reader, passage translate) for admin/editor users, with a cost guard for large batches. Add persistent back navigation for the mobile PWA.
+
+- [x] `app/src/components/admin/bulk-translate-trigger.tsx` — reusable client widget: language selector, cost estimate, inline confirmation for >10 passages or >$5 est., sequential translation with per-passage retry, inline progress
+- [x] `app/src/app/(main)/manuscripts/[id]/page.tsx` — server-side role lookup; `userRole` passed to `ManuscriptDetail`
+- [x] `app/src/app/(main)/manuscripts/[id]/manuscript-detail.tsx` — admin/editor: `BulkTranslateTrigger` in Passages tab header for all passages with original text
+- [x] `app/src/app/(main)/read/[book]/[chapter]/chapter-admin-bar.tsx` — client component showing untranslated count + trigger
+- [x] `app/src/app/(main)/read/[book]/[chapter]/page.tsx` — role lookup; `ChapterAdminBar` rendered for admin/editor when untranslated passages exist
+- [x] `app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/translation-workspace.tsx` — "Compare manuscripts for {reference}" link derived from passage reference
+- [x] `app/src/components/layout/header.tsx` — persistent back button on mobile (non-root pages only); uses `router.back()`
 
 ### 3.6 Accessibility + i18n (Priority: Standard)
 

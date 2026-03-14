@@ -39,6 +39,34 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-13 — Admin Bulk Operations + Mobile Back Button
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Admin users could only trigger batch translation from the dedicated admin dashboard panel. No UI-level affordance existed at the manuscript page, chapter reader page, or passage translate page to run agent operations on the objects visible in that view. Additionally, the app runs as a PWA in `display: standalone` mode, which hides the browser chrome and its native back button — leaving mobile users without navigation history control.
+
+**Decision:**
+1. Add a persistent back button to the mobile header that appears on any non-root navigation page and calls `router.back()`.
+2. Create a reusable `BulkTranslateTrigger` client component that any admin-gated UI can embed to trigger sequential `/api/translate` calls on a provided passage list, with inline progress, per-passage retry, and a cost confirmation gate for batches >10 passages or >$5 estimated cost.
+3. Embed `BulkTranslateTrigger` in: (a) the Passages tab of the manuscript detail page for admin/editor users; (b) a `ChapterAdminBar` on the chapter reader page showing only untranslated manuscript passages.
+4. Add a "Compare manuscripts" link on the passage translate workspace, derived from the passage reference, pointing to `/read/{book}/{chapter}/compare`.
+
+**Rationale:**
+The principle of contextual access — every page should expose the agent operations relevant to the objects it displays (§6 of project constitution). Cost guard prevents accidental large-cost runs; the $5/$10-item thresholds are conservative for Sonnet 4 pricing (~$0.0115/passage). The back button resolves a real mobile PWA usability gap without requiring custom routing changes.
+
+**Consequences:**
+- Manuscript and chapter pages now require server-side role lookup (adds one `users` query per page load for authenticated users only).
+- `BulkTranslateTrigger` does not create agent task records (those stay in the admin dashboard batch panel). Translations generated here are indistinguishable in the DB from single-passage or dashboard translations.
+- Reader/scholar users see no change — all bulk controls are gated on `["admin", "editor"]`.
+
+**Related Documents:**
+- Plan file: `C:\Users\hayde\.claude\plans\stateless-forging-willow.md`
+
+---
+
 ### 2026-03-13 — Translation Quality & Reliability Rework
 
 **Type:** decision

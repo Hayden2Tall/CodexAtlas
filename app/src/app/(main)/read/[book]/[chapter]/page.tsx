@@ -8,6 +8,7 @@ import { MethodBadge } from "@/components/ui/method-badge";
 import { PassageSummary } from "@/components/scripture/passage-summary";
 import { ChapterNav } from "./chapter-nav";
 import { ShareButton } from "@/components/ui/share-button";
+import { ChapterAdminBar } from "./chapter-admin-bar";
 
 interface PageProps {
   params: Promise<{ book: string; chapter: string }>;
@@ -219,6 +220,17 @@ export default async function ChapterPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthenticated = !!user;
 
+  let userRole: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single<{ role: string }>();
+    userRole = profile?.role ?? null;
+  }
+  const isAdmin = ["admin", "editor"].includes(userRole ?? "");
+
   if (!results || results.length === 0) {
     return (
       <div className="mx-auto max-w-3xl py-12 text-center">
@@ -272,6 +284,16 @@ export default async function ChapterPage({ params }: PageProps) {
         </div>
         <ShareButton title={`${bookDecoded} ${chapterNum} — CodexAtlas`} />
       </div>
+
+      {/* Admin: translate untranslated passages in this chapter */}
+      <ChapterAdminBar
+        untranslatedPassages={
+          isAdmin
+            ? results.filter((r) => r.translation === null).map((r) => ({ id: r.passage.id, reference: r.passage.reference }))
+            : []
+        }
+        totalManuscripts={results.length}
+      />
 
       {/* Manuscript passages */}
       <div className="space-y-8">

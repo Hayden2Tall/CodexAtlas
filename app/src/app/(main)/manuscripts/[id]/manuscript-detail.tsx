@@ -6,6 +6,7 @@ import type { Manuscript, Passage, ManuscriptImage } from "@/lib/types";
 import { formatManuscriptDate } from "@/lib/utils/dates";
 import { getLanguageName } from "@/lib/utils/languages";
 import { ManuscriptSummary } from "@/components/ui/manuscript-summary";
+import { BulkTranslateTrigger } from "@/components/admin/bulk-translate-trigger";
 
 type Tab = "overview" | "passages" | "images";
 
@@ -14,6 +15,7 @@ interface ManuscriptDetailProps {
   passages: Passage[];
   images: ManuscriptImage[];
   isAuthenticated: boolean;
+  userRole: string | null;
 }
 
 export function ManuscriptDetail({
@@ -21,6 +23,7 @@ export function ManuscriptDetail({
   passages,
   images,
   isAuthenticated,
+  userRole,
 }: ManuscriptDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [expandedPassage, setExpandedPassage] = useState<string | null>(null);
@@ -129,6 +132,7 @@ export function ManuscriptDetail({
             setExpandedPassage(expandedPassage === id ? null : id)
           }
           isAuthenticated={isAuthenticated}
+          userRole={userRole}
         />
       )}
       {activeTab === "images" && <ImagesTab images={images} />}
@@ -221,12 +225,14 @@ function PassagesTab({
   expandedPassage,
   onToggle,
   isAuthenticated,
+  userRole,
 }: {
   passages: Passage[];
   manuscriptId: string;
   expandedPassage: string | null;
   onToggle: (id: string) => void;
   isAuthenticated: boolean;
+  userRole: string | null;
 }) {
   const [passages, setPassages] = useState(initialPassages);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -303,8 +309,23 @@ function PassagesTab({
     );
   }
 
+  const passagesWithText = passages.filter((p) => !!p.original_text);
+  const isAdmin = ["admin", "editor"].includes(userRole ?? "");
+
   return (
     <div className="space-y-3">
+      {isAdmin && passagesWithText.length > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-primary-100 bg-primary-50/50 px-4 py-2">
+          <span className="text-xs text-primary-700">
+            {passagesWithText.length} passage{passagesWithText.length !== 1 ? "s" : ""} with text
+          </span>
+          <BulkTranslateTrigger
+            passages={passagesWithText.map((p) => ({ id: p.id, reference: p.reference }))}
+            label="in this manuscript"
+            size="sm"
+          />
+        </div>
+      )}
       {passages.map((passage) => {
         const isExpanded = expandedPassage === passage.id;
         const isEditing = editingId === passage.id;

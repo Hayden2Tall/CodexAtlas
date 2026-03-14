@@ -16,6 +16,8 @@ const navLinks = [
   { href: "/admin", label: "Admin" },
 ] as const;
 
+const ROOT_PATHS = ["/", "/read", "/manuscripts", "/visualize", "/search", "/admin"];
+
 export function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,6 +25,8 @@ export function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  const isRootPage = ROOT_PATHS.some((p) => pathname === p || pathname === p + "/");
 
   useEffect(() => {
     const supabase = createClient();
@@ -69,7 +73,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 py-3">
-          {/* Left: hamburger + logo */}
+          {/* Left: hamburger + back (mobile) + logo */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
@@ -90,6 +94,28 @@ export function Header() {
                 />
               </svg>
             </button>
+
+            {!isRootPage && (
+              <button
+                onClick={() => router.back()}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden"
+                aria-label="Go back"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 19.5L8.25 12l7.5-7.5"
+                  />
+                </svg>
+              </button>
+            )}
 
             <Link href="/" className="flex items-center gap-2.5">
               <Logo size={30} />

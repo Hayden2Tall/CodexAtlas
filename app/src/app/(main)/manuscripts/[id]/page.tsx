@@ -70,12 +70,23 @@ export default async function ManuscriptPage({ params }: ManuscriptPageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let userRole: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single<{ role: string }>();
+    userRole = profile?.role ?? null;
+  }
+
   return (
     <ManuscriptDetail
       manuscript={manuscript}
       passages={passages ?? []}
       images={images ?? []}
       isAuthenticated={!!user}
+      userRole={userRole}
     />
   );
 }
