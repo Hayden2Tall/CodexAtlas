@@ -45,8 +45,8 @@ const OWNER = "OpenGreekAndLatin";
 const REPO = "First1KGreek";
 const DATA_PATH = "data";
 
-// Limit to avoid an extremely long run. Increase or remove to import everything.
-const MAX_WORKS = parseInt(process.env.OGL_MAX_WORKS ?? "200", 10);
+// Set OGL_MAX_WORKS env var to limit (e.g. OGL_MAX_WORKS=50 for testing). Default: all works.
+const MAX_WORKS = process.env.OGL_MAX_WORKS ? parseInt(process.env.OGL_MAX_WORKS, 10) : Infinity;
 
 const GITHUB_HEADERS = {
   Accept: "application/vnd.github.v3+json",

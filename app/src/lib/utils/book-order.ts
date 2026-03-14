@@ -1,4 +1,20 @@
 /**
+ * Browser category for the read page corpus filter.
+ * Widens the old "ot"|"nt"|"deuterocanonical"|"other" union to include patristic and Ethiopian.
+ */
+export type BrowserCategory = "ot" | "nt" | "deuterocanonical" | "ethiopian" | "patristic" | "other";
+
+/**
+ * Maps source registry IDs (manuscript_source_texts.source) to browser categories.
+ * Used for passages whose book name is not in BOOK_ORDER (e.g. patristic OGL works).
+ * Sources not listed here default to "other".
+ */
+export const SOURCE_TO_CATEGORY: Record<string, BrowserCategory> = {
+  first1k_greek: "patristic",
+  coptic_scriptorium: "patristic",
+};
+
+/**
  * Canonical book ordering for sorting passage references across the platform.
  * Covers Protestant canon, Deuterocanonical/Apocrypha, Ethiopian canon, and other ancient texts.
  * Keys are lowercase; values define sort position.
@@ -105,11 +121,12 @@ export function getBookDisplayName(bookKey: string): string {
 }
 
 /**
- * Classify a book order number into a testament section.
+ * Classify a book order number into a browser category.
  */
-export function getTestamentSection(order: number): "ot" | "nt" | "deuterocanonical" | "other" {
+export function getTestamentSection(order: number): BrowserCategory {
   if (order >= OT_RANGE[0] && order <= OT_RANGE[1]) return "ot";
   if (order >= NT_RANGE[0] && order <= NT_RANGE[1]) return "nt";
   if (order >= 67 && order <= 86) return "deuterocanonical";
+  if (order >= 100 && order <= 106) return "ethiopian";
   return "other";
 }

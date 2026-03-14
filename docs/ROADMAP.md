@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
-> **Last Updated:** 2026-03-10
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Entering Phase 3.5
+> **Last Updated:** 2026-03-13
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -312,6 +312,18 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] `TranscriptionMethod` type updated with all 8 valid values
 - [x] `docs/agent-context/ingestion-system-2026.md` — compressed architecture summary for future agents
 - [x] `docs/design/ingestion-rework-2026.md` — feature design document (§8.2)
+
+### 3.9b Corpus Browser Enhancement — Complete (2026-03-13)
+
+**Goal:** Expose all imported corpora (patristic OGL works, Ethiopian canon, etc.) in the Read page with category filtering and search, now that the ingestion rework populates the passages table with non-canonical texts.
+
+- [x] `BrowserCategory` type added to `book-order.ts` — extends section union to include `"ethiopian"` and `"patristic"`
+- [x] `SOURCE_TO_CATEGORY` map — maps source registry IDs to browser categories (first1k_greek → patristic, coptic_scriptorium → patristic)
+- [x] `getTestamentSection()` bug fix — Ethiopian range 100–106 now correctly returns `"ethiopian"` (was `"other"`)
+- [x] Two-pass `loadBooks()` — pass 1 handles canonical books (unchanged), pass 2 resolves patristic/unknown books via manuscript metadata
+- [x] `browser-client.tsx` — client component with category tabs (All | OT | NT | Deuterocanonical | Ethiopian Canon | Early Church | Other), text search, and results count
+- [x] Read page title updated to "Manuscript Library"
+- [x] Unit tests: `app/src/__tests__/book-order.test.ts`
 
 ### 3.6 Accessibility + i18n (Priority: Standard)
 

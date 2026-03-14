@@ -39,6 +39,45 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-13 — Corpus Browser Enhancement: All-Corpus Read View with Category Filtering
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+After the Phase 3.9 ingestion rework, the `passages` table now contains text from 8 corpora including ~40,000+ rows of OpenGreekAndLatin / First1KGreek patristic works. The existing Read page (`/read`) only displayed books present in the hardcoded `BOOK_ORDER` map (Protestant canon + Deuterocanonical + Ethiopian). Any passage whose book name was not in `BOOK_ORDER` was silently dropped by `loadBooks()` via an `order === 999` guard — making all patristic and other non-canonical corpora invisible in the browser.
+
+**Decision:**
+Extend the Read page to display all corpora with category-based filtering:
+1. `book-order.ts` — Add `BrowserCategory` union type (`"ot" | "nt" | "deuterocanonical" | "ethiopian" | "patristic" | "other"`). Fix `getTestamentSection()` to return `"ethiopian"` for orders 100–106 (was incorrectly returning `"other"`). Add `SOURCE_TO_CATEGORY` map from sourceId to category.
+2. `read/page.tsx` — Two-pass `loadBooks()`: pass 1 handles known books (unchanged); pass 2 extracts raw titles for unknown books, queries manuscripts for `source_registry_id`, and maps to category via `SOURCE_TO_CATEGORY`.
+3. `read/browser-client.tsx` — New client component with category tabs (All | OT | NT | Deuterocanonical | Ethiopian Canon | Early Church | Other) and text search input. Filters client-side for instant UX.
+
+**Rationale:**
+- The ingestion rework loaded patristic, Coptic, and other non-biblical corpora into the DB. These should be accessible through the same read interface.
+- Category tabs preserve the existing UX for scripture browsing (default "All" shows everything; users can narrow to OT/NT for familiar workflow).
+- Client-side filtering avoids DB round-trips on every tab switch.
+- Two-pass `loadBooks()` avoids joining manuscript metadata onto every passage row (only queries manuscripts for the unknown-book subset).
+
+**Consequences:**
+- Read page shows all corpora after `populate-manuscripts.mjs` is run.
+- Ethiopian Canon books (1 Enoch, Jubilees, etc.) now correctly categorized (were showing under "Other Texts").
+- `BrowserCategory` type widens the previous `"ot"|"nt"|"deuterocanonical"|"other"` union — no breaking changes since `BookEntry.section` is internal to `read/page.tsx`.
+- OGL work titles used as book names route correctly via `/read/{encoded-title}/{section}` — confirmed by chapter page's exact ILIKE query (no `%` wildcard).
+
+**Files Affected:**
+- `app/src/lib/utils/book-order.ts` (modified)
+- `app/src/app/(main)/read/page.tsx` (modified)
+- `app/src/app/(main)/read/browser-client.tsx` (created)
+- `app/src/__tests__/book-order.test.ts` (created)
+
+**Related Documents:**
+- Plan: `C:\Users\hayde\.claude\plans\stateless-forging-willow.md`
+- Prior: 2026-03-12 Ingestion System Rework entry
+
+---
+
 ### 2026-03-12 — Ingestion System Rework: Source Registry, IIIF Harvest, Remove AI Fallback
 
 **Type:** decision

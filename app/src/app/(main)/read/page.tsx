@@ -1,24 +1,27 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   BOOK_DISPLAY_NAMES,
   getTestamentSection,
   parseReference,
+  extractBookName,
+  SOURCE_TO_CATEGORY,
+  type BrowserCategory,
 } from "@/lib/utils/book-order";
+import { BrowserClient } from "./browser-client";
 
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Scripture Browser — CodexAtlas",
+  title: "Manuscript Library — CodexAtlas",
   description:
-    "Browse ancient manuscripts by book and chapter. Explore transparent AI translations with full evidence chains.",
+    "Browse all manuscripts and ancient texts by book and chapter. Explore scripture, patristic works, and the Dead Sea Scrolls with full evidence chains.",
 };
 
-interface BookEntry {
+export interface BookEntry {
   displayName: string;
-  order: number;
-  section: "ot" | "nt" | "deuterocanonical" | "other";
+  order: number; // 999 for patristic/unknown
+  section: BrowserCategory;
   chapters: number[];
   manuscriptCount: number;
 }
@@ -32,25 +35,66 @@ async function loadBooks(): Promise<BookEntry[]> {
     .not("original_text", "is", null)
     .neq("original_text", "");
 
+  // Pass 1: separate known books (in BOOK_ORDER) from unknown (patristic/other)
   const bookMap = new Map<
     number,
     { chapters: Set<number>; manuscripts: Set<string> }
   >();
 
+  // key = raw title (for books not in BOOK_ORDER)
+  const unknownMap = new Map<
+    string,
+    { chapters: Set<number>; manuscripts: Set<string> }
+  >();
+  const unknownManuscriptIds = new Set<string>();
+
   for (const p of passages ?? []) {
     const [order, chapter] = parseReference(p.reference);
-    if (order === 999 || chapter === 0) continue;
+    if (chapter === 0) continue;
 
-    let entry = bookMap.get(order);
-    if (!entry) {
-      entry = { chapters: new Set(), manuscripts: new Set() };
-      bookMap.set(order, entry);
+    if (order !== 999) {
+      // Known canonical book
+      let entry = bookMap.get(order);
+      if (!entry) {
+        entry = { chapters: new Set(), manuscripts: new Set() };
+        bookMap.set(order, entry);
+      }
+      entry.chapters.add(chapter);
+      entry.manuscripts.add(p.manuscript_id);
+    } else {
+      // Unknown book — extract raw title
+      const rawTitle = extractBookName(p.reference);
+      if (!rawTitle) continue;
+      let entry = unknownMap.get(rawTitle);
+      if (!entry) {
+        entry = { chapters: new Set(), manuscripts: new Set() };
+        unknownMap.set(rawTitle, entry);
+      }
+      entry.chapters.add(chapter);
+      entry.manuscripts.add(p.manuscript_id);
+      unknownManuscriptIds.add(p.manuscript_id);
     }
-    entry.chapters.add(chapter);
-    entry.manuscripts.add(p.manuscript_id);
   }
 
+  // Pass 2: resolve source_registry_id for unknown books (batch query — avoids joining on every row)
+  const manuscriptToSourceId = new Map<string, string>();
+  if (unknownManuscriptIds.size > 0) {
+    const { data: mss } = await admin
+      .from("manuscripts")
+      .select("id, metadata")
+      .in("id", [...unknownManuscriptIds]);
+
+    for (const ms of mss ?? []) {
+      const srcId = (ms.metadata as Record<string, unknown> | null)
+        ?.source_registry_id as string | undefined;
+      if (srcId) manuscriptToSourceId.set(ms.id, srcId);
+    }
+  }
+
+  // Build BookEntry list
   const books: BookEntry[] = [];
+
+  // Known books
   for (const [order, entry] of bookMap) {
     books.push({
       displayName: BOOK_DISPLAY_NAMES[order] ?? `Book ${order}`,
@@ -61,92 +105,48 @@ async function loadBooks(): Promise<BookEntry[]> {
     });
   }
 
-  return books.sort((a, b) => a.order - b.order);
-}
+  // Unknown books (patristic / other)
+  for (const [rawTitle, entry] of unknownMap) {
+    // Pick any manuscript_id to look up sourceId
+    const anyMsId = [...entry.manuscripts][0];
+    const sourceId = manuscriptToSourceId.get(anyMsId) ?? "";
+    const category: BrowserCategory = SOURCE_TO_CATEGORY[sourceId] ?? "other";
 
-const SECTION_LABELS: Record<string, string> = {
-  ot: "Old Testament",
-  nt: "New Testament",
-  deuterocanonical: "Deuterocanonical",
-  other: "Other Texts",
-};
+    books.push({
+      displayName: rawTitle,
+      order: 999,
+      section: category,
+      chapters: [...entry.chapters].sort((a, b) => a - b),
+      manuscriptCount: entry.manuscripts.size,
+    });
+  }
+
+  return books.sort((a, b) => {
+    // Known books first (by order), then unknown sorted alphabetically
+    if (a.order !== b.order) {
+      if (a.order === 999 && b.order !== 999) return 1;
+      if (a.order !== 999 && b.order === 999) return -1;
+      return a.order - b.order;
+    }
+    return a.displayName.localeCompare(b.displayName);
+  });
+}
 
 export default async function ReadPage() {
   const books = await loadBooks();
-  const sections = ["ot", "nt", "deuterocanonical", "other"] as const;
-
-  const hasContent = books.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-bold text-gray-900">
-          Scripture Browser
+          Manuscript Library
         </h1>
         <p className="mt-2 text-gray-600">
-          Navigate by book and chapter across all manuscripts in the corpus.
+          Browse scripture, patristic texts, and ancient manuscripts by book and chapter.
         </p>
       </div>
 
-      {!hasContent && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 px-8 py-16 text-center">
-          <p className="text-gray-500">
-            No passages have been imported yet. Use the{" "}
-            <Link href="/admin" className="text-primary-700 underline">
-              Admin panel
-            </Link>{" "}
-            to discover and import manuscripts.
-          </p>
-        </div>
-      )}
-
-      {hasContent && (
-        <div className="space-y-10">
-          {sections.map((sectionKey) => {
-            const sectionBooks = books.filter((b) => b.section === sectionKey);
-            if (sectionBooks.length === 0) return null;
-
-            return (
-              <section key={sectionKey}>
-                <h2 className="mb-4 text-lg font-semibold text-gray-800">
-                  {SECTION_LABELS[sectionKey]}
-                </h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {sectionBooks.map((book) => (
-                    <BookCard key={book.order} book={book} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BookCard({ book }: { book: BookEntry }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
-      <div className="mb-3 flex items-start justify-between">
-        <h3 className="font-serif text-base font-semibold text-gray-900">
-          {book.displayName}
-        </h3>
-        <span className="ml-2 shrink-0 rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
-          {book.manuscriptCount} ms{book.manuscriptCount !== 1 ? "s" : ""}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {book.chapters.map((ch) => (
-          <Link
-            key={ch}
-            href={`/read/${encodeURIComponent(book.displayName)}/${ch}`}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-primary-700"
-          >
-            {ch}
-          </Link>
-        ))}
-      </div>
+      <BrowserClient books={books} />
     </div>
   );
 }

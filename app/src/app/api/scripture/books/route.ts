@@ -4,6 +4,7 @@ import {
   BOOK_DISPLAY_NAMES,
   getTestamentSection,
   parseReference,
+  type BrowserCategory,
 } from "@/lib/utils/book-order";
 
 export const revalidate = 300;
@@ -12,7 +13,7 @@ interface BookEntry {
   book: string;
   displayName: string;
   order: number;
-  section: "ot" | "nt" | "deuterocanonical" | "other";
+  section: BrowserCategory;
   chapters: number[];
   manuscriptCount: number;
   passageCount: number;
