@@ -207,12 +207,13 @@ Respond ONLY with a JSON object (no markdown fences, no extra text):
   ]
 }
 
-Confidence score guidelines:
-- 0.95+    : Standard text, well-known vocabulary and grammar
-- 0.80–0.94 : Minor ambiguities, strong scholarly consensus
-- 0.60–0.79 : Significant ambiguities or disputed readings
-- 0.30–0.59 : Fragmentary text or highly uncertain vocabulary
-- Below 0.30 : Largely speculative reconstruction`;
+Confidence score guidelines (reflects your translation certainty only — do NOT penalise for working from a single manuscript witness, as all translations here are single-source by design):
+- 0.95+ : Clear, unambiguous text; standard vocabulary and well-understood grammar
+- 0.85–0.94 : Minor lexical choices with strong scholarly consensus; negligible uncertainty
+- 0.70–0.84 : Meaningful ambiguities in vocabulary or grammar; multiple defensible readings
+- 0.50–0.69 : Significant portions uncertain; disputed terminology; several viable interpretations
+- 0.30–0.49 : Substantially fragmentary; highly uncertain vocabulary or syntax
+- Below 0.30 : Largely speculative; extensive reconstruction required`;
 }
 
 // ── Response parser ───────────────────────────────────────────────────────────

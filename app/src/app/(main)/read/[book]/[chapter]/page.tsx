@@ -51,24 +51,41 @@ interface VersionRow {
 async function loadChapterData(bookDecoded: string, chapterNum: number) {
   const admin = createAdminClient();
 
-  // Build OR filter across all known aliases for this book so "Psalm" and "Psalms" both match
+  // Query across all known aliases for this book so "Psalm" and "Psalms" both match.
+  // Use separate ilike queries per alias (avoids PostgREST .or() parser issues with spaces).
   const targetOrder = BOOK_ORDER[bookDecoded.toLowerCase()] ?? 999;
   const aliases = targetOrder !== 999
     ? [...new Set(Object.entries(BOOK_ORDER).filter(([, v]) => v === targetOrder).map(([k]) => k))]
     : [bookDecoded.toLowerCase()];
-  const orFilter = aliases.map((a) => `reference.ilike.${a} ${chapterNum}%`).join(",");
 
-  const { data: passageRows } = await admin
-    .from("passages")
-    .select(`
-      id, reference, original_text, manuscript_id, transcription_method, metadata,
-      manuscripts!inner(id, title, original_language, estimated_date_start, estimated_date_end)
-    `)
-    .or(orFilter)
-    .not("original_text", "is", null)
-    .returns<PassageRow[]>();
+  const SELECT = `
+    id, reference, original_text, manuscript_id, transcription_method, metadata,
+    manuscripts!inner(id, title, original_language, estimated_date_start, estimated_date_end)
+  `;
 
-  if (!passageRows?.length) return null;
+  const aliasResults = await Promise.all(
+    aliases.map((alias) =>
+      admin
+        .from("passages")
+        .select(SELECT)
+        .ilike("reference", `${alias} ${chapterNum}%`)
+        .not("original_text", "is", null)
+        .returns<PassageRow[]>()
+    )
+  );
+
+  const seenIds = new Set<string>();
+  const passageRows: PassageRow[] = [];
+  for (const { data } of aliasResults) {
+    for (const row of data ?? []) {
+      if (!seenIds.has(row.id)) {
+        seenIds.add(row.id);
+        passageRows.push(row);
+      }
+    }
+  }
+
+  if (!passageRows.length) return null;
 
   const passageIds = passageRows.map((p) => p.id);
 
