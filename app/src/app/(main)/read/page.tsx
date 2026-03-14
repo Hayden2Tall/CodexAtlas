@@ -29,11 +29,24 @@ export interface BookEntry {
 async function loadBooks(): Promise<BookEntry[]> {
   const admin = createAdminClient();
 
-  const { data: passages } = await admin
-    .from("passages")
-    .select("reference, manuscript_id")
-    .not("original_text", "is", null)
-    .neq("original_text", "");
+  // Supabase PostgREST caps responses at 1000 rows by default.
+  // Paginate to ensure every passage is counted regardless of corpus size.
+  const PAGE_SIZE = 1000;
+  const allPassages: { reference: string; manuscript_id: string }[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await admin
+      .from("passages")
+      .select("reference, manuscript_id")
+      .not("original_text", "is", null)
+      .neq("original_text", "")
+      .range(from, from + PAGE_SIZE - 1);
+    if (error || !data?.length) break;
+    allPassages.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  const passages = allPassages;
 
   // Pass 1: separate known books (in BOOK_ORDER) from unknown (patristic/other)
   const bookMap = new Map<

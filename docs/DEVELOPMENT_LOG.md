@@ -39,6 +39,35 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-13 — Book Browser Missing Chapters: Supabase Row Limit Root Cause
+
+**Type:** incident
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+After applying `force-dynamic` to `read/page.tsx` (prior entry), the book browser still omitted specific chapters (Psalms 34, 32, and others). The direct chapter URL `/read/Psalms/34` worked correctly, confirming data existed. Root cause was not correctly identified in the prior fix.
+
+**Decision:**
+`loadBooks()` in `read/page.tsx` queried the `passages` table with no `.range()` constraint. Supabase PostgREST applies a default `max_rows` cap of 1000 rows on all queries when no explicit range is specified. With 556+ Psalms passages alone plus all other corpus books, the total passage count exceeds 1000. Passages imported last (e.g. Psalms 34, imported after the purge/reimport cycle) are silently truncated from the response.
+
+Fix: replaced single query with a paginated loop using `.range(from, from + PAGE_SIZE - 1)` with `PAGE_SIZE = 1000`, accumulating all pages until a partial page signals completion.
+
+Also changed `page.tsx` (homepage) from `revalidate = 60` to `force-dynamic`. The ISR stale-while-revalidate behavior meant the first visitor after a cache expiry always received the previous version — stats like language count appeared perpetually stale even after new deployments.
+
+**Rationale:**
+Pagination is required for any unbounded query against a growing corpus. The 1000-row limit will continue to silently truncate results as more manuscripts are ingested. Force-dynamic on the homepage eliminates the stale-serve-on-first-request problem inherent to ISR for a page where stat accuracy matters.
+
+**Consequences:**
+- Book browser now fetches all passages correctly regardless of corpus size; page load makes N sequential Supabase requests where N = ceil(total_passages / 1000).
+- Homepage now hits Supabase on every load. Acceptable at current traffic scale; add edge caching header if traffic grows.
+- Both pages are now always authoritative with live DB state.
+
+**Related Documents:**
+- Prior entry: "Post-Deploy Hotfixes: Book Browser Stale Cache + Homepage Cleanup" (incomplete diagnosis)
+
+---
+
 ### 2026-03-13 — Post-Deploy Hotfixes: Book Browser Stale Cache + Homepage Cleanup
 
 **Type:** incident

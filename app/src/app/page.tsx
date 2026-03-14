@@ -3,7 +3,7 @@ import { Header } from "@/components/layout/header";
 import { Logo } from "@/components/brand/logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 interface StatsData {
   manuscripts: number;
