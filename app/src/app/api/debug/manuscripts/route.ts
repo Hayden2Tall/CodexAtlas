@@ -19,23 +19,42 @@ export async function GET(_request: NextRequest) {
 
   const admin = createAdminClient();
 
-  const [{ data: manuscripts }, { data: passageCounts }] = await Promise.all([
-    admin
+  // Paginate both queries to bypass 1000-row cap
+  const PAGE_SIZE = 1000;
+  const manuscripts: { id: string; title: string; original_language: string; archived_at: string | null; created_at: string }[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await admin
       .from("manuscripts")
       .select("id, title, original_language, archived_at, created_at")
-      .order("created_at", { ascending: true }),
-    admin
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (!data?.length) break;
+    manuscripts.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  const passageCounts: { manuscript_id: string }[] = [];
+  from = 0;
+  while (true) {
+    const { data } = await admin
       .from("passages")
       .select("manuscript_id")
-      .not("original_text", "is", null),
-  ]);
+      .not("original_text", "is", null)
+      .range(from, from + PAGE_SIZE - 1);
+    if (!data?.length) break;
+    passageCounts.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
 
   const countByMs = new Map<string, number>();
-  for (const p of passageCounts ?? []) {
+  for (const p of passageCounts) {
     countByMs.set(p.manuscript_id, (countByMs.get(p.manuscript_id) ?? 0) + 1);
   }
 
-  const rows = (manuscripts ?? []).map((m) => ({
+  const rows = manuscripts.map((m) => ({
     id: m.id,
     title: m.title,
     language: m.original_language,
@@ -46,7 +65,7 @@ export async function GET(_request: NextRequest) {
   }));
 
   const langCounts: Record<string, number> = {};
-  for (const m of manuscripts ?? []) {
+  for (const m of manuscripts) {
     langCounts[m.original_language] = (langCounts[m.original_language] ?? 0) + 1;
   }
 

@@ -11,12 +11,24 @@ export const metadata = {
 export default async function ManuscriptsPage() {
   const supabase = await createClient();
 
-  const { data: manuscripts } = await supabase
-    .from("manuscripts")
-    .select("*")
-    .is("archived_at", null)
-    .order("created_at", { ascending: false })
-    .returns<Manuscript[]>();
+  // Paginate to bypass Supabase PostgREST 1000-row default cap
+  const PAGE_SIZE = 1000;
+  const allManuscripts: Manuscript[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await supabase
+      .from("manuscripts")
+      .select("*")
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1)
+      .returns<Manuscript[]>();
+    if (!data?.length) break;
+    allManuscripts.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  const manuscripts = allManuscripts;
 
   const {
     data: { user },
