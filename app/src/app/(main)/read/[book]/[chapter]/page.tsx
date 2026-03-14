@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { BOOK_ORDER, parseReference } from "@/lib/utils/book-order";
+
+export const dynamic = "force-dynamic";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
 import { PassageSummary } from "@/components/scripture/passage-summary";
@@ -76,7 +78,8 @@ async function loadChapterData(bookDecoded: string, chapterNum: number) {
 
   const seenIds = new Set<string>();
   const passageRows: PassageRow[] = [];
-  for (const { data } of aliasResults) {
+  for (const { data, error } of aliasResults) {
+    if (error) console.error(`[chapter-page] loadChapterData query error for "${bookDecoded}" ch${chapterNum}:`, error.message);
     for (const row of data ?? []) {
       if (!seenIds.has(row.id)) {
         seenIds.add(row.id);
@@ -84,6 +87,8 @@ async function loadChapterData(bookDecoded: string, chapterNum: number) {
       }
     }
   }
+
+  console.log(`[chapter-page] "${bookDecoded}" ch${chapterNum}: found ${passageRows.length} passages via aliases [${aliases.join(",")}]`);
 
   if (!passageRows.length) return null;
 
