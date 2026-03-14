@@ -49,7 +49,7 @@ interface VersionRow {
 
 async function loadChapterData(bookDecoded: string, chapterNum: number) {
   const admin = createAdminClient();
-  const refPattern = `${bookDecoded} ${chapterNum}`;
+  const refPattern = `${bookDecoded} ${chapterNum}%`;
 
   const { data: passageRows } = await admin
     .from("passages")

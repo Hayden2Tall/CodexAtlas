@@ -122,9 +122,6 @@ export function Header() {
               <span className="font-serif text-xl font-bold text-primary-700">
                 CodexAtlas
               </span>
-              <span className="hidden sm:inline rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-700">
-                Alpha
-              </span>
             </Link>
           </div>
 
