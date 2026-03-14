@@ -49,8 +49,12 @@ coverage/
 sw.js
 workbox-*.js
 
-# Preprocessing data (large downloaded files)
+# Preprocessing data (large downloaded files, cached corpus)
 scripts/*.xml
+scripts/cache/
+
+# Claude Code local settings
+.claude/settings.local.json
 
 # Misc
 *.tsbuildinfo
