@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { BOOK_ORDER, parseReference } from "@/lib/utils/book-order";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
 import { PassageSummary } from "@/components/scripture/passage-summary";
@@ -49,7 +50,13 @@ interface VersionRow {
 
 async function loadChapterData(bookDecoded: string, chapterNum: number) {
   const admin = createAdminClient();
-  const refPattern = `${bookDecoded} ${chapterNum}%`;
+
+  // Build OR filter across all known aliases for this book so "Psalm" and "Psalms" both match
+  const targetOrder = BOOK_ORDER[bookDecoded.toLowerCase()] ?? 999;
+  const aliases = targetOrder !== 999
+    ? [...new Set(Object.entries(BOOK_ORDER).filter(([, v]) => v === targetOrder).map(([k]) => k))]
+    : [bookDecoded.toLowerCase()];
+  const orFilter = aliases.map((a) => `reference.ilike.${a} ${chapterNum}%`).join(",");
 
   const { data: passageRows } = await admin
     .from("passages")
@@ -57,7 +64,7 @@ async function loadChapterData(bookDecoded: string, chapterNum: number) {
       id, reference, original_text, manuscript_id, transcription_method, metadata,
       manuscripts!inner(id, title, original_language, estimated_date_start, estimated_date_end)
     `)
-    .ilike("reference", refPattern)
+    .or(orFilter)
     .not("original_text", "is", null)
     .returns<PassageRow[]>();
 
@@ -153,13 +160,20 @@ async function loadAvailableChapters(bookDecoded: string) {
     .neq("original_text", "");
 
   const chapters = new Set<number>();
+  const targetOrder = BOOK_ORDER[bookDecoded.toLowerCase()] ?? 999;
   const bookLower = bookDecoded.toLowerCase();
 
   for (const p of passages ?? []) {
-    const match = p.reference.match(/^(.+?)\s+(\d+)/);
-    if (!match) continue;
-    if (match[1].trim().toLowerCase() === bookLower) {
-      chapters.add(parseInt(match[2], 10));
+    const [order, chapter] = parseReference(p.reference);
+    if (chapter === 0) continue;
+    if (targetOrder !== 999 && order === targetOrder) {
+      chapters.add(chapter);
+    } else if (targetOrder === 999) {
+      // Unknown book: fall back to exact name match
+      const match = p.reference.match(/^(.+?)\s+(\d+)/);
+      if (match && match[1].trim().toLowerCase() === bookLower) {
+        chapters.add(parseInt(match[2], 10));
+      }
     }
   }
 
