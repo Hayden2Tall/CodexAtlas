@@ -39,6 +39,40 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-13 — Post-Deploy Hotfixes: Book Browser Stale Cache + Homepage Cleanup
+
+**Type:** incident
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+After Phase 3.9d deploy, several UI visibility issues were reported:
+- Psalms 34 (and other chapters) not appearing in the `/read` book browser, even though passages existed in the DB and the direct URL `/read/Psalms/34` worked correctly.
+- Homepage "Alpha" badge on logo, misleading "Nothing is deleted." in Version History feature card, and Discover section paths pointing to `/manuscripts` instead of relevant chapter views.
+- No homepage disclaimer about the hobby-project nature and AI-generated content accuracy.
+- Translation confidence score guidelines penalising single-source translations — incorrect since all translations are single-source by design.
+
+**Decision:**
+1. `read/page.tsx` — Changed `export const revalidate = 60` to `export const dynamic = "force-dynamic"`. The ISR 60-second cache was serving stale passage data; the book browser would not show newly imported chapters until the cache regenerated.
+2. `header.tsx` — Removed Alpha badge from logo area.
+3. `page.tsx` (homepage) — Removed "Nothing is deleted." from Version History card; fixed Discover section hrefs to `/read/Mark/1`, `/read/Isaiah/1`, `/read/Genesis/1`; added disclaimer section before the footer.
+4. `translation-prompts.ts` — Rewrote confidence score guidelines to explicitly not penalise for single-source provenance; tightened the scale bands.
+5. Added `/api/debug/passages` admin-only diagnostic endpoint (temporary) and `scripts/debug-passages.mjs` for DB-level inspection.
+
+**Rationale:**
+The book browser uses a server component that fetches all passages from Supabase to build the book/chapter tree. With ISR, this data was cached and would not reflect passages imported after the last cache regeneration. `force-dynamic` ensures every load reflects live DB state — appropriate for a research tool where content is actively being added. The homepage and confidence fixes address accuracy and trust concerns surfaced during manual QA.
+
+**Consequences:**
+- `/read` page now has no CDN caching layer — each load hits Supabase directly. Acceptable at current traffic scale; revisit with edge caching if load increases.
+- Confidence scores on future translations will trend slightly higher as the single-source penalty is removed. Existing scores are unaffected.
+- Debug endpoint and script remain in codebase temporarily; should be cleaned up once data investigation is complete.
+
+**Related Documents:**
+- Phase 3.9b (Corpus Browser Enhancement) — prior ISR fixes on other public pages
+- Phase 3.9d (Admin Bulk Operations) — the deploy that preceded these hotfixes
+
+---
+
 ### 2026-03-13 — Admin Bulk Operations + Mobile Back Button
 
 **Type:** decision

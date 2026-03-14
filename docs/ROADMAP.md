@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-13
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b–3.9d complete
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b–3.9d complete · Post-deploy hotfixes applied
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
