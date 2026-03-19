@@ -446,9 +446,8 @@ async function callAnthropicWithRetry(
 
 // ── Parallel text lookup ──────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchParallelText(
-  admin: any,
+  admin: ReturnType<typeof createAdminClient>,
   reference: string,
   currentSourceId: string | undefined,
   langCode: string
