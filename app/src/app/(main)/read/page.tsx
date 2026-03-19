@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   BOOK_DISPLAY_NAMES,
   getTestamentSection,
@@ -146,7 +147,21 @@ async function loadBooks(): Promise<BookEntry[]> {
 }
 
 export default async function ReadPage() {
-  const books = await loadBooks();
+  const admin = createAdminClient();
+
+  const [books, { data: summaryRows }] = await Promise.all([
+    loadBooks(),
+    admin
+      .from("ai_summaries")
+      .select("scope_key")
+      .eq("level", "book"),
+  ]);
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthenticated = !!user;
+
+  const summarizedBooks = new Set((summaryRows ?? []).map((r) => r.scope_key));
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -159,7 +174,7 @@ export default async function ReadPage() {
         </p>
       </div>
 
-      <BrowserClient books={books} />
+      <BrowserClient books={books} summarizedBooks={summarizedBooks} isAuthenticated={isAuthenticated} />
     </div>
   );
 }
