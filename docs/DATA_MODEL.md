@@ -1,7 +1,7 @@
 # CodexAtlas Data Model Specification
 
 > **Database:** Supabase (PostgreSQL)
-> **Last Updated:** 2026-03-12
+> **Last Updated:** 2026-03-19
 > **Status:** Canonical Reference
 
 This document defines the complete data model for CodexAtlas, an open-source AI-assisted research platform for ancient religious manuscripts. It is intended to be precise enough for a developer to implement the schema directly.
@@ -243,7 +243,9 @@ User profiles synchronized with Supabase Auth.
 |---|---|---|---|
 | `id` | `UUID` | `PK` | Matches the Supabase Auth `auth.users.id`. Not auto-generated — set on signup via trigger. |
 | `display_name` | `TEXT` | | User's chosen display name. |
-| `role` | `TEXT` | `NOT NULL DEFAULT 'reader'` | Access role: `'reader'`, `'reviewer'`, `'scholar'`, `'editor'`, `'admin'`. |
+| `role` | `TEXT` | `NOT NULL DEFAULT 'reader'` | Access role: `'reader'`, `'reviewer'`, `'scholar'`, `'contributor'`, `'pending_contributor'`, `'editor'`, `'admin'`. See role definitions in SECURITY_MODEL.md. |
+| `api_key_vault_id` | `UUID` | `DEFAULT NULL` | Supabase Vault secret UUID for this contributor's Anthropic API key. `NULL` if no key stored. Set by `store_contributor_api_key` RPC. (Migration 029) |
+| `contributor_requested_at` | `TIMESTAMPTZ` | `DEFAULT NULL` | Timestamp when user applied for contributor access. `NULL` if not applied. Cleared when role changes to `contributor` or `reader`. (Migration 029) |
 | `institution` | `TEXT` | | Affiliated institution or university. |
 | `orcid` | `TEXT` | | ORCID identifier (e.g., `"0000-0002-1825-0097"`). |
 | `bio` | `TEXT` | | Short biography or research summary. |
@@ -346,6 +348,77 @@ CREATE INDEX idx_mst_source_book  ON manuscript_source_texts (source, book);
 | `first1k_greek` | OpenGreekAndLatin First1KGreek (TEI XML) | `grc` | Patristic | `scholarly_transcription` | `preprocess-ogl.mjs` |
 
 > **Note:** For `first1k_greek`, the `book` column stores the work title (e.g., `"Ignatius - To the Ephesians"`) and `chapter` stores the section number, not a biblical chapter.
+
+---
+
+### 2.18 `variant_detection_runs`
+
+Tracks each execution of the automated variant detection pipeline, enabling cache checks, re-detection guards, and run history. Added in migration 024.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Unique identifier. |
+| `passage_ids` | `UUID[]` | `NOT NULL` | Array of passage IDs included in this detection run. |
+| `passage_references` | `TEXT[]` | | Array of canonical reference strings for display. |
+| `model` | `TEXT` | | AI model used for detection (e.g., `"claude-haiku-4-5-20251001"`). |
+| `variant_count` | `INTEGER` | `NOT NULL DEFAULT 0` | Number of variants found in this run. |
+| `metadata` | `JSONB` | `DEFAULT '{}'::jsonb` | Run-specific metadata (prompt version, token counts). |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | When the run was executed. |
+| `created_by` | `UUID` | `REFERENCES users(id)` | User who triggered the run. |
+
+The `variants` table has a `detection_run_id UUID REFERENCES variant_detection_runs(id)` column added in migration 024, linking each variant to the run that discovered it.
+
+---
+
+### 2.19 `ai_summaries`
+
+Cached AI-generated summaries at multiple levels of granularity (passage, chapter, book, grand). Each row is uniquely identified by `(level, scope_key)`. Added in migration 027.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Unique identifier. |
+| `level` | `TEXT` | `NOT NULL` | Summary granularity: `'passage'`, `'chapter'`, `'book'`, `'manuscript'`, `'grand'`. |
+| `scope_key` | `TEXT` | `NOT NULL` | Unique key for this scope. Format: `'Genesis 1'` (chapter), `'Genesis'` (book), `'grand'` (grand assessment), manuscript UUID (manuscript), passage UUID (passage). |
+| `content` | `JSONB` | `NOT NULL` | Structured summary content. Schema varies by level (see below). |
+| `model` | `TEXT` | | AI model used (e.g., `"claude-haiku-4-5-20251001"`). |
+| `cost_usd` | `NUMERIC(10,6)` | | Estimated cost to generate this summary. |
+| `generated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | When the summary was generated. |
+| `version` | `INTEGER` | `NOT NULL DEFAULT 1` | Regeneration counter. |
+
+**Unique constraint:** `UNIQUE(level, scope_key)` — prevents duplicate summaries; upserts via `ON CONFLICT (level, scope_key) DO UPDATE`.
+
+**`content` JSONB structure by level:**
+- `'chapter'` / `'book'`: `{ summary, key_themes[], historical_significance, manuscript_count, passage_count }`
+- `'grand'`: `{ overall_assessment, key_insights[], manuscript_highlights[], translation_quality_overview, scholarly_significance }`
+- `'manuscript'` / `'passage'`: `{ summary, significance_factors[], historical_period, related_traditions[] }` (passage-level summaries still cached in `passages.metadata.ai_summary` for legacy reasons)
+
+**RLS:** Public SELECT; admin/editor/contributor INSERT/UPDATE.
+
+---
+
+### 2.20 Vault RPC Functions (Migration 030)
+
+Three `SECURITY DEFINER` PL/pgSQL functions providing the only application-level interface to Supabase Vault for contributor API key management. All granted to `service_role` only — never callable from client-side or anon context.
+
+| Function | Signature | Description |
+|---|---|---|
+| `store_contributor_api_key` | `(p_user_id UUID, p_api_key TEXT) RETURNS VOID` | Creates or updates the contributor's Anthropic key in Vault. Updates `users.api_key_vault_id` with the returned UUID. |
+| `get_contributor_api_key` | `(p_user_id UUID) RETURNS TEXT` | Decrypts and returns the contributor's API key from `vault.decrypted_secrets`. Returns `NULL` if no key stored. |
+| `delete_contributor_api_key` | `(p_user_id UUID) RETURNS VOID` | Deletes the key from `vault.secrets` and sets `users.api_key_vault_id = NULL`. |
+
+**Note:** pgsodium (the Vault) must be enabled via Supabase Dashboard → Extensions. `CREATE EXTENSION supabase_vault` cannot be run directly in Supabase-hosted projects.
+
+---
+
+### 2.21 `create_translation_version_with_evidence` RPC (Migration 028)
+
+A `SECURITY DEFINER` PL/pgSQL function that atomically wraps the three-step translation write:
+1. Insert into `evidence_records` → returns `evidence_record_id`
+2. Insert into `translation_versions` with `evidence_record_id` → returns `version_id`
+3. Update `evidence_records.entity_id` to point to the new version (replaces passage_id with version_id)
+4. Update `translations.current_version_id` → `version_id`
+
+This prevents orphaned evidence records that occurred when the second write failed after the first succeeded (partial write bug fixed 2026-03-19).
 
 ---
 
@@ -752,7 +825,11 @@ scripts/migrations/
 ├── 022_add_scholarly_transcription_method.sql
 ├── 023_create_manuscript_source_texts.sql
 ├── 025_add_iiif_transcription_method.sql
-└── 026_add_registry_source_index.sql
+├── 026_add_registry_source_index.sql
+├── 027_create_ai_summaries.sql
+├── 028_create_translation_version_rpc.sql
+├── 029_add_contributor_role.sql
+└── 030_create_contributor_api_key_rpcs.sql
 ```
 
 ### Principles

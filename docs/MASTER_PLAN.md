@@ -226,9 +226,15 @@ CodexAtlas/
 ├── prompts/                      — Agent task packet templates
 ├── summaries/                    — Compressed architecture summaries for agent context
 ├── scripts/
-│   ├── migrations/               — SQL migration files (001-024)
-│   ├── preprocess-sinaiticus.mjs — One-time Codex Sinaiticus XML preprocessing
-│   └── preprocess-dss.mjs       — One-time Dead Sea Scrolls preprocessing
+│   ├── migrations/               — SQL migration files (001-030)
+│   ├── preprocess-sinaiticus.mjs — Codex Sinaiticus XML preprocessing
+│   ├── preprocess-dss.mjs        — Dead Sea Scrolls preprocessing
+│   ├── preprocess-wlc.mjs        — Westminster Leningrad Codex preprocessing
+│   ├── preprocess-sblgnt.mjs     — SBLGNT preprocessing
+│   ├── preprocess-thgnt.mjs      — Tyndale House GNT preprocessing
+│   ├── preprocess-coptic.mjs     — Coptic Scriptorium preprocessing
+│   ├── preprocess-oshb.mjs       — Open Scriptures Hebrew Bible preprocessing
+│   └── preprocess-ogl.mjs        — OpenGreekAndLatin preprocessing
 └── README.md
 ```
 

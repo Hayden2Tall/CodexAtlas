@@ -60,13 +60,15 @@ Supabase Auth is the sole identity provider. All user identity flows — registr
 
 ```
 Admin
-  └── Editor
+  ├── Editor (platform-funded AI access)
+  └── Contributor (self-funded AI access via personal Anthropic key)
         └── Scholar
               └── Reviewer
                     └── Reader
+                          └── pending_contributor (reader-level, awaiting admin approval)
 ```
 
-Each role inherits all permissions of the roles below it. Roles are stored in a `user_roles` table and referenced in RLS policies via a helper function.
+Roles are stored in `users.role` and referenced via `current_user_role()` in RLS policies. `contributor` and `editor` have equivalent AI task permissions; the only differences are API key source (Vault vs. platform env var) and delete scope (own versions only vs. any version).
 
 ### Helper Function
 
@@ -119,15 +121,34 @@ Granted to users with verified academic or domain credentials.
 | Access advanced research tools | AI-assisted analysis features |
 | View draft content | Own drafts only |
 
-#### Editor (trusted contributor)
+#### Contributor (trusted collaborator — self-funded)
 
-Granted to trusted, vetted contributors who help maintain content quality.
+Granted by admin approval to trusted collaborators. Same AI task scope as Editor but funded via their own Anthropic API key stored in Supabase Vault. Delete is restricted to own work.
 
 | Permission | Scope |
 |---|---|
 | All Scholar permissions | — |
+| Trigger all AI tasks | Discover, import, batch translate, OCR, variant detection, summaries — using personal Anthropic key from Vault |
+| Soft-delete translation versions | Own versions only; reverts to previous non-superseded version |
+| Access admin panel | Operations, Registry, Tasks tabs (not Users tab) |
+
+If a contributor has no key stored in Vault, AI task routes return `402 Payment Required` with a link to `/settings`.
+
+#### pending_contributor
+
+Intermediate role for users who have applied for contributor access via `/settings` but not yet been approved by an admin. Has reader-level access only. `contributor_requested_at` timestamp set on application.
+
+#### Editor (platform-funded — trusted maintainer)
+
+Granted to trusted, vetted contributors who help maintain content quality. Uses the platform Anthropic API key (`ANTHROPIC_API_KEY` env var).
+
+| Permission | Scope |
+|---|---|
+| All Scholar permissions | — |
+| All AI task access | Using platform Anthropic key |
 | Edit manuscript metadata | All manuscripts |
 | Manage translation status | Promote/demote translation versions |
+| Soft-delete any translation version | All versions (admin-equivalent for translations) |
 | Moderate reviews | Flag, hide, or escalate reviews |
 | View all drafts | All users' draft content |
 
@@ -272,8 +293,39 @@ The Supabase service role key bypasses all RLS policies. This is used exclusivel
 - AI pipeline operations that write results across multiple tables
 - Batch processing and migrations
 - Audit log insertions from triggers (`SECURITY DEFINER` functions)
+- Vault RPC calls for contributor API key management
 
 The service role is **never** used in any client-facing request path.
+
+---
+
+## 4.5 Supabase Vault — Contributor API Key Storage
+
+Contributor Anthropic API keys are encrypted at the database layer using **Supabase Vault** (pgsodium). This is more secure than application-level AES because the plaintext never leaves the Postgres process — the key is decrypted inside the DB and returned directly to the API route.
+
+### Flow
+
+1. Contributor submits their Anthropic key (`sk-ant-...`) in `/settings`
+2. `POST /api/settings/api-key` calls `admin.rpc('store_contributor_api_key', { p_user_id, p_api_key })`
+3. PL/pgSQL function calls `vault.create_secret(p_api_key, 'contributor_key_<userId>')` → returns a UUID
+4. UUID stored in `users.api_key_vault_id`
+5. When contributor triggers any AI route, route calls `admin.rpc('get_contributor_api_key', { p_user_id })`
+6. PL/pgSQL function reads `vault.decrypted_secrets` by UUID → returns plaintext key
+7. Route uses key as `x-api-key` header in the Anthropic API call
+8. Anthropic bills the contributor's account directly
+
+### Security Properties
+
+- **Key never returned to frontend.** The settings UI shows only "Key set ✓" or "No key stored".
+- **Key never logged.** API routes never log the decrypted key value.
+- **Vault access via SECURITY DEFINER only.** The three RPC functions are granted to `service_role` only — no authenticated client can call them via the Supabase anon/auth API.
+- **Key deletion is complete.** `delete_contributor_api_key` calls `DELETE FROM vault.secrets` and clears `api_key_vault_id`. No remnant in any table.
+
+### Helper (`lib/utils/contributor-api-key.ts`)
+
+All AI routes call `getAnthropicApiKey(userId, role)` to resolve the correct key:
+- If `role !== 'contributor'` → returns `process.env.ANTHROPIC_API_KEY` (platform key)
+- If `role === 'contributor'` → calls the Vault RPC; returns `{ error, status: 402 }` if no key stored
 
 ---
 

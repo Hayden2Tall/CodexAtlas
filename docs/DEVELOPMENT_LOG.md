@@ -39,6 +39,47 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-19 — Phase 5: Contributor System — Vault API Key Pass-Through
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Phase 4 was complete but the platform was single-user. The goal: let trusted friends contribute with full AI task access (discover, import, batch translate, OCR, variant detection, summaries) without requiring the platform to fund their usage. The design decision was Supabase Vault (pgsodium, included in Pro) over a credit/Stripe system — Vault encrypts API keys at the DB layer, the plaintext never leaves Postgres, and contributors are billed directly by Anthropic. Admin must approve contributors before they gain access; contributors can only soft-delete their own work.
+
+**Decision:**
+1. **Migration 029** — Drop and recreate `users_role_check` constraint to add `contributor` and `pending_contributor` roles. Add `api_key_vault_id UUID DEFAULT NULL` and `contributor_requested_at TIMESTAMPTZ DEFAULT NULL` columns to `users`.
+2. **Migration 030** — Three `SECURITY DEFINER` PL/pgSQL functions: `store_contributor_api_key`, `get_contributor_api_key`, `delete_contributor_api_key`. All use `vault.create_secret` / `vault.update_secret` / `vault.decrypted_secrets`. Granted to `service_role` only. (Note: `CREATE EXTENSION supabase_vault` cannot be run in Supabase projects — pgsodium is enabled via Dashboard.)
+3. **`UserRole` type** — Updated to `'reader' | 'reviewer' | 'scholar' | 'contributor' | 'pending_contributor' | 'editor' | 'admin'`.
+4. **`ADMIN_ROLES` arrays** — Updated from `["admin", "editor"]` to `["admin", "editor", "contributor"]` across 14 AI agent routes.
+5. **`lib/utils/contributor-api-key.ts`** — Helper function `getAnthropicApiKey(userId, role)`: returns platform key for non-contributors; decrypts from Vault for contributors. Returns `{ error, status: 402 }` if no key stored.
+6. **All AI routes updated** — `translate`, `batch-translate`, `summaries/*`, `detect-variants`, `discover`, `discover/toc`, `discover/section-text`, `ingest`, `ocr`, `iiif/harvest`, `summaries/grand`, `text-provenance.tsx` — all resolve API key via helper.
+7. **`requireAdmin` pattern refactored** — Returns `{ userId: string, role: string }` instead of the full Supabase `User` object to avoid TypeScript type collision with `@/lib/types` User.
+8. **New API routes**: `POST/DELETE /api/settings/api-key`, `POST/DELETE /api/settings/contributor-request`, `GET /api/admin/users`, `PATCH /api/admin/users/[id]/role`, `DELETE /api/translations/versions/[versionId]` (soft-delete with revert).
+9. **`/settings` page** — Role-appropriate UI: contributors see API key section (Vault status + masked input); pending contributors see application status + cancel; readers/reviewers/scholars see "Apply to contribute" button; editors/admins see platform key note.
+10. **Admin Users panel** — New "Users" tab in admin dashboard (admin-only). Filter tabs: Pending | Contributors | Editors | Admins | All. Approve/Reject buttons for pending contributors; role dropdown for all.
+11. **Translation version soft-delete** — `DELETE /api/translations/versions/[versionId]` marks `status = 'superseded'`. If was current version: finds previous non-superseded version → updates `translations.current_version_id` + re-marks previous as `published`. Contributors restricted to own versions (403 on others).
+12. **Header Settings link** — Added to user dropdown above Sign Out.
+
+**Rationale:**
+Vault is the correct choice for encrypting third-party API keys — encryption at the DB layer is safer than application-level AES where the plaintext passes through the server process. The `pending_contributor` intermediate role avoids accidental full access before admin review. The soft-delete revert preserves the append-only data model (constitution §5.1) while giving contributors the ability to undo their own work.
+
+**Consequences:**
+- Contributors must store their own Anthropic key in Settings before any AI tasks work; no key → 402 response.
+- Anthropic bills contributor accounts directly — platform costs stay flat regardless of contributor activity.
+- Build confirmed clean (zero type errors) post-implementation.
+- Migrations 029 and 030 applied to production Supabase; functions verified via `SELECT proname FROM pg_proc WHERE proname LIKE '%contributor_api_key%'`.
+
+**Related Documents:**
+- `scripts/migrations/029_add_contributor_role.sql`
+- `scripts/migrations/030_create_contributor_api_key_rpcs.sql`
+- `app/src/lib/utils/contributor-api-key.ts`
+- `app/src/app/(main)/settings/page.tsx`
+- `app/src/app/(main)/admin/users-panel.tsx`
+
+---
+
 ### 2026-03-19 — Sprint 4.1b: Atomic DB writes + timeout extension + sources attribution
 
 **Type:** milestone

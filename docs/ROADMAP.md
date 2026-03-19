@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-19
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.1b–4.3 complete
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.1b–4.3 complete · Phase 5 complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -386,15 +386,29 @@ Design document: `docs/design/phase4-strategic-roadmap-2026.md`
 - [x] Header + MobileNav — Insights nav link added
 - [ ] `POST /api/summaries/cross-manuscript` — deferred; needs denser variant data first
 
-### Sprint 4.4 — Contributor Model (Credit System) — Future
+---
 
-Only proceed if going straight to the full credit system; skip donation-only approaches.
+## 5.5 Phase 5 — Contributor System (Complete, 2026-03-19)
 
-- [ ] `user_credits` table and credit transaction schema
-- [ ] Stripe integration for credit top-up
-- [ ] AI task endpoints gate on credit balance; deduct after task completion
-- [ ] Admin monthly credit allocation
-- [ ] `/about/sources` page — per-corpus attribution + license notices
+**Goal:** Let trusted friends and collaborators join the platform with full AI task access using their own Anthropic API key — not the platform key. Admin approves contributors. Contributors can only soft-delete their own work (with version revert). No billing infrastructure needed.
+
+- [x] Migration 029 — `contributor` + `pending_contributor` roles; `api_key_vault_id UUID`, `contributor_requested_at TIMESTAMPTZ` columns on `users`
+- [x] Migration 030 — Supabase Vault RPC functions: `store_contributor_api_key`, `get_contributor_api_key`, `delete_contributor_api_key` (`SECURITY DEFINER`, `service_role` only)
+- [x] `UserRole` type updated: `'contributor' | 'pending_contributor'` added
+- [x] `ADMIN_ROLES` arrays updated from `["admin", "editor"]` → `["admin", "editor", "contributor"]` across 14 AI routes
+- [x] `lib/utils/contributor-api-key.ts` — resolves correct Anthropic key per role; 402 if contributor has no key stored
+- [x] All 11 AI routes updated to use `getAnthropicApiKey()` helper
+- [x] `requireAdmin` pattern refactored to return `{ userId, role }` (avoids Supabase User type collision)
+- [x] `POST /api/settings/api-key` + `DELETE` — store/remove contributor Anthropic key via Vault
+- [x] `POST /api/settings/contributor-request` + `DELETE` — apply to contribute / cancel application
+- [x] `GET /api/admin/users` — list all users, admin-only
+- [x] `PATCH /api/admin/users/[id]/role` — change any user's role, admin-only
+- [x] `DELETE /api/translations/versions/[versionId]` — soft-delete with revert: marks `superseded`, reverts `current_version_id` + re-publishes previous version; contributors restricted to own versions
+- [x] `/settings` page — role-appropriate UI (contributor: key entry/status; pending: status + cancel; reader/scholar: apply button; admin/editor: info)
+- [x] `api-key-section.tsx` — client component, masked key input, vault status badge, remove button
+- [x] `users-panel.tsx` — admin Users tab: filter tabs (Pending/Contributors/Editors/Admins/All), Approve/Reject for pending, role dropdown for all
+- [x] Admin dashboard Users tab — admin-only conditional
+- [x] Header Settings link in user dropdown
 
 ---
 
@@ -425,7 +439,50 @@ Platform is polished, accessible, and ready for broader public and institutional
 
 ---
 
-## 6. Success Milestones
+## 5.9 Outstanding Items (Phase 4 carry-forward)
+
+Small items from Phase 4 not yet executed. Low priority — do when convenient.
+
+- [ ] **Resumable batch UI** — `admin/batch-translate-panel.tsx`: store `{ manuscriptId, language }` in `sessionStorage`. Add "Resume" button that re-runs scan from first untranslated passage. Scan already skips translated passages. Effort: 1 hr.
+- [ ] **Manuscript summary → tool use** — `api/summaries/manuscript/route.ts`: upgrade from JSON-in-prompt to `submit_manuscript_summary` tool use, matching pattern used by all other summary routes. Effort: 30 min.
+- [ ] **Cross-manuscript summary** — `api/summaries/cross-manuscript/route.ts` (new): Sonnet; aggregates chapter summaries + variant data across manuscripts for same book+chapter. **Deferred** until multiple manuscripts exist with variant detection runs. No urgent timeline.
+
+---
+
+## 6. Phase 6 — Future Scope (Deferred)
+
+Do not build until Phase 5 is live and stable and there is clear demand.
+
+### 6.1 Credit System (Stripe)
+- `user_credits` + `credit_transactions` tables
+- Stripe integration for credit top-up (dollars → balance)
+- AI task endpoints gate on credit balance; deduct after task completion
+- Admin monthly credit allocation for invited collaborators
+- **Status:** Deferred — no external user base to justify billing infrastructure
+
+### 6.2 API Key Management
+- Key rotation reminders (last used > 90 days prompt)
+- Stale key detection in the admin Users panel
+- **Status:** Deferred — unnecessary at friend-scale
+
+### 6.3 Streaming Translation
+- Replace `maxDuration=300` + AbortController with true streaming via `anthropic.messages.stream()`
+- Defeats Vercel function timeout for very long passages
+- **Status:** Deferred — 300s limit is sufficient until an actual problem occurs
+
+### 6.4 Donation Page
+- Ko-fi or GitHub Sponsors link in footer / `/about/sources` page
+- One-line addition when ready
+- **Status:** Deferred per project decision (grey area)
+
+### 6.5 Accessibility + i18n (carry-forward from Phase 3.6)
+- WCAG 2.1 AA audit and remediation
+- RTL text support for Hebrew, Arabic, Syriac passages
+- Multi-language interface (English first, then community)
+
+---
+
+## 7. Success Milestones
 
 | Milestone | Target | Phase |
 |---|---|---|
@@ -458,10 +515,13 @@ Platform is polished, accessible, and ready for broader public and institutional
 | Textual family tree / stemma infrastructure | Complete | 3.4 |
 | 100 manuscripts in the system | Phase 3 | 3 |
 | 1,000 passages translated with evidence records | Phase 3 | 3 |
+| Contributor system with Vault API key pass-through | Complete | 5 |
+| Admin contributor approval workflow | Complete | 5 |
+| Translation version soft-delete with version revert | Complete | 5 |
 
 ---
 
-## 7. Risk Register
+## 8. Risk Register
 
 | Risk | Impact | Mitigation |
 |---|---|---|
