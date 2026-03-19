@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-19
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprint 4.1 in progress
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.2 complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -367,11 +367,12 @@ Design document: `docs/design/phase4-strategic-roadmap-2026.md`
 - [ ] Streaming translations — use `anthropic.messages.stream()` to keep Vercel function alive for very long passages (Sprint 4.1b)
 - [ ] DB write atomicity — Supabase RPC for evidence record + translation version in one transaction (Sprint 4.1b)
 
-### Sprint 4.2 — Comparison Enhancements — Planned
+### Sprint 4.2 — Comparison Enhancements — Complete (2026-03-19)
 
-- [ ] Translation diff in compare view — word-level diff using existing `computeWordDiff()` utility
-- [ ] Confidence scores + translation notes visible in compare view per manuscript
-- [ ] Wire up `variant_comparisons.similarity_score` to compare UI when data exists
+- [x] Translation diff in compare view — word-level diff using existing `computeWordDiff()` utility; DiffText component with red/green highlighting
+- [x] Confidence scores + method badge visible in compare view per manuscript panel
+- [x] Translation notes + key decisions collapsible section per panel (evidence records wired)
+- [ ] Wire up `variant_comparisons.similarity_score` to compare UI when data exists (deferred — data sparse)
 
 ### Sprint 4.3 — Summary Pyramid — Planned
 

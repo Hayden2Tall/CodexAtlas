@@ -39,6 +39,34 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-19 — Phase 4: Comparison View Enhancement (Sprint 4.2)
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+The compare view at `/read/[book]/[chapter]/compare` showed raw text side-by-side but lacked translation quality metadata. Users could not see confidence scores, translation method, notes, or key decisions — and could not visually diff two translations at the word level.
+
+**Decision:**
+1. **Word-level diff mode** — New "Diff" view mode renders both panels with `computeWordDiff()` output; removed words shown in red strikethrough, added words in green. Diff button disabled when either panel lacks a translation. Color legend shown in diff mode.
+2. **Confidence + method badges** — `ConfidenceBadge` and `MethodBadge` components rendered per panel (already existed; just needed wiring).
+3. **Translation notes panel** — `NotesSection` collapsible component shows `translationNotes` and `keyDecisions` from evidence records. Hidden when both are empty.
+4. **Evidence record fetch in page.tsx** — `loadCompareData` now fetches `evidence_records` rows for all version IDs and surfaces `translation_notes` / `key_decisions` in the serialized output passed to the client.
+5. **Mobile parity** — Diff mode works on the mobile single-panel tab view as well.
+
+**Rationale:**
+The compare view's value to scholars depends on more than side-by-side text. Confidence and method metadata lets users judge which translation to trust; the word diff makes disagreements immediately visible; key decisions provide scholarly rationale. All supporting data was already being stored — it just wasn't surfaced.
+
+**Consequences:**
+- One additional Supabase query per compare page load (evidence records). Small impact; query is bounded by the number of versions shown.
+- `variant_comparisons.similarity_score` wiring deferred — data is sparse; will revisit when more comparisons exist.
+
+**Related Documents:**
+- `docs/design/phase4-strategic-roadmap-2026.md`
+
+---
+
 ### 2026-03-19 — Phase 4: Translation Reliability Overhaul (Sprint 4.1)
 
 **Type:** decision
