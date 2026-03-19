@@ -103,7 +103,7 @@ export function ChapterSummary({
               </p>
             )}
 
-            {summary.theological_themes.length > 0 && (
+            {(summary.theological_themes?.length ?? 0) > 0 && (
               <div className="flex flex-wrap gap-1">
                 {summary.theological_themes.map((theme) => (
                   <span

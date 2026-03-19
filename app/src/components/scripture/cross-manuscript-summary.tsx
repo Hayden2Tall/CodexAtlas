@@ -115,7 +115,7 @@ export function CrossManuscriptSummary({
               </p>
             )}
 
-            {summary.manuscripts_compared.length > 0 && (
+            {(summary.manuscripts_compared?.length ?? 0) > 0 && (
               <div className="flex flex-wrap gap-1 pt-1">
                 {summary.manuscripts_compared.map((ms) => (
                   <span
