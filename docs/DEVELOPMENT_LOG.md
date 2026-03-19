@@ -39,6 +39,35 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-19 — Sprint 4.1b: Atomic DB writes + timeout extension + sources attribution
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Three problems existed in the translation pipeline: (1) evidence record and translation version were written as separate Supabase calls — if the version insert succeeded but the `entity_id` update failed, the evidence record pointed at `passage_id` instead of `version_id` (silent data corruption). (2) The Vercel function `maxDuration` was 60s and the AbortController fired at 50s — complex passages on slow API responses could time out. (3) The passage summary route still used JSON-in-prompt with regex extraction, unlike the translate route which had already been upgraded to tool use.
+
+**Decision:**
+1. **Migration 028** — PL/pgSQL function `create_translation_version_with_evidence(...)` wraps evidence record insert + translation version insert + entity_id update in a single transaction with `SECURITY DEFINER`. Called via `admin.rpc()` in the translate route.
+2. **translate/route.ts** — Replaced the three-step DB write sequence (steps 1, 4, 5) with a single RPC call. Bumped `maxDuration` 60 → 300s and AbortController 50_000 → 270_000ms.
+3. **summaries/passage/route.ts** — Upgraded to `submit_passage_summary` tool use (matching the chapter/book/grand pattern). Removed JSON regex parsing code.
+4. **`/about/sources` page** — Per-corpus attribution with license badges (color-coded by commercial status), alias names, download URLs, and a non-commercial use disclaimer. Linked from a new footer in `layout.tsx`.
+
+**Rationale:**
+Partial DB writes in a translation pipeline create hard-to-detect corruption — atomic transactions are the correct fix. Tool use across all AI routes means zero parse failures structurally. The sources page fulfills legal hygiene requirements for non-commercial corpus licenses and establishes a clear policy on donations.
+
+**Consequences:**
+- Translation writes are now fully atomic — no orphaned evidence records possible.
+- Long passages (1000+ chars) on Pro plan get 270s before timeout vs. 50s previously.
+- Migration 028 must be applied to Supabase before the updated translate route will function.
+- All AI routes (translate, passage, chapter, book, grand) now use tool use.
+
+**Related Documents:**
+`scripts/migrations/028_create_translation_version_rpc.sql`, `app/src/app/(main)/about/sources/page.tsx`
+
+---
+
 ### 2026-03-19 — Phase 4: Summary Pyramid (Sprint 4.3)
 
 **Type:** milestone
