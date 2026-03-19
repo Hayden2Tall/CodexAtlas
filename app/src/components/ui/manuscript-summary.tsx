@@ -72,7 +72,7 @@ export function ManuscriptSummary({ manuscriptId, cachedSummary, isAuthenticated
         <div className="space-y-3">
           <p className="text-sm leading-relaxed text-gray-700">{summary.summary}</p>
 
-          {(summary.significance_factors?.length ?? 0) > 0 && (
+          {Array.isArray(summary.significance_factors) && summary.significance_factors.length > 0 && (
             <div>
               <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Key Factors

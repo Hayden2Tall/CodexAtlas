@@ -195,7 +195,7 @@ export function BookSummaryPanel({
                   <span className="font-semibold text-gray-700">Significance:</span> {summary.scholarly_significance}
                 </p>
               )}
-              {summary.theological_themes?.length > 0 && (
+              {Array.isArray(summary.theological_themes) && summary.theological_themes.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {summary.theological_themes.map((theme) => (
                     <span key={theme} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200">

@@ -85,7 +85,7 @@ export function PassageSummary({ passageId, cachedSummary, isAuthenticated }: Pa
                 <span className="font-semibold">Significance:</span> {summary.significance}
               </p>
             )}
-            {(summary.key_themes?.length ?? 0) > 0 && (
+            {Array.isArray(summary.key_themes) && summary.key_themes.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {summary.key_themes.map((theme) => (
                   <span key={theme} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200">
