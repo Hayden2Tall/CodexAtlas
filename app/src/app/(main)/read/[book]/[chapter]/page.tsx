@@ -83,10 +83,13 @@ async function loadChapterData(bookDecoded: string, chapterNum: number) {
   for (const { data, error } of aliasResults) {
     if (error) console.error(`[chapter-page] loadChapterData query error for "${bookDecoded}" ch${chapterNum}:`, error.message);
     for (const row of data ?? []) {
-      if (!seenIds.has(row.id)) {
-        seenIds.add(row.id);
-        passageRows.push(row);
-      }
+      if (seenIds.has(row.id)) continue;
+      // Guard: the ilike pattern "Book N%" also matches "Book N0", "Book N1" etc.
+      // Post-filter with parseReference to ensure exact chapter match.
+      const [, rowChapter] = parseReference(row.reference);
+      if (rowChapter !== chapterNum) continue;
+      seenIds.add(row.id);
+      passageRows.push(row);
     }
   }
 
@@ -208,38 +211,73 @@ async function loadCachedCrossManuscriptSummary(
 
 async function loadChapterVariants(bookDecoded: string, chapterNum: number) {
   const admin = createAdminClient();
-  const refPattern = `${bookDecoded} ${chapterNum}%`;
+  const targetOrder = BOOK_ORDER[bookDecoded.toLowerCase()] ?? 999;
 
-  const { data: variants } = await admin
-    .from("variants")
-    .select("id, passage_reference, description, metadata")
-    .ilike("passage_reference", refPattern);
+  // Use broad ilike for the book, then post-filter to the exact chapter.
+  const aliases = targetOrder !== 999
+    ? [...new Set(Object.entries(BOOK_ORDER).filter(([, v]) => v === targetOrder).map(([k]) => k))]
+    : [bookDecoded.toLowerCase()];
 
-  return variants ?? [];
+  const results = await Promise.all(
+    aliases.map((alias) =>
+      admin
+        .from("variants")
+        .select("id, passage_reference, description, metadata")
+        .ilike("passage_reference", `${alias} %`)
+    )
+  );
+
+  const seen = new Set<string>();
+  const variants: { id: string; passage_reference: string; description: string | null; metadata: unknown }[] = [];
+  for (const { data } of results) {
+    for (const v of data ?? []) {
+      if (seen.has(v.id)) continue;
+      const [, ch] = parseReference(v.passage_reference);
+      if (ch !== chapterNum) continue;
+      seen.add(v.id);
+      variants.push(v);
+    }
+  }
+  return variants;
 }
 
 async function loadAvailableChapters(bookDecoded: string) {
   const admin = createAdminClient();
-  const { data: passages } = await admin
-    .from("passages")
-    .select("reference")
-    .not("original_text", "is", null)
-    .neq("original_text", "");
-
-  const chapters = new Set<number>();
   const targetOrder = BOOK_ORDER[bookDecoded.toLowerCase()] ?? 999;
   const bookLower = bookDecoded.toLowerCase();
 
-  for (const p of passages ?? []) {
-    const [order, chapter] = parseReference(p.reference);
-    if (chapter === 0) continue;
-    if (targetOrder !== 999 && order === targetOrder) {
-      chapters.add(chapter);
-    } else if (targetOrder === 999) {
-      // Unknown book: fall back to exact name match
-      const match = p.reference.match(/^(.+?)\s+(\d+)/);
-      if (match && match[1].trim().toLowerCase() === bookLower) {
-        chapters.add(parseInt(match[2], 10));
+  // Build alias list for the book so all spelling variants are covered.
+  const aliases = targetOrder !== 999
+    ? [...new Set(Object.entries(BOOK_ORDER).filter(([, v]) => v === targetOrder).map(([k]) => k))]
+    : [bookLower];
+
+  // Query only passages matching this book's aliases — avoids a full-table scan
+  // and the Supabase 1000-row default limit that causes missing chapters.
+  const aliasResults = await Promise.all(
+    aliases.map((alias) =>
+      admin
+        .from("passages")
+        .select("reference")
+        .ilike("reference", `${alias} %`)
+        .not("original_text", "is", null)
+        .neq("original_text", "")
+        .limit(5000)
+    )
+  );
+
+  const chapters = new Set<number>();
+
+  for (const { data } of aliasResults) {
+    for (const p of data ?? []) {
+      const [order, chapter] = parseReference(p.reference);
+      if (chapter === 0) continue;
+      if (targetOrder !== 999 && order === targetOrder) {
+        chapters.add(chapter);
+      } else if (targetOrder === 999) {
+        const match = p.reference.match(/^(.+?)\s+(\d+)/);
+        if (match && match[1].trim().toLowerCase() === bookLower) {
+          chapters.add(parseInt(match[2], 10));
+        }
       }
     }
   }
