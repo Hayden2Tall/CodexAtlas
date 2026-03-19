@@ -46,6 +46,8 @@ export function BookSummaryPanel({
   const unsummarizedChapters = chapters.filter((ch) => !summarizedChapters.has(ch));
   const [chapterPhase, setChapterPhase] = useState<"idle" | "confirming" | "running" | "done">("idle");
   const [chapterProgress, setChapterProgress] = useState({ done: 0, failed: 0, total: 0, current: 0 });
+  const [pendingChapters, setPendingChapters] = useState<number[]>([]);
+  const [pendingForce, setPendingForce] = useState(false);
 
   const handleGenerateBook = useCallback(async (force = false) => {
     setGenerating(true);
@@ -73,20 +75,22 @@ export function BookSummaryPanel({
   }, [book, router]);
 
   async function startChapterSummaries() {
+    const chaptersToRun = pendingChapters;
+    const force = pendingForce;
     setChapterPhase("running");
-    setChapterProgress({ done: 0, failed: 0, total: unsummarizedChapters.length, current: 0 });
+    setChapterProgress({ done: 0, failed: 0, total: chaptersToRun.length, current: 0 });
 
     let done = 0, failed = 0;
 
-    for (let i = 0; i < unsummarizedChapters.length; i++) {
-      const ch = unsummarizedChapters[i];
-      setChapterProgress({ done, failed, total: unsummarizedChapters.length, current: ch });
+    for (let i = 0; i < chaptersToRun.length; i++) {
+      const ch = chaptersToRun[i];
+      setChapterProgress({ done, failed, total: chaptersToRun.length, current: ch });
 
       try {
         const res = await fetch("/api/summaries/chapter", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ book, chapter: ch }),
+          body: JSON.stringify({ book, chapter: ch, ...(force && { force: true }) }),
         });
         if (res.ok) done++;
         else failed++;
@@ -94,14 +98,20 @@ export function BookSummaryPanel({
         failed++;
       }
 
-      if (i < unsummarizedChapters.length - 1) {
+      if (i < chaptersToRun.length - 1) {
         await new Promise((r) => setTimeout(r, DELAY_BETWEEN_MS));
       }
     }
 
-    setChapterProgress({ done, failed, total: unsummarizedChapters.length, current: 0 });
+    setChapterProgress({ done, failed, total: chaptersToRun.length, current: 0 });
     setChapterPhase("done");
     router.refresh();
+  }
+
+  function queueChapters(chaptersToRun: number[], force: boolean) {
+    setPendingChapters(chaptersToRun);
+    setPendingForce(force);
+    setChapterPhase("confirming");
   }
 
   const chapterCostEst = unsummarizedChapters.length * COST_PER_CHAPTER;
@@ -219,7 +229,7 @@ export function BookSummaryPanel({
 
             {chapterPhase === "idle" && (
               <button
-                onClick={() => setChapterPhase("confirming")}
+                onClick={() => queueChapters(unsummarizedChapters, false)}
                 className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
               >
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -232,10 +242,12 @@ export function BookSummaryPanel({
             {chapterPhase === "confirming" && (
               <div className="rounded-lg border border-gray-200 bg-white p-3">
                 <p className="text-xs font-medium text-gray-800">
-                  Generate summaries for {unsummarizedChapters.length} chapter{unsummarizedChapters.length !== 1 ? "s" : ""}?
+                  {pendingForce
+                    ? `Re-run summaries for all ${pendingChapters.length} chapter${pendingChapters.length !== 1 ? "s" : ""}?`
+                    : `Generate summaries for ${pendingChapters.length} chapter${pendingChapters.length !== 1 ? "s" : ""}?`}
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  ~${chapterCostEst.toFixed(2)} estimated cost (Haiku). Each chapter calls the AI API.
+                  ~${(pendingChapters.length * COST_PER_CHAPTER).toFixed(2)} estimated cost (Haiku). Each chapter calls the AI API.
                 </p>
                 <div className="mt-2 flex gap-2">
                   <button
@@ -281,9 +293,76 @@ export function BookSummaryPanel({
       )}
 
       {isAuthenticated && unsummarizedChapters.length === 0 && chapters.length > 0 && (
-        <p className="text-xs text-gray-400">
-          All {chapters.length} chapters have summaries. Ready to generate book summary above.
-        </p>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Chapter summaries</p>
+              <p className="text-xs text-gray-500">
+                All {chapters.length} chapter{chapters.length !== 1 ? "s" : ""} have summaries
+              </p>
+            </div>
+
+            {chapterPhase === "idle" && (
+              <button
+                onClick={() => queueChapters(chapters, true)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Re-run all — ~${(chapters.length * COST_PER_CHAPTER).toFixed(2)}
+              </button>
+            )}
+
+            {chapterPhase === "confirming" && (
+              <div className="rounded-lg border border-gray-200 bg-white p-3">
+                <p className="text-xs font-medium text-gray-800">
+                  Re-run summaries for all {pendingChapters.length} chapters?
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  ~${(pendingChapters.length * COST_PER_CHAPTER).toFixed(2)} estimated cost. Overwrites existing summaries.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={startChapterSummaries}
+                    className="rounded-md bg-gray-800 px-3 py-1 text-xs font-medium text-white hover:bg-gray-900"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => setChapterPhase("idle")}
+                    className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {chapterPhase === "running" && (
+              <div className="min-w-[200px] space-y-1">
+                <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className="h-full rounded-full bg-primary-600 transition-all"
+                    style={{ width: `${Math.round(((chapterProgress.done + chapterProgress.failed) / chapterProgress.total) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  {chapterProgress.done + chapterProgress.failed}/{chapterProgress.total}
+                  {chapterProgress.failed > 0 && <span className="ml-1 text-red-500">{chapterProgress.failed} failed</span>}
+                  {chapterProgress.current > 0 && <span className="ml-1 text-gray-400">— Ch. {chapterProgress.current}</span>}
+                </p>
+              </div>
+            )}
+
+            {chapterPhase === "done" && (
+              <p className="text-xs text-green-700">
+                {chapterProgress.done} chapter{chapterProgress.done !== 1 ? "s" : ""} re-run
+                {chapterProgress.failed > 0 && <span className="text-red-500"> · {chapterProgress.failed} failed</span>}
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

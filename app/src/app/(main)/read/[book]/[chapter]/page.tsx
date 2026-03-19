@@ -330,6 +330,16 @@ export default async function ChapterPage({ params }: PageProps) {
     );
   }
 
+  // Group passages by manuscript so multi-verse chapters render one card per manuscript
+  const manuscriptGroups = (() => {
+    const map = new Map<string, { manuscript: typeof results[0]['manuscript']; passages: typeof results }>();
+    for (const r of results) {
+      if (!map.has(r.manuscript.id)) map.set(r.manuscript.id, { manuscript: r.manuscript, passages: [] });
+      map.get(r.manuscript.id)!.passages.push(r);
+    }
+    return [...map.values()];
+  })();
+
   const prevChapter = availableChapters.filter((c) => c < chapterNum).pop();
   const nextChapter = availableChapters.find((c) => c > chapterNum);
 
@@ -361,7 +371,7 @@ export default async function ChapterPage({ params }: PageProps) {
             {bookDecoded} {chapterNum}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {results.length} manuscript{results.length !== 1 ? "s" : ""} contain
+            {manuscriptGroups.length} manuscript{manuscriptGroups.length !== 1 ? "s" : ""} contain
             this passage
           </p>
         </div>
@@ -380,7 +390,7 @@ export default async function ChapterPage({ params }: PageProps) {
             ? results.map((r) => ({ id: r.passage.id, reference: r.passage.reference }))
             : []
         }
-        totalManuscripts={results.length}
+        totalManuscripts={manuscriptGroups.length}
       />
 
       {/* Chapter overview */}
@@ -392,126 +402,142 @@ export default async function ChapterPage({ params }: PageProps) {
       />
 
       {/* Cross-manuscript comparison (shown when 2+ manuscripts) */}
-      {results.length >= 2 && (
+      {manuscriptGroups.length >= 2 && (
         <CrossManuscriptSummary
           book={bookDecoded}
           chapter={chapterNum}
-          manuscriptCount={results.length}
+          manuscriptCount={manuscriptGroups.length}
           cachedSummary={cachedCrossManuscriptSummary}
           isAuthenticated={isAuthenticated}
         />
       )}
 
-      {/* Manuscript passages */}
+      {/* Manuscript passages — one card per manuscript, verses listed inside */}
       <div className="space-y-8">
-        {results.map((r) => (
+        {manuscriptGroups.map((group) => (
           <article
-            key={r.passage.id}
+            key={group.manuscript.id}
             className="rounded-xl border border-gray-200 bg-white overflow-hidden"
           >
             {/* Manuscript header */}
             <div className="border-b border-gray-100 bg-gray-50/50 px-5 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Link
-                  href={`/manuscripts/${r.manuscript.id}`}
+                  href={`/manuscripts/${group.manuscript.id}`}
                   className="font-medium text-gray-900 hover:text-primary-700"
                 >
-                  {r.manuscript.title}
+                  {group.manuscript.title}
                 </Link>
                 <span className="text-xs text-gray-400">
-                  {r.manuscript.original_language.toUpperCase()}
+                  {group.manuscript.original_language.toUpperCase()}
                 </span>
-                {(r.manuscript.estimated_date_start || r.manuscript.estimated_date_end) && (
+                {(group.manuscript.estimated_date_start || group.manuscript.estimated_date_end) && (
                   <span className="text-xs text-gray-400">
                     {formatDateRange(
-                      r.manuscript.estimated_date_start,
-                      r.manuscript.estimated_date_end,
+                      group.manuscript.estimated_date_start,
+                      group.manuscript.estimated_date_end,
                     )}
+                  </span>
+                )}
+                {group.passages.length > 1 && (
+                  <span className="text-xs text-gray-400">
+                    &middot; {group.passages.length} verses
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="p-5">
-              {/* Translation (primary reading content) */}
-              {r.translation ? (
-                <div className="mb-4">
-                  <p className="font-serif text-lg leading-relaxed text-gray-800">
-                    {r.translation.translated_text}
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <MethodBadge method={r.translation.translation_method} />
-                    {r.translation.confidence_score != null && (
-                      <ConfidenceBadge score={r.translation.confidence_score} />
-                    )}
-                    <span className="text-xs text-gray-400">
-                      v{r.translation.version_number} &middot;{" "}
-                      {r.translation.target_language}
-                    </span>
+            <div className="divide-y divide-gray-100">
+              {group.passages.map((r) => (
+                <div key={r.passage.id} className="p-5">
+                  {/* Verse reference — only shown when manuscript has multiple passages */}
+                  {group.passages.length > 1 && (
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      {r.passage.reference}
+                    </p>
+                  )}
+
+                  {/* Translation (primary reading content) */}
+                  {r.translation ? (
+                    <div className="mb-4">
+                      <p className="font-serif text-lg leading-relaxed text-gray-800">
+                        {r.translation.translated_text}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <MethodBadge method={r.translation.translation_method} />
+                        {r.translation.confidence_score != null && (
+                          <ConfidenceBadge score={r.translation.confidence_score} />
+                        )}
+                        <span className="text-xs text-gray-400">
+                          v{r.translation.version_number} &middot;{" "}
+                          {r.translation.target_language}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mb-4 text-sm italic text-gray-400">
+                      No published translation yet
+                    </p>
+                  )}
+
+                  {/* Original text (collapsed by default via details) */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-primary-700">
+                      View original text ({r.manuscript.original_language})
+                    </summary>
+                    <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-gray-50 p-4 font-mono text-sm leading-relaxed text-gray-700" dir={["heb", "ara", "syc"].includes(r.manuscript.original_language) ? "rtl" : "ltr"}>
+                      {r.passage.original_text}
+                    </pre>
+                  </details>
+
+                  {/* Passage summary */}
+                  <PassageSummary
+                    passageId={r.passage.id}
+                    cachedSummary={
+                      (r.passage.metadata as Record<string, unknown> | null)?.ai_summary
+                        ? ((r.passage.metadata as Record<string, unknown>).ai_summary as { summary: string; historical_context: string; significance: string; key_themes: string[] })
+                        : null
+                    }
+                    isAuthenticated={isAuthenticated}
+                  />
+
+                  {/* Variant indicator + link to full translation page */}
+                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
+                    <Link
+                      href={`/manuscripts/${r.manuscript.id}/passages/${r.passage.id}/translate`}
+                      className="text-xs font-medium text-primary-700 hover:underline"
+                    >
+                      View full evidence chain &rarr;
+                    </Link>
+                    {(() => {
+                      const passageVariants = variantsByRef.get(r.passage.reference);
+                      if (!passageVariants?.length) return null;
+                      const majorCount = passageVariants.filter(
+                        (v) => (v.metadata as Record<string, unknown> | null)?.significance === "major"
+                      ).length;
+                      return (
+                        <Link
+                          href={`/variants/${passageVariants[0].id}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100"
+                        >
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                          </svg>
+                          {passageVariants.length} variant{passageVariants.length !== 1 ? "s" : ""}
+                          {majorCount > 0 && ` (${majorCount} major)`}
+                        </Link>
+                      );
+                    })()}
                   </div>
                 </div>
-              ) : (
-                <p className="mb-4 text-sm italic text-gray-400">
-                  No published translation yet
-                </p>
-              )}
-
-              {/* Original text (collapsed by default via details) */}
-              <details className="group">
-                <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-primary-700">
-                  View original text ({r.manuscript.original_language})
-                </summary>
-                <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-gray-50 p-4 font-mono text-sm leading-relaxed text-gray-700" dir={["heb", "ara", "syc"].includes(r.manuscript.original_language) ? "rtl" : "ltr"}>
-                  {r.passage.original_text}
-                </pre>
-              </details>
-
-              {/* Passage summary */}
-              <PassageSummary
-                passageId={r.passage.id}
-                cachedSummary={
-                  (r.passage.metadata as Record<string, unknown> | null)?.ai_summary
-                    ? ((r.passage.metadata as Record<string, unknown>).ai_summary as { summary: string; historical_context: string; significance: string; key_themes: string[] })
-                    : null
-                }
-                isAuthenticated={isAuthenticated}
-              />
-
-              {/* Variant indicator + link to full translation page */}
-              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
-                <Link
-                  href={`/manuscripts/${r.manuscript.id}/passages/${r.passage.id}/translate`}
-                  className="text-xs font-medium text-primary-700 hover:underline"
-                >
-                  View full evidence chain &rarr;
-                </Link>
-                {(() => {
-                  const passageVariants = variantsByRef.get(r.passage.reference);
-                  if (!passageVariants?.length) return null;
-                  const majorCount = passageVariants.filter(
-                    (v) => (v.metadata as Record<string, unknown> | null)?.significance === "major"
-                  ).length;
-                  return (
-                    <Link
-                      href={`/variants/${passageVariants[0].id}`}
-                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100"
-                    >
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                      </svg>
-                      {passageVariants.length} variant{passageVariants.length !== 1 ? "s" : ""}
-                      {majorCount > 0 && ` (${majorCount} major)`}
-                    </Link>
-                  );
-                })()}
-              </div>
+              ))}
             </div>
           </article>
         ))}
       </div>
 
       {/* Compare link */}
-      {results.length >= 2 && (
+      {manuscriptGroups.length >= 2 && (
         <div className="mt-8 text-center">
           <Link
             href={`/read/${encodeURIComponent(bookDecoded)}/${chapterNum}/compare`}
@@ -520,7 +546,7 @@ export default async function ChapterPage({ params }: PageProps) {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
             </svg>
-            Compare {results.length} manuscripts side by side
+            Compare {manuscriptGroups.length} manuscripts side by side
           </Link>
         </div>
       )}

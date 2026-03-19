@@ -86,24 +86,32 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
 
     // Return cached summary if it exists
-    const { data: cached } = await admin
+    const { data: cached, error: cacheErr } = await admin
       .from("ai_summaries")
       .select("content, model, generated_at, version")
       .eq("level", "book")
       .eq("scope_key", scopeKey)
       .single();
 
+    if (cacheErr && cacheErr.code !== "PGRST116") {
+      console.error("[summaries/book] cache query error:", cacheErr);
+    }
+
     if (cached && !force) {
       return NextResponse.json({ summary: cached.content, cached: true });
     }
 
+    console.log(`[summaries/book] generating for "${book}" force=${force}`);
+
     // Gather existing chapter summaries for this book
-    const { data: chapterSummaries } = await admin
+    const { data: chapterSummaries, error: csErr } = await admin
       .from("ai_summaries")
       .select("scope_key, content, generated_at")
       .eq("level", "chapter")
       .ilike("scope_key", `${book} %`)
       .order("scope_key");
+
+    if (csErr) console.error("[summaries/book] chapterSummaries query error:", csErr);
 
     if (!chapterSummaries?.length) {
       return NextResponse.json(
@@ -112,19 +120,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[summaries/book] found ${chapterSummaries.length} chapter summaries`);
+
     // Also pull manuscript diversity stats
-    const { data: passages } = await admin
+    const { data: passages, error: passErr } = await admin
       .from("passages")
       .select("manuscript_id, manuscripts!inner(title, original_language)")
       .ilike("reference", `${book} %`)
       .not("original_text", "is", null);
 
+    if (passErr) console.error("[summaries/book] passages query error:", passErr);
+
     const manuscripts = new Set<string>();
     const languages = new Set<string>();
     for (const p of passages ?? []) {
       const ms = p.manuscripts as unknown as { title: string; original_language: string };
-      manuscripts.add(ms.title);
-      languages.add(ms.original_language);
+      if (ms?.title) manuscripts.add(ms.title);
+      if (ms?.original_language) languages.add(ms.original_language);
     }
 
     // Build chapter context block — up to 6000 chars
@@ -160,6 +172,8 @@ ${chapterBlocks.join("\n\n")}
 
 Call submit_book_summary with your synthesis.`;
 
+    console.log(`[summaries/book] calling AI, prompt length=${prompt.length}`);
+
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -177,7 +191,8 @@ Call submit_book_summary with your synthesis.`;
     });
 
     if (!anthropicRes.ok) {
-      console.error(`[summaries/book] AI error ${anthropicRes.status}`);
+      const errBody = await anthropicRes.text().catch(() => "");
+      console.error(`[summaries/book] AI error ${anthropicRes.status}:`, errBody);
       return NextResponse.json({ error: "Summary generation failed" }, { status: 502 });
     }
 
@@ -191,12 +206,13 @@ Call submit_book_summary with your synthesis.`;
     )?.find((b) => b.type === "tool_use");
 
     if (!toolBlock?.input) {
+      console.error("[summaries/book] no tool_use block in response:", JSON.stringify(aiResult.content));
       return NextResponse.json({ error: "Unexpected AI response format" }, { status: 502 });
     }
 
     const parsed = toolBlock.input as BookSummaryContent;
 
-    await admin.from("ai_summaries").upsert(
+    const { error: upsertErr } = await admin.from("ai_summaries").upsert(
       {
         level: "book",
         scope_key: scopeKey,
@@ -204,10 +220,17 @@ Call submit_book_summary with your synthesis.`;
         model: AI_MODEL,
         cost_usd: cost,
         generated_at: new Date().toISOString(),
-        version: 1,
+        version: (cached?.version ?? 0) + 1,
       },
       { onConflict: "level,scope_key" }
     );
+
+    if (upsertErr) {
+      console.error("[summaries/book] upsert error:", upsertErr);
+      return NextResponse.json({ error: "Failed to save summary" }, { status: 500 });
+    }
+
+    console.log(`[summaries/book] done for "${book}"`);
 
     return NextResponse.json({
       summary: parsed,
@@ -215,7 +238,7 @@ Call submit_book_summary with your synthesis.`;
       usage: { tokens_input: tokensIn, tokens_output: tokensOut, estimated_cost_usd: cost, ai_model: AI_MODEL },
     });
   } catch (err) {
-    console.error("[summaries/book] Error:", err);
+    console.error("[summaries/book] unhandled error:", err instanceof Error ? err.stack : err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
