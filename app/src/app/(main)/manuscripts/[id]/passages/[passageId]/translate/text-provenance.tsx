@@ -125,6 +125,7 @@ function getTranscriptionLabel(method: string | null): string | null {
 export function TextProvenance({
   passage,
   manuscriptTitle,
+  manuscriptLanguage,
   userRole,
 }: TextProvenanceProps) {
   const router = useRouter();
@@ -132,6 +133,7 @@ export function TextProvenance({
   const [isReimporting, setIsReimporting] = useState(false);
   const [reimportError, setReimportError] = useState<string | null>(null);
   const [reimportSuccess, setReimportSuccess] = useState(false);
+  const [reimportSkipped, setReimportSkipped] = useState(false);
 
   const meta = passage.metadata as Record<string, unknown> | null;
   const sourceChain = meta?.source_chain as SourceChainStep[] | undefined;
@@ -148,7 +150,6 @@ export function TextProvenance({
 
   const canReimport =
     ADMIN_ROLES.has(userRole ?? "") &&
-    passage.transcription_method !== "scholarly_transcription" &&
     passage.transcription_method !== "ocr_reviewed" &&
     passage.transcription_method !== "manual";
 
@@ -156,6 +157,7 @@ export function TextProvenance({
     setIsReimporting(true);
     setReimportError(null);
     setReimportSuccess(false);
+    setReimportSkipped(false);
     try {
       const res = await fetch("/api/agent/discover/section-text", {
         method: "POST",
@@ -163,6 +165,7 @@ export function TextProvenance({
         body: JSON.stringify({
           manuscript_id: passage.manuscript_id,
           manuscript_title: manuscriptTitle,
+          original_language: manuscriptLanguage,
           reference: passage.reference,
           force_reimport: true,
         }),
@@ -171,8 +174,13 @@ export function TextProvenance({
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? "Re-import failed");
       }
-      setReimportSuccess(true);
-      router.refresh();
+      const data = await res.json();
+      if (data.skipped && data.reason === "no_authoritative_source") {
+        setReimportSkipped(true);
+      } else {
+        setReimportSuccess(true);
+        router.refresh();
+      }
     } catch (err) {
       setReimportError(err instanceof Error ? err.message : "Re-import failed");
     } finally {
@@ -286,7 +294,11 @@ export function TextProvenance({
             <div className="mt-4 border-t border-gray-100 pt-3">
               {reimportSuccess ? (
                 <p className="text-green-600">
-                  Re-import queued. Page will refresh with updated source data.
+                  Re-imported successfully. Page refreshed with updated source data.
+                </p>
+              ) : reimportSkipped ? (
+                <p className="text-amber-700">
+                  No authoritative source found for this passage. Run the preprocessor script for this corpus first, then retry.
                 </p>
               ) : (
                 <>

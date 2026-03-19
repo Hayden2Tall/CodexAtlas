@@ -351,6 +351,11 @@ export default async function ChapterPage({ params }: PageProps) {
             ? results.filter((r) => r.translation === null).map((r) => ({ id: r.passage.id, reference: r.passage.reference }))
             : []
         }
+        allPassages={
+          isAdmin
+            ? results.map((r) => ({ id: r.passage.id, reference: r.passage.reference }))
+            : []
+        }
         totalManuscripts={results.length}
       />
 
