@@ -47,14 +47,14 @@ export function BookSummaryPanel({
   const [chapterPhase, setChapterPhase] = useState<"idle" | "confirming" | "running" | "done">("idle");
   const [chapterProgress, setChapterProgress] = useState({ done: 0, failed: 0, total: 0, current: 0 });
 
-  const handleGenerateBook = useCallback(async () => {
+  const handleGenerateBook = useCallback(async (force = false) => {
     setGenerating(true);
     setGenerateError(null);
     try {
       const res = await fetch("/api/summaries/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ book }),
+        body: JSON.stringify({ book, ...(force && { force: true }) }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -127,7 +127,7 @@ export function BookSummaryPanel({
 
           {isAuthenticated && (
             <button
-              onClick={handleGenerateBook}
+              onClick={() => handleGenerateBook(!!summary)}
               disabled={generating}
               className="flex items-center gap-1 rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
             >

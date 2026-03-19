@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const anthropicApiKey = apiKeyResult.key;
 
     const body = await request.json();
-    const { passage_id } = body;
+    const { passage_id, force } = body;
 
     if (!passage_id) {
       return NextResponse.json({ error: "passage_id is required" }, { status: 400 });
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existingMeta = (passage.metadata as Record<string, unknown>) ?? {};
-    if (existingMeta.ai_summary) {
+    if (existingMeta.ai_summary && !force) {
       return NextResponse.json({
         summary: existingMeta.ai_summary,
         cached: true,

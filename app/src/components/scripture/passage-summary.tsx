@@ -21,14 +21,14 @@ export function PassageSummary({ passageId, cachedSummary, isAuthenticated }: Pa
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (force = false) => {
     setGenerating(true);
     setError(null);
     try {
       const res = await fetch("/api/summaries/passage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passage_id: passageId }),
+        body: JSON.stringify({ passage_id: passageId, ...(force && { force: true }) }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -62,6 +62,16 @@ export function PassageSummary({ passageId, cachedSummary, isAuthenticated }: Pa
             <span className="ml-1 rounded-full bg-blue-50 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 ring-1 ring-inset ring-blue-200">
               AI Summary
             </span>
+            {isAuthenticated && (
+              <button
+                onClick={(e) => { e.preventDefault(); handleGenerate(true); }}
+                disabled={generating}
+                className="ml-auto text-[10px] text-gray-400 hover:text-primary-600 disabled:opacity-50"
+                title="Regenerate summary"
+              >
+                {generating ? "Regenerating…" : "Regenerate"}
+              </button>
+            )}
           </summary>
           <div className="mt-2 space-y-2 rounded-lg bg-gray-50 p-3">
             <p className="text-sm leading-relaxed text-gray-700">{summary.summary}</p>
@@ -89,7 +99,7 @@ export function PassageSummary({ passageId, cachedSummary, isAuthenticated }: Pa
       ) : isAuthenticated ? (
         <div className="flex items-center gap-2">
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={generating}
             className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-800 disabled:opacity-50"
           >

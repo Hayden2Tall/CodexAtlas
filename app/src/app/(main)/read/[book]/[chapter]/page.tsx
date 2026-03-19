@@ -13,6 +13,7 @@ import { ChapterNav } from "./chapter-nav";
 import { ShareButton } from "@/components/ui/share-button";
 import { ChapterAdminBar } from "./chapter-admin-bar";
 import { ChapterSummary } from "@/components/scripture/chapter-summary";
+import { CrossManuscriptSummary } from "@/components/scripture/cross-manuscript-summary";
 
 interface PageProps {
   params: Promise<{ book: string; chapter: string }>;
@@ -169,6 +170,14 @@ interface ChapterSummaryContent {
   scholarly_significance: string;
 }
 
+interface CrossManuscriptContent {
+  comparative_overview: string;
+  manuscripts_compared: string[];
+  areas_of_agreement: string;
+  notable_divergences: string;
+  textual_implications: string;
+}
+
 async function loadCachedChapterSummary(
   bookDecoded: string,
   chapterNum: number
@@ -181,6 +190,20 @@ async function loadCachedChapterSummary(
     .eq("scope_key", `${bookDecoded} ${chapterNum}`)
     .single();
   return (data?.content as ChapterSummaryContent | null) ?? null;
+}
+
+async function loadCachedCrossManuscriptSummary(
+  bookDecoded: string,
+  chapterNum: number
+): Promise<CrossManuscriptContent | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("ai_summaries")
+    .select("content")
+    .eq("level", "cross_manuscript")
+    .eq("scope_key", `${bookDecoded} ${chapterNum}`)
+    .single();
+  return (data?.content as CrossManuscriptContent | null) ?? null;
 }
 
 async function loadChapterVariants(bookDecoded: string, chapterNum: number) {
@@ -261,11 +284,12 @@ export default async function ChapterPage({ params }: PageProps) {
 
   if (!bookDecoded || isNaN(chapterNum)) notFound();
 
-  const [results, availableChapters, chapterVariants, cachedChapterSummary] = await Promise.all([
+  const [results, availableChapters, chapterVariants, cachedChapterSummary, cachedCrossManuscriptSummary] = await Promise.all([
     loadChapterData(bookDecoded, chapterNum),
     loadAvailableChapters(bookDecoded),
     loadChapterVariants(bookDecoded, chapterNum),
     loadCachedChapterSummary(bookDecoded, chapterNum),
+    loadCachedCrossManuscriptSummary(bookDecoded, chapterNum),
   ]);
 
   const variantsByRef = new Map<string, typeof chapterVariants>();
@@ -366,6 +390,17 @@ export default async function ChapterPage({ params }: PageProps) {
         cachedSummary={cachedChapterSummary}
         isAuthenticated={isAuthenticated}
       />
+
+      {/* Cross-manuscript comparison (shown when 2+ manuscripts) */}
+      {results.length >= 2 && (
+        <CrossManuscriptSummary
+          book={bookDecoded}
+          chapter={chapterNum}
+          manuscriptCount={results.length}
+          cachedSummary={cachedCrossManuscriptSummary}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
 
       {/* Manuscript passages */}
       <div className="space-y-8">

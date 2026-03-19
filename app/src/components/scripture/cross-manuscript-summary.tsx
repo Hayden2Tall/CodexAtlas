@@ -2,27 +2,30 @@
 
 import { useState, useCallback } from "react";
 
-interface ChapterSummaryContent {
-  overview: string;
-  theological_themes: string[];
-  manuscript_notes: string;
-  scholarly_significance: string;
+interface CrossManuscriptContent {
+  comparative_overview: string;
+  manuscripts_compared: string[];
+  areas_of_agreement: string;
+  notable_divergences: string;
+  textual_implications: string;
 }
 
-interface ChapterSummaryProps {
+interface CrossManuscriptSummaryProps {
   book: string;
   chapter: number;
-  cachedSummary: ChapterSummaryContent | null;
+  manuscriptCount: number;
+  cachedSummary: CrossManuscriptContent | null;
   isAuthenticated: boolean;
 }
 
-export function ChapterSummary({
+export function CrossManuscriptSummary({
   book,
   chapter,
+  manuscriptCount,
   cachedSummary,
   isAuthenticated,
-}: ChapterSummaryProps) {
-  const [summary, setSummary] = useState<ChapterSummaryContent | null>(cachedSummary);
+}: CrossManuscriptSummaryProps) {
+  const [summary, setSummary] = useState<CrossManuscriptContent | null>(cachedSummary);
   const [expanded, setExpanded] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +34,14 @@ export function ChapterSummary({
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch("/api/summaries/chapter", {
+      const res = await fetch("/api/summaries/cross-manuscript", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ book, chapter, ...(force && { force: true }) }),
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error ?? "Failed to generate summary");
+        throw new Error(data.error ?? "Failed to generate cross-manuscript summary");
       }
       const data = await res.json();
       setSummary(data.summary);
@@ -50,17 +53,19 @@ export function ChapterSummary({
     }
   }, [book, chapter]);
 
+  // Only meaningful with 2+ manuscripts
+  if (manuscriptCount < 2 && !summary) return null;
   if (!summary && !isAuthenticated) return null;
 
   return (
-    <div className="mb-8 rounded-xl border border-blue-100 bg-blue-50/40 px-5 py-4">
+    <div className="mb-8 rounded-xl border border-purple-100 bg-purple-50/40 px-5 py-4">
       {summary ? (
         <details
           className="group"
           open={expanded}
           onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
         >
-          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-blue-800 hover:text-blue-900">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-purple-800 hover:text-purple-900">
             <svg
               className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
               fill="none"
@@ -70,16 +75,16 @@ export function ChapterSummary({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            Chapter overview
-            <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 ring-1 ring-inset ring-blue-300">
-              AI Summary
+            Cross-manuscript comparison
+            <span className="ml-1 rounded-full bg-purple-100 px-1.5 py-0 text-[9px] font-semibold uppercase text-purple-600 ring-1 ring-inset ring-purple-300">
+              {summary.manuscripts_compared.length} manuscripts
             </span>
             {isAuthenticated && (
               <button
                 onClick={(e) => { e.preventDefault(); handleGenerate(true); }}
                 disabled={generating}
-                className="ml-auto text-xs text-blue-500 hover:text-blue-800 disabled:opacity-50"
-                title="Regenerate chapter overview"
+                className="ml-auto text-xs text-purple-500 hover:text-purple-800 disabled:opacity-50"
+                title="Regenerate cross-manuscript comparison"
               >
                 {generating ? "Regenerating…" : "Regenerate"}
               </button>
@@ -87,30 +92,37 @@ export function ChapterSummary({
           </summary>
 
           <div className="mt-3 space-y-3">
-            <p className="text-sm leading-relaxed text-gray-700">{summary.overview}</p>
+            <p className="text-sm leading-relaxed text-gray-700">{summary.comparative_overview}</p>
 
-            {summary.manuscript_notes && (
+            {summary.areas_of_agreement && (
               <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Manuscript notes:</span>{" "}
-                {summary.manuscript_notes}
+                <span className="font-semibold text-gray-700">Agreement:</span>{" "}
+                {summary.areas_of_agreement}
               </p>
             )}
 
-            {summary.scholarly_significance && (
+            {summary.notable_divergences && (
               <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Significance:</span>{" "}
-                {summary.scholarly_significance}
+                <span className="font-semibold text-gray-700">Divergences:</span>{" "}
+                {summary.notable_divergences}
               </p>
             )}
 
-            {summary.theological_themes.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {summary.theological_themes.map((theme) => (
+            {summary.textual_implications && (
+              <p className="text-xs leading-relaxed text-gray-600">
+                <span className="font-semibold text-gray-700">Implications:</span>{" "}
+                {summary.textual_implications}
+              </p>
+            )}
+
+            {summary.manuscripts_compared.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {summary.manuscripts_compared.map((ms) => (
                   <span
-                    key={theme}
+                    key={ms}
                     className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200"
                   >
-                    {theme}
+                    {ms}
                   </span>
                 ))}
               </div>
@@ -122,7 +134,7 @@ export function ChapterSummary({
           <button
             onClick={() => handleGenerate()}
             disabled={generating}
-            className="flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm font-medium text-purple-700 hover:text-purple-900 disabled:opacity-50"
           >
             {generating ? (
               <>
@@ -130,14 +142,14 @@ export function ChapterSummary({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Generating chapter overview…
+                Generating comparison…
               </>
             ) : (
               <>
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                 </svg>
-                Generate chapter overview
+                Compare {manuscriptCount} manuscripts for this chapter
               </>
             )}
           </button>

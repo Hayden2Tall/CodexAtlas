@@ -20,14 +20,14 @@ export function ManuscriptSummary({ manuscriptId, cachedSummary, isAuthenticated
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (force = false) => {
     setGenerating(true);
     setError(null);
     try {
       const res = await fetch("/api/summaries/manuscript", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ manuscript_id: manuscriptId }),
+        body: JSON.stringify({ manuscript_id: manuscriptId, ...(force && { force: true }) }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -56,6 +56,16 @@ export function ManuscriptSummary({ manuscriptId, cachedSummary, isAuthenticated
         <span className="rounded-full bg-blue-50 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 ring-1 ring-inset ring-blue-200">
           AI Summary
         </span>
+        {summary && isAuthenticated && (
+          <button
+            onClick={() => handleGenerate(true)}
+            disabled={generating}
+            className="ml-auto text-xs text-gray-400 hover:text-primary-600 disabled:opacity-50"
+            title="Regenerate significance summary"
+          >
+            {generating ? "Regenerating…" : "Regenerate"}
+          </button>
+        )}
       </div>
 
       {summary ? (
@@ -93,7 +103,7 @@ export function ManuscriptSummary({ manuscriptId, cachedSummary, isAuthenticated
       ) : isAuthenticated ? (
         <div className="flex items-center gap-2">
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={generating}
             className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-50 disabled:opacity-50"
           >

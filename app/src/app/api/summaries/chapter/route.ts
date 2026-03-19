@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const anthropicApiKey = apiKeyResult.key;
 
     const body = await request.json();
-    const { book, chapter } = body as { book?: string; chapter?: number };
+    const { book, chapter, force } = body as { book?: string; chapter?: number; force?: boolean };
 
     if (!book || typeof book !== "string" || !chapter || typeof chapter !== "number") {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       .eq("scope_key", scopeKey)
       .single();
 
-    if (cached) {
+    if (cached && !force) {
       return NextResponse.json({ summary: cached.content, cached: true });
     }
 

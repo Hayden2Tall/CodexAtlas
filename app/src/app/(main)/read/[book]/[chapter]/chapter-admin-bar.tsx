@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BulkTranslateTrigger } from "@/components/admin/bulk-translate-trigger";
+import { VariantDetectionTrigger } from "@/components/admin/variant-detection-trigger";
 
 interface PassageRef {
   id: string;
@@ -70,6 +71,13 @@ export function ChapterAdminBar({ untranslatedPassages, allPassages, totalManusc
           </div>
         )}
       </div>
+
+      {/* Variant detection — only shown when 2+ manuscripts */}
+      {allPassages.length >= 2 && (
+        <div className="mt-3 border-t border-gray-200 pt-3">
+          <VariantDetectionTrigger passages={allPassages} label="for this chapter" />
+        </div>
+      )}
     </div>
   );
 }
