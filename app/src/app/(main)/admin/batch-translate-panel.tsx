@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { AgentTask, Passage } from "@/lib/types";
+
+const SESSION_KEY = "codexatlas_batch_resume";
+
+interface SavedBatch {
+  manuscriptId: string;
+  targetLanguage: string;
+  taskId: string | null;
+}
 
 interface Props {
   manuscripts: { id: string; title: string }[];
@@ -42,6 +50,17 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
 
   const pauseRef = useRef(false);
   const cancelRef = useRef(false);
+  const [savedBatch, setSavedBatch] = useState<SavedBatch | null>(null);
+
+  // Check sessionStorage for a resumable batch on mount
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) setSavedBatch(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const totalCost = Array.from(results.values()).reduce((s, r) => s + (r.costUsd ?? 0), 0);
   const successCount = Array.from(results.values()).filter((r) => r.success).length;
@@ -84,7 +103,12 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
     [onTaskUpdated]
   );
 
-  async function handleScan() {
+  async function handleScan(overrideMs?: string, overrideLang?: string) {
+    const msId = overrideMs ?? selectedMs;
+    const lang = overrideLang ?? targetLanguage;
+    if (overrideMs !== undefined) setSelectedMs(overrideMs);
+    if (overrideLang !== undefined) setTargetLanguage(overrideLang);
+
     setPhase("scanning");
     setResults(new Map());
     setAllPassages([]);
@@ -97,8 +121,8 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          target_language: targetLanguage,
-          manuscript_id: selectedMs || undefined,
+          target_language: lang,
+          manuscript_id: msId || undefined,
           include_translated: true, // Always fetch all so we can show status
         }),
       });
@@ -162,6 +186,18 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
     cancelRef.current = false;
     pauseRef.current = false;
     setPhase("running");
+
+    // Persist batch params so the user can resume if the tab closes
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        manuscriptId: selectedMs,
+        targetLanguage,
+        taskId,
+      } satisfies SavedBatch));
+      setSavedBatch(null); // hide the resume banner once a new batch is running
+    } catch {
+      // ignore
+    }
 
     // Initialize result map
     const initResults = new Map<string, TranslationResult>();
@@ -268,6 +304,8 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
       setPhase("done");
     }
 
+    // Clear saved batch once finished or cancelled
+    try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
     setIsPaused(false);
   }
 
@@ -297,6 +335,36 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
       <p className="mt-1 text-xs text-gray-500">
         Select a manuscript and target language, review passages, then translate.
       </p>
+
+      {/* Resume banner — shown when a previous batch was interrupted */}
+      {savedBatch && phase === "idle" && (
+        <div className="mt-3 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-xs text-amber-800">
+            A batch was interrupted. Resume it to continue translating remaining passages.
+          </p>
+          <div className="flex gap-2 ml-3 shrink-0">
+            <button
+              onClick={() => {
+                setTaskId(savedBatch.taskId);
+                setSavedBatch(null);
+                handleScan(savedBatch.manuscriptId, savedBatch.targetLanguage);
+              }}
+              className="rounded border border-amber-400 bg-white px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-50"
+            >
+              Resume
+            </button>
+            <button
+              onClick={() => {
+                try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+                setSavedBatch(null);
+              }}
+              className="text-xs text-amber-500 hover:text-amber-700"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -337,7 +405,7 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
 
         {(phase === "idle" || phase === "done") && (
           <button
-            onClick={handleScan}
+            onClick={() => handleScan()}
             className="rounded-md bg-primary-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-800 transition-colors"
           >
             Scan Passages

@@ -14,7 +14,7 @@ export const TRANSLATION_SYSTEM_PROMPT = `You are a specialist in ancient manusc
 - Consistent in terminology within a single translation session
 - Clear in English while preserving structural features that carry semantic meaning
 
-You always respond with valid JSON only — no preamble, no markdown fences, no explanation outside the JSON structure.`;
+Call the submit_translation tool exactly once with your completed translation.`;
 
 // ── Language names ───────────────────────────────────────────────────────────
 
@@ -195,19 +195,8 @@ ${parallelSection}
 === ORIGINAL TEXT ===
 ${originalText}
 
-=== RESPONSE FORMAT ===
-Respond ONLY with a JSON object (no markdown fences, no extra text):
-
-{
-  "translated_text": "The full scholarly translation",
-  "confidence_score": 0.85,
-  "translation_notes": "Brief scholarly notes on the translation approach and any difficulties encountered",
-  "key_decisions": [
-    "Description of a significant translation choice and the reasoning behind it"
-  ]
-}
-
-Confidence score guidelines (reflects your translation certainty only — do NOT penalise for working from a single manuscript witness, as all translations here are single-source by design):
+=== CONFIDENCE SCORE GUIDANCE ===
+Set confidence_score to reflect your translation certainty only. Do NOT penalise for working from a single manuscript witness — all translations here are single-source by design.
 - 0.95+ : Clear, unambiguous text; standard vocabulary and well-understood grammar
 - 0.85–0.94 : Minor lexical choices with strong scholarly consensus; negligible uncertainty
 - 0.70–0.84 : Meaningful ambiguities in vocabulary or grammar; multiple defensible readings
@@ -216,57 +205,3 @@ Confidence score guidelines (reflects your translation certainty only — do NOT
 - Below 0.30 : Largely speculative; extensive reconstruction required`;
 }
 
-// ── Response parser ───────────────────────────────────────────────────────────
-
-export interface ParsedTranslation {
-  translated_text: string;
-  confidence_score: number;
-  translation_notes: string;
-  key_decisions: string[];
-}
-
-export function parseTranslationResponse(raw: string): ParsedTranslation | null {
-  // Try direct parse first
-  try {
-    return validateParsed(JSON.parse(raw));
-  } catch {
-    // Strip markdown fences if present, then try again
-    const stripped = raw
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
-    try {
-      return validateParsed(JSON.parse(stripped));
-    } catch {
-      // Last resort: find first {...} block
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          return validateParsed(JSON.parse(jsonMatch[0]));
-        } catch {
-          return null;
-        }
-      }
-      return null;
-    }
-  }
-}
-
-export function validateParsed(obj: Record<string, unknown>): ParsedTranslation | null {
-  if (typeof obj.translated_text !== "string" || !obj.translated_text.trim()) {
-    return null;
-  }
-
-  return {
-    translated_text: obj.translated_text,
-    confidence_score:
-      typeof obj.confidence_score === "number"
-        ? Math.max(0, Math.min(1, obj.confidence_score))
-        : 0.5,
-    translation_notes:
-      typeof obj.translation_notes === "string" ? obj.translation_notes : "",
-    key_decisions: Array.isArray(obj.key_decisions)
-      ? obj.key_decisions.map(String)
-      : [],
-  };
-}

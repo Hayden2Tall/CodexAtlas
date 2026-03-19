@@ -39,6 +39,38 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-19 — Phase 4: Translation Reliability Overhaul (Sprint 4.1)
+
+**Type:** decision
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Translation jobs were failing occasionally in production — parse failures when Claude returned preamble or markdown fences around JSON, timeout failures on longer passages (50s AbortController inside the 60s Vercel function limit), and retries only covering 429/529 status codes while leaving 500/502/503 network-level failures unhandled. Additionally, the AI model ID (`claude-sonnet-4-20250514`) was outdated.
+
+Strategic planning also surfaced three longer-horizon initiatives captured in `docs/design/phase4-strategic-roadmap-2026.md`: enhanced comparison UI, a hierarchical AI summary pyramid (passage → chapter → book → cross-manuscript → grand assessment), and a future credit system for contributor-funded AI tasks.
+
+**Decision:**
+1. **Tool use for structured output** — Replaced JSON-in-prompt with Anthropic's `tool_choice: { type: "tool", name: "submit_translation" }`. The model is forced to call the `submit_translation` tool; parse failures become structurally impossible. Removed `parseTranslationResponse()` and the `=== RESPONSE FORMAT ===` block from prompts.
+2. **Model update** — `claude-sonnet-4-20250514` → `claude-sonnet-4-6`.
+3. **Exponential backoff + broader retry scope** — Expanded retryable HTTP status codes from {429, 529} to {429, 500, 502, 503, 529}. Retry delay changed from flat [1s, 3s] to `min(1000 × 2^attempt + jitter(0–500ms), 30000ms)` with max 3 retries. Network/AbortError now gets 1 retry after 5s.
+4. **Resumable batch** — Added session-state persistence and a "Resume" button to `batch-translate-panel.tsx` so a tab close does not lose batch progress.
+5. **Phase 4 design doc** — Created `docs/design/phase4-strategic-roadmap-2026.md` governing all Phase 4 work.
+
+**Rationale:**
+Tool use is the correct approach for any Anthropic API call requiring structured output — it is more reliable than prompt-based JSON at all model temperatures. Exponential backoff with jitter is standard practice for avoiding thundering-herd on transient failures. The broader retry scope covers Anthropic infrastructure blips (500/503) and Vercel-level gateway errors (502) that the previous code let through as immediate failures.
+
+**Consequences:**
+- Translation parse failures should drop to near zero.
+- Retry duration for a worst-case 3-attempt sequence: ~8–10s total — acceptable for long-lived translation jobs.
+- `parseTranslationResponse` and `validateParsed` are removed from `translation-prompts.ts`; callers that used them directly must be updated.
+- Summary pyramid and comparison enhancements are captured in the design doc but not yet implemented — they are Sprint 4.2 / 4.3.
+
+**Related Documents:**
+- `docs/design/phase4-strategic-roadmap-2026.md`
+
+---
+
 ### 2026-03-13 — Book Browser Missing Chapters: Supabase Row Limit Root Cause
 
 **Type:** incident

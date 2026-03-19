@@ -3,8 +3,6 @@ import {
   getLanguageBlock,
   getCorpusDescription,
   buildTranslationPrompt,
-  parseTranslationResponse,
-  validateParsed,
   TRANSLATION_SYSTEM_PROMPT,
 } from "@/lib/utils/translation-prompts";
 
@@ -148,12 +146,10 @@ describe("buildTranslationPrompt", () => {
     expect(prompt).not.toContain("PARALLEL ATTESTATION");
   });
 
-  it("includes JSON response format instruction", () => {
+  it("includes confidence score guidance", () => {
     const prompt = buildTranslationPrompt(BASE_INPUT);
-    expect(prompt).toContain("translated_text");
     expect(prompt).toContain("confidence_score");
-    expect(prompt).toContain("translation_notes");
-    expect(prompt).toContain("key_decisions");
+    expect(prompt).toContain("CONFIDENCE SCORE GUIDANCE");
   });
 
   it("includes the original text", () => {
@@ -174,85 +170,8 @@ describe("buildTranslationPrompt", () => {
 // ── TRANSLATION_SYSTEM_PROMPT ─────────────────────────────────────────────────
 
 describe("TRANSLATION_SYSTEM_PROMPT", () => {
-  it("is non-empty and mentions JSON output requirement", () => {
+  it("is non-empty and mentions the translation tool", () => {
     expect(TRANSLATION_SYSTEM_PROMPT.trim().length).toBeGreaterThan(0);
-    expect(TRANSLATION_SYSTEM_PROMPT).toContain("JSON");
-  });
-});
-
-// ── parseTranslationResponse ──────────────────────────────────────────────────
-
-describe("parseTranslationResponse", () => {
-  const VALID_OBJ = {
-    translated_text: "In the beginning God created",
-    confidence_score: 0.92,
-    translation_notes: "Standard rendering",
-    key_decisions: ["Rendered אֱלֹהִים as God"],
-  };
-
-  it("parses a valid JSON string directly", () => {
-    const result = parseTranslationResponse(JSON.stringify(VALID_OBJ));
-    expect(result?.translated_text).toBe("In the beginning God created");
-    expect(result?.confidence_score).toBe(0.92);
-  });
-
-  it("parses JSON wrapped in markdown code fence", () => {
-    const fenced = "```json\n" + JSON.stringify(VALID_OBJ) + "\n```";
-    const result = parseTranslationResponse(fenced);
-    expect(result?.translated_text).toBe("In the beginning God created");
-  });
-
-  it("parses JSON embedded in surrounding text", () => {
-    const wrapped = "Here is the result:\n" + JSON.stringify(VALID_OBJ) + "\nEnd.";
-    const result = parseTranslationResponse(wrapped);
-    expect(result?.translated_text).toBe("In the beginning God created");
-  });
-
-  it("returns null for garbage input", () => {
-    expect(parseTranslationResponse("not json at all")).toBeNull();
-  });
-
-  it("returns null when translated_text is missing", () => {
-    const obj = { confidence_score: 0.8, translation_notes: "ok", key_decisions: [] };
-    expect(parseTranslationResponse(JSON.stringify(obj))).toBeNull();
-  });
-
-  it("returns null when translated_text is an empty string", () => {
-    const obj = { ...VALID_OBJ, translated_text: "   " };
-    expect(parseTranslationResponse(JSON.stringify(obj))).toBeNull();
-  });
-});
-
-// ── validateParsed ────────────────────────────────────────────────────────────
-
-describe("validateParsed", () => {
-  it("clamps confidence_score above 1 to 1", () => {
-    const result = validateParsed({ translated_text: "hello", confidence_score: 1.5 });
-    expect(result?.confidence_score).toBe(1);
-  });
-
-  it("clamps confidence_score below 0 to 0", () => {
-    const result = validateParsed({ translated_text: "hello", confidence_score: -0.1 });
-    expect(result?.confidence_score).toBe(0);
-  });
-
-  it("defaults missing confidence_score to 0.5", () => {
-    const result = validateParsed({ translated_text: "hello" });
-    expect(result?.confidence_score).toBe(0.5);
-  });
-
-  it("defaults missing key_decisions to []", () => {
-    const result = validateParsed({ translated_text: "hello" });
-    expect(result?.key_decisions).toEqual([]);
-  });
-
-  it("defaults missing translation_notes to empty string", () => {
-    const result = validateParsed({ translated_text: "hello" });
-    expect(result?.translation_notes).toBe("");
-  });
-
-  it("converts non-string elements in key_decisions to strings", () => {
-    const result = validateParsed({ translated_text: "hello", key_decisions: [1, true, "note"] });
-    expect(result?.key_decisions).toEqual(["1", "true", "note"]);
+    expect(TRANSLATION_SYSTEM_PROMPT).toContain("submit_translation");
   });
 });

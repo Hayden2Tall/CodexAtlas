@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
-> **Last Updated:** 2026-03-13
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9 complete · Phase 3.9b–3.9d complete · Post-deploy hotfixes applied
+> **Last Updated:** 2026-03-19
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprint 4.1 in progress
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -345,6 +345,55 @@ Make the variant detection and exploration system robust and useful for scholars
 - [x] `app/src/app/(main)/read/[book]/[chapter]/page.tsx` — role lookup; `ChapterAdminBar` rendered for admin/editor when untranslated passages exist
 - [x] `app/src/app/(main)/manuscripts/[id]/passages/[passageId]/translate/translation-workspace.tsx` — "Compare manuscripts for {reference}" link derived from passage reference
 - [x] `app/src/components/layout/header.tsx` — persistent back button on mobile (non-root pages only); uses `router.back()`
+
+---
+
+## 5. Phase 4 — AI Reliability + Summary Pyramid + Comparison Depth
+
+**Goal:** Eliminate remaining translation failures, surface comparison data meaningfully, and build a hierarchical AI summary system from passage-level up to a grand unified assessment.
+
+Design document: `docs/design/phase4-strategic-roadmap-2026.md`
+
+### Sprint 4.1 — Translation Reliability — In Progress (2026-03-19)
+
+**Goal:** Eliminate all translation parse failures; harden retry logic; make batch jobs resumable after tab close.
+
+- [x] `api/translate/route.ts` — tool use (submit_translation tool with forced schema) replaces JSON-in-prompt; parse failures structurally impossible
+- [x] `api/translate/route.ts` — model updated to `claude-sonnet-4-6`
+- [x] `api/translate/route.ts` — exponential backoff + broader retry scope: {429, 500, 502, 503, 529}, max 3 retries, jitter, AbortError retry
+- [x] `lib/utils/translation-prompts.ts` — system prompt updated for tool use; JSON format section replaced with confidence guidance; `parseTranslationResponse`/`validateParsed` removed
+- [x] `admin/batch-translate-panel.tsx` — sessionStorage persistence of batch params; resume banner on page reload
+- [x] `__tests__/translation-prompts.test.ts` — tests updated for tool use approach
+- [ ] Streaming translations — use `anthropic.messages.stream()` to keep Vercel function alive for very long passages (Sprint 4.1b)
+- [ ] DB write atomicity — Supabase RPC for evidence record + translation version in one transaction (Sprint 4.1b)
+
+### Sprint 4.2 — Comparison Enhancements — Planned
+
+- [ ] Translation diff in compare view — word-level diff using existing `computeWordDiff()` utility
+- [ ] Confidence scores + translation notes visible in compare view per manuscript
+- [ ] Wire up `variant_comparisons.similarity_score` to compare UI when data exists
+
+### Sprint 4.3 — Summary Pyramid — Planned
+
+- [ ] Migration 027 — `ai_summaries` table `(level, scope_type, scope_key, content, model, cost_usd, generated_at, version)`
+- [ ] `POST /api/summaries/chapter` — Haiku; aggregates passage summaries + translations; cached
+- [ ] Chapter summary collapsible card in `/read/[book]/[chapter]` (on-demand, not auto-loaded)
+- [ ] `POST /api/summaries/book` — Sonnet; aggregates chapter summaries; cached
+- [ ] `POST /api/summaries/cross-manuscript` — Sonnet; cross-manuscript synthesis per chapter
+- [ ] `POST /api/summaries/grand` — Opus; grand unified assessment (admin-only generation); public view
+- [ ] `/insights` page — book summary cards + grand assessment display with model badge and generation date
+
+### Sprint 4.4 — Contributor Model (Credit System) — Future
+
+Only proceed if going straight to the full credit system; skip donation-only approaches.
+
+- [ ] `user_credits` table and credit transaction schema
+- [ ] Stripe integration for credit top-up
+- [ ] AI task endpoints gate on credit balance; deduct after task completion
+- [ ] Admin monthly credit allocation
+- [ ] `/about/sources` page — per-corpus attribution + license notices
+
+---
 
 ### 3.6 Accessibility + i18n (Priority: Standard)
 

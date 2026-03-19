@@ -5,7 +5,6 @@ import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import {
   TRANSLATION_SYSTEM_PROMPT,
   buildTranslationPrompt,
-  parseTranslationResponse,
   getCorpusDescription,
   type ParallelText,
 } from "@/lib/utils/translation-prompts";
@@ -24,7 +23,7 @@ import type {
 export const maxDuration = 60;
 
 const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "editor", "admin"];
-const AI_MODEL = "claude-sonnet-4-20250514";
+const AI_MODEL = "claude-sonnet-4-6";
 
 // Priority order for parallel text lookup — preferred source comes first.
 // Only sources with the same language as the passage are useful as parallels.
@@ -32,6 +31,53 @@ const PARALLEL_SOURCE_PRIORITY: Record<string, string[]> = {
   heb: ["wlc", "oshb", "etcbc_dss"],
   grc: ["sinaiticus_project", "sblgnt", "thgnt"],
 };
+
+// Tool schema for structured translation output.
+// Using tool_choice forces the model to always call this tool, making parse
+// failures structurally impossible — the SDK returns a typed input object.
+const TRANSLATION_TOOL = {
+  name: "submit_translation",
+  description:
+    "Submit the completed scholarly translation with confidence assessment. Call this tool once with the finished translation.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      translated_text: {
+        type: "string",
+        description: "The full scholarly translation of the passage",
+      },
+      confidence_score: {
+        type: "number",
+        description:
+          "Confidence in the translation (0.0–1.0). Reflects textual certainty only — do NOT penalise for single-source manuscripts, as all translations here are single-source by design.",
+      },
+      translation_notes: {
+        type: "string",
+        description:
+          "Scholarly notes on the translation approach, textual difficulties, or significant ambiguities",
+      },
+      key_decisions: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "List of significant translation choices and the reasoning behind each",
+      },
+    },
+    required: [
+      "translated_text",
+      "confidence_score",
+      "translation_notes",
+      "key_decisions",
+    ],
+  },
+};
+
+interface TranslationToolInput {
+  translated_text: string;
+  confidence_score: number;
+  translation_notes: string;
+  key_decisions: string[];
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,7 +146,10 @@ export async function POST(request: NextRequest) {
       .single<Manuscript>();
 
     if (msError || !manuscript) {
-      return NextResponse.json({ error: "Manuscript not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Manuscript not found" },
+        { status: 404 }
+      );
     }
 
     // ── Parallel text lookup ─────────────────────────────────────────
@@ -129,7 +178,9 @@ export async function POST(request: NextRequest) {
       parallelText,
     });
 
-    // ── Call Claude API (with retry) ─────────────────────────────────
+    // ── Call Claude API with tool use (with retry) ───────────────────
+    // tool_choice forces the model to call submit_translation — parse
+    // failures are structurally impossible with this approach.
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 50_000);
 
@@ -142,6 +193,8 @@ export async function POST(request: NextRequest) {
           temperature: 0.2,
           system: TRANSLATION_SYSTEM_PROMPT,
           messages: [{ role: "user", content: prompt }],
+          tools: [TRANSLATION_TOOL],
+          tool_choice: { type: "tool", name: "submit_translation" },
         },
         process.env.ANTHROPIC_API_KEY!,
         controller.signal
@@ -171,28 +224,41 @@ export async function POST(request: NextRequest) {
     }
 
     const aiResult = await anthropicRes.json();
-    const rawContent: string | undefined = aiResult.content?.[0]?.text;
 
     const tokensInput: number = aiResult.usage?.input_tokens ?? 0;
     const tokensOutput: number = aiResult.usage?.output_tokens ?? 0;
     const costUsd = estimateCostUsd(AI_MODEL, tokensInput, tokensOutput);
 
-    if (!rawContent) {
+    // Extract tool use result from the response content array
+    const toolUseBlock = (
+      aiResult.content as { type: string; input?: unknown }[] | undefined
+    )?.find((b) => b.type === "tool_use");
+
+    if (!toolUseBlock?.input) {
+      console.error(
+        "[translate] No tool_use block in response:",
+        JSON.stringify(aiResult.content).slice(0, 500)
+      );
       return NextResponse.json(
-        { error: "Empty response from translation service" },
+        { error: "Translation service returned an unexpected response format" },
         { status: 502 }
       );
     }
 
-    const parsed = parseTranslationResponse(rawContent);
+    const parsed = toolUseBlock.input as TranslationToolInput;
 
-    if (!parsed) {
-      console.error("Failed to parse AI response:", rawContent.slice(0, 500));
+    if (!parsed.translated_text?.trim()) {
       return NextResponse.json(
-        { error: "Failed to parse translation response" },
+        { error: "Translation service returned an empty translation" },
         { status: 502 }
       );
     }
+
+    // Clamp confidence score to [0, 1]
+    const confidenceScore = Math.max(
+      0,
+      Math.min(1, parsed.confidence_score ?? 0.5)
+    );
 
     // ── Persist to Supabase ──────────────────────────────────────────
 
@@ -205,11 +271,13 @@ export async function POST(request: NextRequest) {
         source_manuscript_ids: [manuscript.id],
         translation_method: "ai_initial",
         ai_model: AI_MODEL,
-        confidence_score: parsed.confidence_score,
+        confidence_score: confidenceScore,
         revision_reason: null,
         metadata: {
-          translation_notes: parsed.translation_notes,
-          key_decisions: parsed.key_decisions,
+          translation_notes: parsed.translation_notes ?? "",
+          key_decisions: Array.isArray(parsed.key_decisions)
+            ? parsed.key_decisions
+            : [],
           target_language,
           original_language: manuscript.original_language,
           source_id: sourceId,
@@ -273,7 +341,7 @@ export async function POST(request: NextRequest) {
         translated_text: parsed.translated_text,
         translation_method: "ai_initial",
         ai_model: AI_MODEL,
-        confidence_score: parsed.confidence_score,
+        confidence_score: confidenceScore,
         source_manuscript_ids: [manuscript.id],
         status: "published",
         evidence_record_id: evidenceRecord.id,
@@ -316,53 +384,71 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Translation pipeline error:", msg, err);
-    return NextResponse.json({ error: `Server error: ${msg}` }, { status: 500 });
+    return NextResponse.json(
+      { error: `Server error: ${msg}` },
+      { status: 500 }
+    );
   }
 }
 
-// ── Anthropic API call with retry ─────────────────────────────────────────────
+// ── Anthropic API call with exponential backoff retry ─────────────────────────
+
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 529]);
+const MAX_RETRIES = 3;
 
 async function callAnthropicWithRetry(
   reqBody: object,
   apiKey: string,
-  signal: AbortSignal,
-  maxRetries = 2
+  signal: AbortSignal
 ): Promise<Response> {
-  const RETRY_DELAYS_MS = [1000, 3000];
+  let lastRes: Response | null = null;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(reqBody),
-      signal,
-    });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(reqBody),
+        signal,
+      });
 
-    // Retry only on rate-limit / overload status codes
-    if ((res.status === 429 || res.status === 529) && attempt < maxRetries) {
-      const delayMs = RETRY_DELAYS_MS[attempt] ?? 3000;
-      console.warn(
-        `[translate] Anthropic ${res.status} on attempt ${attempt + 1}/${maxRetries + 1} — retrying in ${delayMs}ms`
+      if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES) {
+        return res;
+      }
+
+      lastRes = res;
+      const delay = Math.min(
+        1000 * Math.pow(2, attempt) + Math.random() * 500,
+        30_000
       );
-      await new Promise((r) => setTimeout(r, delayMs));
-      continue;
+      console.warn(
+        `[translate] Anthropic ${res.status} on attempt ${attempt + 1}/${MAX_RETRIES + 1} — retrying in ${Math.round(delay)}ms`
+      );
+      await new Promise((r) => setTimeout(r, delay));
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      // On timeout/abort, one retry after 5s then re-throw
+      if (isAbort && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 5_000));
+        continue;
+      }
+      throw err;
     }
-
-    return res;
   }
 
-  // Unreachable but satisfies TS
-  throw new Error("Retry loop exhausted");
+  // Return last response if all retries exhausted
+  return lastRes!;
 }
 
 // ── Parallel text lookup ──────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchParallelText(admin: any,
+async function fetchParallelText(
+  admin: any,
   reference: string,
   currentSourceId: string | undefined,
   langCode: string
@@ -398,7 +484,10 @@ async function fetchParallelText(admin: any,
       const found = (rows as { source: string; text: string }[]).find(
         (r) => r.source === srcId
       );
-      if (found) { bestRow = found; break; }
+      if (found) {
+        bestRow = found;
+        break;
+      }
     }
 
     if (!bestRow || !bestRow.text || bestRow.text.length <= 50) return null;
