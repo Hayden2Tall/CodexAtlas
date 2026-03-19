@@ -6,6 +6,43 @@ import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 
 export const maxDuration = 30;
 
+const AI_MODEL = "claude-haiku-4-5-20251001";
+
+const MANUSCRIPT_SUMMARY_TOOL = {
+  name: "submit_manuscript_summary",
+  description: "Submit a scholarly significance summary for a manuscript.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      summary: {
+        type: "string",
+        description: "2–3 sentence scholarly significance summary for researchers and general readers",
+      },
+      significance_factors: {
+        type: "array",
+        items: { type: "string" },
+        description: "3–5 key factors that make this manuscript significant",
+      },
+      historical_period: {
+        type: "string",
+        description: "Brief description of the manuscript's historical context and dating",
+      },
+      related_traditions: {
+        type: "string",
+        description: "Which textual traditions this manuscript belongs to or relates to",
+      },
+    },
+    required: ["summary", "significance_factors", "historical_period", "related_traditions"],
+  },
+};
+
+interface ManuscriptSummaryContent {
+  summary: string;
+  significance_factors: string[];
+  historical_period: string;
+  related_traditions: string;
+}
+
 /**
  * POST /api/summaries/manuscript
  *
@@ -79,15 +116,7 @@ Origin: ${manuscript.origin_location ?? "unknown"}
 Archive: ${manuscript.archive_location ?? "unknown"}
 Stats: ${passageCount.count ?? 0} passages, ${translationCount.count ?? 0} translations, ${variantCount.count ?? 0} variant readings
 
-Respond with ONLY a JSON object (no markdown, no commentary):
-{
-  "summary": "2-3 sentence scholarly significance summary",
-  "significance_factors": ["factor1", "factor2", "factor3"],
-  "historical_period": "brief description of the manuscript's historical context",
-  "related_traditions": "which textual traditions this manuscript belongs to or relates to"
-}`;
-
-    const aiModel = "claude-haiku-4-5-20251001";
+Call submit_manuscript_summary with your analysis.`;
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -97,9 +126,11 @@ Respond with ONLY a JSON object (no markdown, no commentary):
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: aiModel,
+        model: AI_MODEL,
         max_tokens: 1000,
         messages: [{ role: "user", content: prompt }],
+        tools: [MANUSCRIPT_SUMMARY_TOOL],
+        tool_choice: { type: "tool", name: "submit_manuscript_summary" },
       }),
     });
 
@@ -109,27 +140,28 @@ Respond with ONLY a JSON object (no markdown, no commentary):
     }
 
     const aiResult = await anthropicRes.json();
-    const rawContent = aiResult.content?.[0]?.text ?? "";
-    const tokensIn = aiResult.usage?.input_tokens ?? 0;
-    const tokensOut = aiResult.usage?.output_tokens ?? 0;
-    const cost = estimateCostUsd(aiModel, tokensIn, tokensOut);
+    const tokensIn: number = aiResult.usage?.input_tokens ?? 0;
+    const tokensOut: number = aiResult.usage?.output_tokens ?? 0;
+    const cost = estimateCostUsd(AI_MODEL, tokensIn, tokensOut);
 
-    let parsed;
-    try {
-      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch?.[0] ?? rawContent);
-    } catch {
-      console.error("[summaries/manuscript] Parse failed:", rawContent.slice(0, 300));
-      return NextResponse.json({ error: "Could not parse summary" }, { status: 502 });
+    const toolBlock = (
+      aiResult.content as { type: string; input?: unknown }[] | undefined
+    )?.find((b) => b.type === "tool_use");
+
+    if (!toolBlock?.input) {
+      console.error("[summaries/manuscript] Unexpected AI response:", JSON.stringify(aiResult).slice(0, 300));
+      return NextResponse.json({ error: "Unexpected AI response format" }, { status: 502 });
     }
 
+    const parsed = toolBlock.input as ManuscriptSummaryContent;
+
     const aiSummary = {
-      summary: parsed.summary ?? "",
-      significance_factors: Array.isArray(parsed.significance_factors) ? parsed.significance_factors : [],
-      historical_period: parsed.historical_period ?? "",
-      related_traditions: parsed.related_traditions ?? "",
+      summary: parsed.summary,
+      significance_factors: parsed.significance_factors,
+      historical_period: parsed.historical_period,
+      related_traditions: parsed.related_traditions,
       generated_at: new Date().toISOString(),
-      model: aiModel,
+      model: AI_MODEL,
       cost_usd: cost,
     };
 
@@ -143,7 +175,7 @@ Respond with ONLY a JSON object (no markdown, no commentary):
     return NextResponse.json({
       summary: aiSummary,
       cached: false,
-      usage: { tokens_input: tokensIn, tokens_output: tokensOut, estimated_cost_usd: cost, ai_model: aiModel },
+      usage: { tokens_input: tokensIn, tokens_output: tokensOut, estimated_cost_usd: cost, ai_model: AI_MODEL },
     });
   } catch (err) {
     console.error("[summaries/manuscript] Error:", err);

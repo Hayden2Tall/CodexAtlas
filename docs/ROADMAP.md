@@ -441,11 +441,9 @@ Platform is polished, accessible, and ready for broader public and institutional
 
 ## 5.9 Outstanding Items (Phase 4 carry-forward)
 
-Small items from Phase 4 not yet executed. Low priority — do when convenient.
-
-- [ ] **Resumable batch UI** — `admin/batch-translate-panel.tsx`: store `{ manuscriptId, language }` in `sessionStorage`. Add "Resume" button that re-runs scan from first untranslated passage. Scan already skips translated passages. Effort: 1 hr.
-- [ ] **Manuscript summary → tool use** — `api/summaries/manuscript/route.ts`: upgrade from JSON-in-prompt to `submit_manuscript_summary` tool use, matching pattern used by all other summary routes. Effort: 30 min.
-- [ ] **Cross-manuscript summary** — `api/summaries/cross-manuscript/route.ts` (new): Sonnet; aggregates chapter summaries + variant data across manuscripts for same book+chapter. **Deferred** until multiple manuscripts exist with variant detection runs. No urgent timeline.
+- [x] **Resumable batch UI** — fully implemented in `admin/batch-translate-panel.tsx` (sessionStorage resume + banner UI). Completed in Sprint 4.1.
+- [x] **Manuscript summary → tool use** — `api/summaries/manuscript/route.ts` upgraded from JSON-in-prompt + regex to `submit_manuscript_summary` tool_choice forced output. Completed 2026-03-19.
+- [ ] **Cross-manuscript summary** — `api/summaries/cross-manuscript/route.ts` (new): Sonnet; aggregates chapter summaries + variant data across manuscripts for same book+chapter. **Deferred** until multiple manuscripts exist with variant detection runs.
 
 ---
 
