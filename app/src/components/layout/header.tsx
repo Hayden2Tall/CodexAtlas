@@ -166,6 +166,13 @@ export function Header() {
                         {user.email}
                       </p>
                     </div>
+                    <Link
+                      href="/settings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Settings
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"

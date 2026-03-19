@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 import {
   TRANSLATION_SYSTEM_PROMPT,
   buildTranslationPrompt,
@@ -22,7 +23,7 @@ import type {
 
 export const maxDuration = 300;
 
-const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "editor", "admin"];
+const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "contributor", "editor", "admin"];
 const AI_MODEL = "claude-sonnet-4-6";
 
 // Priority order for parallel text lookup — preferred source comes first.
@@ -121,6 +122,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const apiKeyResult = await getAnthropicApiKey(user.id, profile.role);
+    if ("error" in apiKeyResult) {
+      return NextResponse.json({ error: apiKeyResult.error }, { status: apiKeyResult.status });
+    }
+    const anthropicApiKey = apiKeyResult.key;
+
     // ── Fetch passage + manuscript ───────────────────────────────────
     const { data: passage, error: passageError } = await supabase
       .from("passages")
@@ -196,7 +203,7 @@ export async function POST(request: NextRequest) {
           tools: [TRANSLATION_TOOL],
           tool_choice: { type: "tool", name: "submit_translation" },
         },
-        process.env.ANTHROPIC_API_KEY!,
+        anthropicApiKey,
         controller.signal
       );
     } catch (fetchErr) {

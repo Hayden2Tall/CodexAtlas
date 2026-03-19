@@ -26,7 +26,7 @@ export type ResearchPackage = Tables<"research_packages">;
 export type AuditLogEntry = Tables<"audit_log">;
 export type AgentTask = Tables<"agent_tasks">;
 
-export type UserRole = "reader" | "reviewer" | "scholar" | "editor" | "admin";
+export type UserRole = "reader" | "reviewer" | "scholar" | "contributor" | "pending_contributor" | "editor" | "admin";
 export type TranslationMethod =
   | "ai_initial"
   | "ai_revised"

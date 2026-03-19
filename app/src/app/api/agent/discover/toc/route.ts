@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 import type { UserRole, User } from "@/lib/types";
 
 export const maxDuration = 60;
 
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -20,7 +21,7 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
     .eq("id", user.id)
     .single<Pick<User, "role">>();
   if (!profile || !ADMIN_ROLES.includes(profile.role as UserRole)) return null;
-  return user;
+  return { userId: user.id, role: profile.role };
 }
 
 export interface TocSection {
@@ -38,10 +39,16 @@ export interface TocSection {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const user = await requireAdmin(supabase);
-    if (!user) {
+    const auth = await requireAdmin(supabase);
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const { userId, role } = auth;
+    const apiKeyResult = await getAnthropicApiKey(userId, role);
+    if ("error" in apiKeyResult) {
+      return NextResponse.json({ error: apiKeyResult.error }, { status: apiKeyResult.status });
+    }
+    const anthropicApiKey = apiKeyResult.key;
 
     const body = await request.json();
     const { title, original_language, manuscript_id } = body;
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "x-api-key": anthropicApiKey,
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
@@ -170,7 +177,7 @@ export async function POST(request: NextRequest) {
         completed_items: sections.length,
         started_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
-        created_by: user.id,
+        created_by: userId,
       } as Record<string, unknown>);
 
     return NextResponse.json({

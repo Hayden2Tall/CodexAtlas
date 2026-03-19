@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { UserRole, User, Manuscript, Passage } from "@/lib/types";
 
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {

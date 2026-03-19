@@ -310,7 +310,7 @@ function PassagesTab({
   }
 
   const passagesWithText = passages.filter((p) => !!p.original_text);
-  const isAdmin = ["admin", "editor"].includes(userRole ?? "");
+  const isAdmin = ["admin", "editor", "contributor"].includes(userRole ?? "");
 
   return (
     <div className="space-y-3">

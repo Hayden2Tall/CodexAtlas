@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 
 export const maxDuration = 30;
 
@@ -56,6 +57,13 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Authentication required to generate summaries" }, { status: 401 });
     }
+
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single<{ role: string }>();
+    const apiKeyResult = await getAnthropicApiKey(user.id, profile?.role ?? "reader");
+    if ("error" in apiKeyResult) {
+      return NextResponse.json({ error: apiKeyResult.error }, { status: apiKeyResult.status });
+    }
+    const anthropicApiKey = apiKeyResult.key;
 
     const body = await request.json();
     const { passage_id } = body;
@@ -122,7 +130,7 @@ Call submit_passage_summary with your analysis.`;
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "x-api-key": anthropicApiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({

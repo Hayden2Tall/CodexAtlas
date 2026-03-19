@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 import type {
   UserRole,
   User,
@@ -11,7 +12,7 @@ import type {
 
 export const maxDuration = 60;
 
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 async function requireAdmin(
   supabase: Awaited<ReturnType<typeof createClient>>
@@ -31,7 +32,7 @@ async function requireAdmin(
 
   if (!profile || !ADMIN_ROLES.includes(profile.role as UserRole)) return null;
 
-  return user;
+  return { userId: user.id, role: profile.role };
 }
 
 interface DetectedVariant {
@@ -56,10 +57,16 @@ interface DetectedVariant {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const user = await requireAdmin(supabase);
-    if (!user) {
+    const auth = await requireAdmin(supabase);
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const { userId, role } = auth;
+    const apiKeyResult = await getAnthropicApiKey(userId, role);
+    if ("error" in apiKeyResult) {
+      return NextResponse.json({ error: apiKeyResult.error }, { status: apiKeyResult.status });
+    }
+    const anthropicApiKey = apiKeyResult.key;
 
     const body = await request.json();
     const { passage_reference, passage_ids, force } = body;
@@ -223,7 +230,7 @@ export async function POST(request: NextRequest) {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-api-key": process.env.ANTHROPIC_API_KEY!,
+              "x-api-key": anthropicApiKey,
               "anthropic-version": "2023-06-01",
             },
             body: JSON.stringify({
@@ -316,7 +323,7 @@ export async function POST(request: NextRequest) {
         completed_items: passages.length,
         started_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
-        created_by: user.id,
+        created_by: userId,
       } as Record<string, unknown>);
 
     return NextResponse.json({
@@ -345,10 +352,11 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const user = await requireAdmin(supabase);
-    if (!user) {
+    const auth = await requireAdmin(supabase);
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const { userId } = auth;
 
     const body = await request.json();
     const { variants, passage_reference, passage_ids, ai_model } = body as {
@@ -378,7 +386,7 @@ export async function PUT(request: NextRequest) {
         model: ai_model ?? "unknown",
         variants_found: variants.length,
         metadata: { passage_ids_sorted: sortedPassageIds },
-        created_by: user.id,
+        created_by: userId,
       } as Record<string, unknown>)
       .select("id")
       .single<{ id: string }>();
@@ -397,7 +405,7 @@ export async function PUT(request: NextRequest) {
           analysis: v.analysis,
           detected_by: "variant_detection_agent",
         },
-        created_by: user.id,
+        created_by: userId,
       };
       if (runId) insertData.detection_run_id = runId;
 
@@ -417,7 +425,7 @@ export async function PUT(request: NextRequest) {
           manuscript_id: r.manuscript_id,
           reading_text: r.reading_text,
           apparatus_notes: r.apparatus_notes || null,
-          created_by: user.id,
+          created_by: userId,
         }));
 
       if (readingRows.length > 0) {

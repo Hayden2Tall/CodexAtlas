@@ -22,7 +22,7 @@ import type { UserRole, User, Passage } from "@/lib/types";
 
 export const maxDuration = 60;
 
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 async function fetchFromNtvmr(
   manuscriptTitle: string,
@@ -258,7 +258,7 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
     .eq("id", user.id)
     .single<Pick<User, "role">>();
   if (!profile || !ADMIN_ROLES.includes(profile.role as UserRole)) return null;
-  return user;
+  return { userId: user.id, role: profile.role };
 }
 
 /**
@@ -271,10 +271,11 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const user = await requireAdmin(supabase);
-    if (!user) {
+    const auth = await requireAdmin(supabase);
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const { userId } = auth;
 
     const body = await request.json();
     const {
@@ -571,7 +572,7 @@ export async function POST(request: NextRequest) {
             sequence_order: sequence_order ?? null,
             original_text: originalText,
             transcription_method: transcriptionMethod,
-            created_by: user.id,
+            created_by: userId,
             metadata,
           } as Record<string, unknown>)
           .select("id")
@@ -643,7 +644,8 @@ async function fetchFromAiModels(
   manuscriptTitle: string,
   language: string,
   reference: string,
-  textHasCorrectScript: (text: string) => boolean
+  textHasCorrectScript: (text: string) => boolean,
+  apiKey: string
 ): Promise<AiTextResult | AiTextError> {
   const MODELS = [
     "claude-haiku-4-5-20251001",
@@ -669,7 +671,7 @@ async function fetchFromAiModels(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({

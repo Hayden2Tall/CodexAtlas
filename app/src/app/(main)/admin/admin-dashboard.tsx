@@ -9,6 +9,7 @@ import { VariantPanel } from "./variant-panel";
 import { TaskList } from "./task-list";
 import { SourceRegistryPanel } from "./source-registry-panel";
 import { IiifHarvestPanel } from "./iiif-harvest-panel";
+import { UsersPanel } from "./users-panel";
 import type { AgentTask } from "@/lib/types";
 
 interface ManuscriptOption {
@@ -34,11 +35,12 @@ interface Props {
   initialTasks: AgentTask[];
   manuscripts: ManuscriptOption[];
   passagesForVariants: PassageOption[];
+  userRole: string;
 }
 
-type Tab = "operations" | "registry" | "iiif" | "tasks";
+type Tab = "operations" | "registry" | "iiif" | "tasks" | "users";
 
-export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVariants }: Props) {
+export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVariants, userRole }: Props) {
   const [tasks, setTasks] = useState<AgentTask[]>(initialTasks);
   const [activeTab, setActiveTab] = useState<Tab>("operations");
 
@@ -73,6 +75,7 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
     { id: "registry", label: "Source Registry" },
     { id: "iiif", label: "IIIF Harvest" },
     { id: "tasks", label: `Task History (${tasks.length})` },
+    ...(userRole === "admin" ? [{ id: "users" as Tab, label: "Users" }] : []),
   ];
 
   return (
@@ -181,6 +184,8 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
       {activeTab === "iiif" && <IiifHarvestPanel />}
 
       {activeTab === "tasks" && <TaskList tasks={tasks} />}
+
+      {activeTab === "users" && userRole === "admin" && <UsersPanel />}
     </div>
   );
 }

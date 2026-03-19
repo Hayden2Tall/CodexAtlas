@@ -30,12 +30,12 @@ export default async function AdminPage() {
     .eq("id", user.id)
     .single<Pick<User, "role">>();
 
-  if (!profile || !["admin", "editor"].includes(profile.role)) {
+  if (!profile || !["admin", "editor", "contributor"].includes(profile.role)) {
     return (
       <div className="py-20 text-center">
         <h1 className="text-2xl font-bold text-gray-900">Access denied</h1>
         <p className="mt-2 text-gray-600">
-          Admin or editor role required. Current role:{" "}
+          Contributor role or above required. Current role:{" "}
           <span className="font-mono text-sm">{profile?.role ?? "none"}</span>
         </p>
       </div>
@@ -96,6 +96,7 @@ export default async function AdminPage() {
       initialTasks={recentTasks ?? []}
       manuscripts={manuscriptList ?? []}
       passagesForVariants={passagesForVariants}
+      userRole={profile.role}
     />
   );
 }

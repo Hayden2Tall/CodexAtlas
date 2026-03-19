@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 import type { UserRole, User } from "@/lib/types";
 
 export const maxDuration = 60;
 
 const AI_MODEL = "claude-opus-4-6";
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 const GRAND_ASSESSMENT_TOOL = {
   name: "submit_grand_assessment",
@@ -104,6 +105,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const apiKeyResult = await getAnthropicApiKey(user.id, profile.role);
+    if ("error" in apiKeyResult) {
+      return NextResponse.json({ error: apiKeyResult.error }, { status: apiKeyResult.status });
+    }
+    const anthropicApiKey = apiKeyResult.key;
+
     const admin = createAdminClient();
 
     // Gather all book summaries
@@ -179,7 +186,7 @@ Call submit_grand_assessment with your comprehensive synthesis. This is the auth
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "x-api-key": anthropicApiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({

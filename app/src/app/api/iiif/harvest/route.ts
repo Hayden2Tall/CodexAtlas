@@ -11,7 +11,7 @@ import type { UserRole, User } from "@/lib/types";
 
 export const maxDuration = 60;
 
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 interface HarvestRequest {
   institution_id: string;

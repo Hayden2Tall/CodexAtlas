@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SOURCE_REGISTRY } from "@/lib/utils/source-registry";
 import type { UserRole, User } from "@/lib/types";
 
-const ADMIN_ROLES: UserRole[] = ["admin", "editor"];
+const ADMIN_ROLES: UserRole[] = ["admin", "editor", "contributor"];
 
 export async function GET() {
   try {

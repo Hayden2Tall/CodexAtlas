@@ -66,7 +66,7 @@ export default async function InsightsPage() {
       .select("role")
       .eq("id", user.id)
       .single<{ role: string }>();
-    isAdmin = ["admin", "editor"].includes(profile?.role ?? "");
+    isAdmin = ["admin", "editor", "contributor"].includes(profile?.role ?? "");
   }
 
   const grandAssessment = grandRow?.content as GrandAssessmentContent | null | undefined;

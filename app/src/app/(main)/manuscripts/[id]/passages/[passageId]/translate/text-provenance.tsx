@@ -26,7 +26,7 @@ const MISMATCH_METHODS = new Set([
   "ai_imported",
 ]);
 
-const ADMIN_ROLES = new Set(["admin", "editor"]);
+const ADMIN_ROLES = new Set(["admin", "editor", "contributor"]);
 
 const SOURCE_DISPLAY: Record<
   string,

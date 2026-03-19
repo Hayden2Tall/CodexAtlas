@@ -288,7 +288,7 @@ export default async function ChapterPage({ params }: PageProps) {
       .single<{ role: string }>();
     userRole = profile?.role ?? null;
   }
-  const isAdmin = ["admin", "editor"].includes(userRole ?? "");
+  const isAdmin = ["admin", "editor", "contributor"].includes(userRole ?? "");
 
   if (!results || results.length === 0) {
     return (
