@@ -39,6 +39,39 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-19 — Phase 4: Summary Pyramid (Sprint 4.3)
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Passage-level AI summaries existed (`passages.metadata.ai_summary`) but there was no aggregation above that level. The vision is a hierarchy: passage → chapter → book → grand assessment. Chapter pages had no way to orient a reader to the whole chapter; there was no place to see cross-corpus insights.
+
+**Decision:**
+1. **`ai_summaries` table (migration 027)** — `(level, scope_key, content JSONB, model, cost_usd, generated_at, version)` with UNIQUE on `(level, scope_key)` and public read RLS. Passage summaries remain in `passages.metadata` (existing pattern).
+2. **`POST /api/summaries/chapter`** — Haiku model; tool use for structured output; aggregates passage `ai_summary` entries + best translations per passage into a 5000-char context window. Upserts into `ai_summaries`. Any authenticated user can generate.
+3. **`POST /api/summaries/book`** — Sonnet model; aggregates existing chapter summaries (requires chapter summaries to exist first). Any authenticated user.
+4. **`POST /api/summaries/grand`** — Opus model; admin/editor only; aggregates all book summaries + corpus stats (manuscript count, passage count, translation count) into a grand unified assessment.
+5. **`ChapterSummary` component** — client component matching the `PassageSummary` pattern; on-demand button for authenticated users; collapsible when summary exists. Loads cached summary server-side to avoid flash.
+6. **`/insights` page** — public page showing grand assessment (if generated) + all book summary cards. Admin button to generate/regenerate grand assessment via `router.refresh()`.
+7. **Nav update** — "Insights" added to header and mobile nav between Manuscripts and Visualize.
+
+**Rationale:**
+Tool use throughout (matching Sprint 4.1 pattern) eliminates parse failures. The Haiku/Sonnet/Opus progression aligns cost to the value of each level — cheap for chapters, premium for the grand assessment. The `ai_summaries` table is simpler than extending `passages` (no nullable JSONB sprawl) and allows efficient querying by level.
+
+**Consequences:**
+- Chapter pages gain a one-click "Generate chapter overview" affordance for authenticated users.
+- `/insights` is public but generates only when an admin triggers it.
+- Cross-manuscript synthesis deferred — the `variant_comparisons` data is too sparse to make it useful yet.
+- `ai-cost.ts` now includes `claude-sonnet-4-6` and `claude-opus-4-6` pricing.
+- Migration 027 must be applied to Supabase before `ai_summaries` queries succeed.
+
+**Related Documents:**
+- `docs/design/phase4-strategic-roadmap-2026.md`
+
+---
+
 ### 2026-03-19 — Phase 4: Comparison View Enhancement (Sprint 4.2)
 
 **Type:** milestone

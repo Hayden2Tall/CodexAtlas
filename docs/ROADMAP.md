@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-19
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.2 complete
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.3 complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -374,15 +374,17 @@ Design document: `docs/design/phase4-strategic-roadmap-2026.md`
 - [x] Translation notes + key decisions collapsible section per panel (evidence records wired)
 - [ ] Wire up `variant_comparisons.similarity_score` to compare UI when data exists (deferred — data sparse)
 
-### Sprint 4.3 — Summary Pyramid — Planned
+### Sprint 4.3 — Summary Pyramid — Complete (2026-03-19)
 
-- [ ] Migration 027 — `ai_summaries` table `(level, scope_type, scope_key, content, model, cost_usd, generated_at, version)`
-- [ ] `POST /api/summaries/chapter` — Haiku; aggregates passage summaries + translations; cached
-- [ ] Chapter summary collapsible card in `/read/[book]/[chapter]` (on-demand, not auto-loaded)
-- [ ] `POST /api/summaries/book` — Sonnet; aggregates chapter summaries; cached
-- [ ] `POST /api/summaries/cross-manuscript` — Sonnet; cross-manuscript synthesis per chapter
-- [ ] `POST /api/summaries/grand` — Opus; grand unified assessment (admin-only generation); public view
-- [ ] `/insights` page — book summary cards + grand assessment display with model badge and generation date
+- [x] Migration 027 — `ai_summaries` table `(level, scope_key, content JSONB, model, cost_usd, generated_at, version)`
+- [x] `POST /api/summaries/chapter` — Haiku, tool use; aggregates passage summaries + translations; cached
+- [x] `ChapterSummary` component — on-demand collapsible card on chapter read pages (any authenticated user)
+- [x] `POST /api/summaries/book` — Sonnet, tool use; aggregates chapter summaries; cached
+- [x] `POST /api/summaries/grand` — Opus, tool use; admin/editor only; grand unified corpus assessment
+- [x] `/insights` page — grand assessment + book summary cards; admin regenerate button
+- [x] `ai-cost.ts` — added `claude-sonnet-4-6` and `claude-opus-4-6` pricing
+- [x] Header + MobileNav — Insights nav link added
+- [ ] `POST /api/summaries/cross-manuscript` — deferred; needs denser variant data first
 
 ### Sprint 4.4 — Contributor Model (Credit System) — Future
 
