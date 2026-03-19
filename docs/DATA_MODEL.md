@@ -377,7 +377,7 @@ Cached AI-generated summaries at multiple levels of granularity (passage, chapte
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Unique identifier. |
-| `level` | `TEXT` | `NOT NULL` | Summary granularity: `'passage'`, `'chapter'`, `'book'`, `'manuscript'`, `'grand'`. |
+| `level` | `TEXT` | `NOT NULL CHECK (level IN ('chapter', 'book', 'grand', 'cross_manuscript'))` | Summary granularity. Migration 031 adds `'cross_manuscript'`. Passage and manuscript summaries are stored in their respective `metadata` JSONB fields, not this table. |
 | `scope_key` | `TEXT` | `NOT NULL` | Unique key for this scope. Format: `'Genesis 1'` (chapter), `'Genesis'` (book), `'grand'` (grand assessment), manuscript UUID (manuscript), passage UUID (passage). |
 | `content` | `JSONB` | `NOT NULL` | Structured summary content. Schema varies by level (see below). |
 | `model` | `TEXT` | | AI model used (e.g., `"claude-haiku-4-5-20251001"`). |
@@ -388,9 +388,11 @@ Cached AI-generated summaries at multiple levels of granularity (passage, chapte
 **Unique constraint:** `UNIQUE(level, scope_key)` — prevents duplicate summaries; upserts via `ON CONFLICT (level, scope_key) DO UPDATE`.
 
 **`content` JSONB structure by level:**
-- `'chapter'` / `'book'`: `{ summary, key_themes[], historical_significance, manuscript_count, passage_count }`
-- `'grand'`: `{ overall_assessment, key_insights[], manuscript_highlights[], translation_quality_overview, scholarly_significance }`
-- `'manuscript'` / `'passage'`: `{ summary, significance_factors[], historical_period, related_traditions[] }` (passage-level summaries still cached in `passages.metadata.ai_summary` for legacy reasons)
+- `'chapter'`: `{ overview, theological_themes[], manuscript_notes, scholarly_significance }`
+- `'book'`: `{ overview, structure, theological_themes[], manuscript_tradition, scholarly_significance }`
+- `'grand'`: `{ narrative, confidence_trends, variant_patterns, cross_manuscript_insights, areas_of_certainty[], areas_of_uncertainty[] }`
+- `'cross_manuscript'`: `{ comparative_overview, manuscripts_compared[], areas_of_agreement, notable_divergences, textual_implications }` — scope_key format `'Book Chapter'` (e.g., `'Genesis 1'`)
+- Passage-level summaries cached in `passages.metadata.ai_summary`; manuscript-level in `manuscripts.metadata.ai_summary`.
 
 **RLS:** Public SELECT; admin/editor/contributor INSERT/UPDATE.
 
@@ -829,7 +831,8 @@ scripts/migrations/
 ├── 027_create_ai_summaries.sql
 ├── 028_create_translation_version_rpc.sql
 ├── 029_add_contributor_role.sql
-└── 030_create_contributor_api_key_rpcs.sql
+├── 030_create_contributor_api_key_rpcs.sql
+└── 031_add_cross_manuscript_summary_level.sql
 ```
 
 ### Principles

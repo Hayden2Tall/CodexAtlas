@@ -14,7 +14,7 @@ import { describe, it, expect } from "vitest";
 function parseOsisBook(xml: string): { chapter: number; text: string }[] {
   const chapterMap = new Map<number, string[]>();
 
-  const verseRe = /osisID="[^."]+"\.(\d+)\.\d+"/g;
+  const verseRe = /osisID="[^.]+\.(\d+)\.\d+"/g;
   const versePositions: { pos: number; chapter: number }[] = [];
   let m: RegExpExecArray | null;
   while ((m = verseRe.exec(xml)) !== null) {

@@ -443,7 +443,7 @@ Platform is polished, accessible, and ready for broader public and institutional
 
 - [x] **Resumable batch UI** — fully implemented in `admin/batch-translate-panel.tsx` (sessionStorage resume + banner UI). Completed in Sprint 4.1.
 - [x] **Manuscript summary → tool use** — `api/summaries/manuscript/route.ts` upgraded from JSON-in-prompt + regex to `submit_manuscript_summary` tool_choice forced output. Completed 2026-03-19.
-- [ ] **Cross-manuscript summary** — `api/summaries/cross-manuscript/route.ts` (new): Sonnet; aggregates chapter summaries + variant data across manuscripts for same book+chapter. **Deferred** until multiple manuscripts exist with variant detection runs.
+- [x] **Cross-manuscript summary** — `api/summaries/cross-manuscript/route.ts`: Sonnet; aggregates passages + variant readings across manuscripts for same book+chapter via `submit_cross_manuscript_summary` tool. `CrossManuscriptSummary` component surfaced on chapter page when 2+ manuscripts. Completed 2026-03-19.
 
 ---
 

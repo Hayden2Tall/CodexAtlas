@@ -39,6 +39,38 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-19 — Sprint 4.4: Force-Regenerate, Cross-Manuscript Summary, Contextual Variant Detection
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+After Phase 5 (contributor system), three gaps remained: (1) all summary routes short-circuited on cached results with no way to regenerate from the UI; (2) the cross-manuscript summary route was unbuilt; (3) variant detection was only accessible from the admin panel, not from the context where passages appear.
+
+**Decision:**
+1. **Force-regenerate on all summary routes** — Added `force?: boolean` body param to `passage`, `chapter`, `book`, and `manuscript` summary routes. When `force: true`, the cache check is skipped and AI is re-called. Grand assessment route already always regenerates (no early return).
+2. **Regenerate UI** — Added inline "Regenerate" buttons to `PassageSummary`, `ChapterSummary`, and `ManuscriptSummary` components. Fixed `BookSummaryPanel` to pass `force: true` from its existing Regenerate button.
+3. **Cross-manuscript summary route** — `POST /api/summaries/cross-manuscript` (Sonnet, `tool_choice` forced). Aggregates all passages for a book+chapter across manuscripts, fetches `variant_readings`, builds per-manuscript context blocks, calls `submit_cross_manuscript_summary` tool. Cached in `ai_summaries` with `level='cross_manuscript'`. Requires 2+ manuscripts (returns 422 otherwise). Supports `force`.
+4. **`CrossManuscriptSummary` component** — Purple-themed collapsible, mirrors `ChapterSummary` UX. Surfaced in chapter page (`/read/[book]/[chapter]`) below `ChapterSummary` when `results.length >= 2`.
+5. **`VariantDetectionTrigger` component** — Compact inline component: calls `POST /api/agent/detect-variants` with `passage_ids`, shows detected variants (scrollable list with significance badges), "Save all" calls `PUT /api/agent/detect-variants`. Phases: idle → detecting → review → saving → done.
+6. **Contextual variant detection** — `VariantDetectionTrigger` added to `ChapterAdminBar` (visible to admin/editor/contributor). Shown when chapter has 2+ passages.
+7. **Test fix** — `preprocessors.test.ts` had inlined `parseOsisBook` with a stale regex (`[^."]+` vs correct `[^.]+`). Fixed to match the canonical implementation in `preprocess-wlc.mjs`. All 143 tests now pass.
+
+**Rationale:**
+The user's principle: any action taken in the UI should be re-runnable. Summaries were one-shot — once cached, there was no way to refresh them if manuscript data changed or if the output was poor. Cross-manuscript summary completes the summary hierarchy (passage → chapter → cross-manuscript → book → grand). Contextual variant detection removes the friction of navigating to admin just to run a standard research operation.
+
+**Consequences:**
+- All summary routes now accept `force: true` — callers should not pass this by default (cost implications)
+- Cross-manuscript summary requires 2+ manuscripts for a chapter; the UI component is conditionally rendered
+- `VariantDetectionTrigger` is admin-gated (only rendered in `ChapterAdminBar` which receives empty arrays for non-admins)
+- **Migration 031 required** — `ai_summaries.level` has a `CHECK (level IN ('chapter', 'book', 'grand'))` constraint. Migration 031 drops and recreates it to add `'cross_manuscript'`. Must be applied before the cross-manuscript route can write to the table.
+
+**Related Documents:**
+ROADMAP.md §5.9
+
+---
+
 ### 2026-03-19 — Phase 5: Contributor System — Vault API Key Pass-Through
 
 **Type:** milestone
