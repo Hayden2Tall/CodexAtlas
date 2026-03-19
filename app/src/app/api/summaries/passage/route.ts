@@ -5,6 +5,41 @@ import { estimateCostUsd } from "@/lib/utils/ai-cost";
 
 export const maxDuration = 30;
 
+const PASSAGE_SUMMARY_TOOL = {
+  name: "submit_passage_summary",
+  description: "Submit the completed passage summary for storage.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      summary: {
+        type: "string",
+        description: "2-3 sentence plain-language summary of what this passage says",
+      },
+      historical_context: {
+        type: "string",
+        description: "1-2 sentences about the historical/literary context",
+      },
+      significance: {
+        type: "string",
+        description: "1 sentence about why this passage matters in biblical studies",
+      },
+      key_themes: {
+        type: "array",
+        items: { type: "string" },
+        description: "2-4 key themes in this passage",
+      },
+    },
+    required: ["summary", "historical_context", "significance", "key_themes"],
+  },
+};
+
+interface PassageSummaryInput {
+  summary: string;
+  historical_context: string;
+  significance: string;
+  key_themes: string[];
+}
+
 /**
  * POST /api/summaries/passage
  *
@@ -72,20 +107,14 @@ export async function POST(request: NextRequest) {
 
     const ms = passage.manuscripts as unknown as { title: string; original_language: string };
 
-    const prompt = `You are a biblical studies scholar. Provide a concise, informative summary of this passage for general readers.
+    const userPrompt = `You are a biblical studies scholar. Provide a concise, informative summary of this passage for general readers.
 
 Passage Reference: ${passage.reference}
 Manuscript: ${ms.title} (${ms.original_language})
 Original Text (excerpt): ${(passage.original_text ?? "").slice(0, 2000)}
 ${translatedText ? `English Translation: ${translatedText.slice(0, 2000)}` : ""}
 
-Respond with ONLY a JSON object (no markdown, no commentary):
-{
-  "summary": "2-3 sentence plain-language summary of what this passage says",
-  "historical_context": "1-2 sentences about the historical/literary context",
-  "significance": "1 sentence about why this passage matters in biblical studies",
-  "key_themes": ["theme1", "theme2", "theme3"]
-}`;
+Call submit_passage_summary with your analysis.`;
 
     const aiModel = "claude-haiku-4-5-20251001";
 
@@ -99,7 +128,9 @@ Respond with ONLY a JSON object (no markdown, no commentary):
       body: JSON.stringify({
         model: aiModel,
         max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: userPrompt }],
+        tools: [PASSAGE_SUMMARY_TOOL],
+        tool_choice: { type: "tool", name: "submit_passage_summary" },
       }),
     });
 
@@ -109,19 +140,19 @@ Respond with ONLY a JSON object (no markdown, no commentary):
     }
 
     const aiResult = await anthropicRes.json();
-    const rawContent = aiResult.content?.[0]?.text ?? "";
     const tokensIn = aiResult.usage?.input_tokens ?? 0;
     const tokensOut = aiResult.usage?.output_tokens ?? 0;
     const cost = estimateCostUsd(aiModel, tokensIn, tokensOut);
 
-    let parsed;
-    try {
-      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch?.[0] ?? rawContent);
-    } catch {
-      console.error("[summaries/passage] Parse failed:", rawContent.slice(0, 300));
+    const toolBlock = (aiResult.content as { type: string; input?: unknown }[] | undefined)
+      ?.find((b) => b.type === "tool_use");
+
+    if (!toolBlock?.input) {
+      console.error("[summaries/passage] No tool_use block:", JSON.stringify(aiResult.content).slice(0, 300));
       return NextResponse.json({ error: "Could not parse summary" }, { status: 502 });
     }
+
+    const parsed = toolBlock.input as PassageSummaryInput;
 
     const aiSummary = {
       summary: parsed.summary ?? "",

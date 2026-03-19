@@ -20,7 +20,7 @@ import type {
   TranslationVersion,
 } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const SCHOLAR_AND_ABOVE: UserRole[] = ["scholar", "editor", "admin"];
 const AI_MODEL = "claude-sonnet-4-6";
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     // tool_choice forces the model to call submit_translation — parse
     // failures are structurally impossible with this approach.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50_000);
+    const timeout = setTimeout(() => controller.abort(), 270_000);
 
     let anthropicRes: Response;
     try {
@@ -262,40 +262,16 @@ export async function POST(request: NextRequest) {
 
     // ── Persist to Supabase ──────────────────────────────────────────
 
-    // 1. Evidence record
-    const { data: evidenceRecord, error: evErr } = await admin
-      .from("evidence_records")
-      .insert({
-        entity_type: "translation_version",
-        entity_id: passage_id,
-        source_manuscript_ids: [manuscript.id],
-        translation_method: "ai_initial",
-        ai_model: AI_MODEL,
-        confidence_score: confidenceScore,
-        revision_reason: null,
-        metadata: {
-          translation_notes: parsed.translation_notes ?? "",
-          key_decisions: Array.isArray(parsed.key_decisions)
-            ? parsed.key_decisions
-            : [],
-          target_language,
-          original_language: manuscript.original_language,
-          source_id: sourceId,
-          had_parallel_text: parallelText !== null,
-        },
-      } as Record<string, unknown>)
-      .select()
-      .single<EvidenceRecord>();
+    const evidenceMeta = {
+      translation_notes: parsed.translation_notes ?? "",
+      key_decisions: Array.isArray(parsed.key_decisions) ? parsed.key_decisions : [],
+      target_language,
+      original_language: manuscript.original_language,
+      source_id: sourceId,
+      had_parallel_text: parallelText !== null,
+    };
 
-    if (evErr || !evidenceRecord) {
-      console.error("Evidence record creation failed:", evErr);
-      return NextResponse.json(
-        { error: "Failed to create evidence record" },
-        { status: 500 }
-      );
-    }
-
-    // 2. Find or create translation row
+    // 1. Find or create translation row
     let { data: translation } = await admin
       .from("translations")
       .select("*")
@@ -324,7 +300,7 @@ export async function POST(request: NextRequest) {
       translation = created;
     }
 
-    // 3. Determine next version number
+    // 2. Determine next version number
     const { count } = await admin
       .from("translation_versions")
       .select("*", { count: "exact", head: true })
@@ -332,46 +308,74 @@ export async function POST(request: NextRequest) {
 
     const versionNumber = (count ?? 0) + 1;
 
-    // 4. Create translation version
-    const { data: version, error: vErr } = await admin
-      .from("translation_versions")
-      .insert({
-        translation_id: translation.id,
-        version_number: versionNumber,
-        translated_text: parsed.translated_text,
-        translation_method: "ai_initial",
-        ai_model: AI_MODEL,
-        confidence_score: confidenceScore,
-        source_manuscript_ids: [manuscript.id],
-        status: "published",
-        evidence_record_id: evidenceRecord.id,
-        created_by: user.id,
-      } as Record<string, unknown>)
-      .select()
-      .single<TranslationVersion>();
+    // 3. Atomic: create evidence record + translation version + fix entity_id in one transaction
+    const { data: rpcRows, error: rpcErr } = await admin.rpc(
+      "create_translation_version_with_evidence",
+      {
+        p_passage_id: passage_id,
+        p_source_manuscript_ids: [manuscript.id],
+        p_ai_model: AI_MODEL,
+        p_confidence_score: confidenceScore,
+        p_metadata: evidenceMeta,
+        p_translation_id: translation.id,
+        p_version_number: versionNumber,
+        p_translated_text: parsed.translated_text,
+        p_translation_method: "ai_initial",
+        p_created_by: user.id,
+      }
+    );
 
-    if (vErr || !version) {
-      console.error("Version creation failed:", vErr);
+    if (rpcErr || !rpcRows?.length) {
+      console.error("RPC create_translation_version_with_evidence failed:", rpcErr);
       return NextResponse.json(
-        { error: "Failed to create translation version" },
+        { error: "Failed to save translation" },
         { status: 500 }
       );
     }
 
-    // 5. Point evidence record at actual version
-    await admin
-      .from("evidence_records")
-      .update({ entity_id: version.id } as Record<string, unknown>)
-      .eq("id", evidenceRecord.id);
+    const { evidence_record_id, version_id } = rpcRows[0] as {
+      evidence_record_id: string;
+      version_id: string;
+    };
 
-    // 6. Set as current version
+    // 4. Set as current version
     await admin
       .from("translations")
-      .update({ current_version_id: version.id } as Record<string, unknown>)
+      .update({ current_version_id: version_id } as Record<string, unknown>)
       .eq("id", translation.id);
 
+    // Build response objects from local data (avoids extra DB round trip)
+    const now = new Date().toISOString();
+    const version: TranslationVersion = {
+      id: version_id,
+      translation_id: translation.id,
+      version_number: versionNumber,
+      translated_text: parsed.translated_text,
+      translation_method: "ai_initial",
+      ai_model: AI_MODEL,
+      confidence_score: confidenceScore,
+      source_manuscript_ids: [manuscript.id],
+      status: "published",
+      evidence_record_id,
+      created_by: user.id,
+      created_at: now,
+    } as unknown as TranslationVersion;
+
+    const evidenceRecord: EvidenceRecord = {
+      id: evidence_record_id,
+      entity_type: "translation_version",
+      entity_id: version_id,
+      source_manuscript_ids: [manuscript.id],
+      translation_method: "ai_initial",
+      ai_model: AI_MODEL,
+      confidence_score: confidenceScore,
+      revision_reason: null,
+      metadata: evidenceMeta,
+      created_at: now,
+    } as unknown as EvidenceRecord;
+
     return NextResponse.json({
-      translation: { ...translation, current_version_id: version.id },
+      translation: { ...translation, current_version_id: version_id },
       version,
       evidence_record: evidenceRecord,
       usage: {
