@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
+import { computeWordDiff, type DiffSegment } from "@/lib/utils/diff";
 
 interface ManuscriptData {
   passageId: string;
@@ -15,6 +16,8 @@ interface ManuscriptData {
   translatedText: string | null;
   translationMethod: string | null;
   confidenceScore: number | null;
+  translationNotes: string | null;
+  keyDecisions: string[];
 }
 
 interface CompareSelectorProps {
@@ -23,7 +26,78 @@ interface CompareSelectorProps {
   chapter: number;
 }
 
-type ViewMode = "translation" | "original";
+type ViewMode = "translation" | "diff" | "original";
+
+function DiffText({ segments }: { segments: DiffSegment[] }) {
+  return (
+    <p className="font-serif text-base leading-relaxed text-gray-800">
+      {segments.map((seg, i) => {
+        if (seg.type === "same") return <span key={i}>{seg.text} </span>;
+        if (seg.type === "removed")
+          return (
+            <span key={i} className="rounded bg-red-100 px-0.5 text-red-700 line-through">
+              {seg.text}{" "}
+            </span>
+          );
+        if (seg.type === "added")
+          return (
+            <span key={i} className="rounded bg-green-100 px-0.5 text-green-700">
+              {seg.text}{" "}
+            </span>
+          );
+        return <span key={i}>{seg.text} </span>;
+      })}
+    </p>
+  );
+}
+
+function NotesSection({
+  notes,
+  decisions,
+}: {
+  notes: string | null;
+  decisions: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  if (!notes && decisions.length === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+      >
+        <svg
+          className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        Translation notes
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {notes && (
+            <p className="text-xs leading-relaxed text-gray-600">{notes}</p>
+          )}
+          {decisions.length > 0 && (
+            <ul className="space-y-1">
+              {decisions.map((d, i) => (
+                <li key={i} className="flex gap-1.5 text-xs text-gray-500">
+                  <span className="mt-0.5 shrink-0 text-primary-400">·</span>
+                  {d}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CompareSelector({ manuscripts }: CompareSelectorProps) {
   const [leftIdx, setLeftIdx] = useState(0);
@@ -34,7 +108,21 @@ export function CompareSelector({ manuscripts }: CompareSelectorProps) {
   const left = manuscripts[leftIdx];
   const right = manuscripts[rightIdx];
 
-  function Panel({ data, side }: { data: ManuscriptData; side: "left" | "right" }) {
+  // Compute word diff between the two translations (only when both have text)
+  const diffResult =
+    viewMode === "diff" && left.translatedText && right.translatedText
+      ? computeWordDiff(left.translatedText, right.translatedText)
+      : null;
+
+  function Panel({
+    data,
+    side,
+    diffSegments,
+  }: {
+    data: ManuscriptData;
+    side: "left" | "right";
+    diffSegments?: DiffSegment[];
+  }) {
     const otherIdx = side === "left" ? rightIdx : leftIdx;
     const setIdx = side === "left" ? setLeftIdx : setRightIdx;
 
@@ -56,33 +144,39 @@ export function CompareSelector({ manuscripts }: CompareSelectorProps) {
         </div>
 
         <div className="flex-1 p-5">
-          {viewMode === "translation" ? (
-            data.translatedText ? (
-              <div>
-                <p className="font-serif text-base leading-relaxed text-gray-800">
-                  {data.translatedText}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {data.translationMethod && (
-                    <MethodBadge method={data.translationMethod} />
-                  )}
-                  {data.confidenceScore != null && (
-                    <ConfidenceBadge score={data.confidenceScore} />
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm italic text-gray-400">
-                No published translation available
-              </p>
-            )
-          ) : (
+          {viewMode === "original" ? (
             <pre
               className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-700"
               dir={["heb", "ara", "syc"].includes(data.language) ? "rtl" : "ltr"}
             >
               {data.originalText}
             </pre>
+          ) : data.translatedText ? (
+            <div>
+              {viewMode === "diff" && diffSegments ? (
+                <DiffText segments={diffSegments} />
+              ) : (
+                <p className="font-serif text-base leading-relaxed text-gray-800">
+                  {data.translatedText}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {data.translationMethod && (
+                  <MethodBadge method={data.translationMethod} />
+                )}
+                {data.confidenceScore != null && (
+                  <ConfidenceBadge score={data.confidenceScore} />
+                )}
+              </div>
+              <NotesSection
+                notes={data.translationNotes}
+                decisions={data.keyDecisions}
+              />
+            </div>
+          ) : (
+            <p className="text-sm italic text-gray-400">
+              No published translation available
+            </p>
           )}
         </div>
 
@@ -98,6 +192,8 @@ export function CompareSelector({ manuscripts }: CompareSelectorProps) {
     );
   }
 
+  const bothHaveTranslations = !!(left.translatedText && right.translatedText);
+
   return (
     <div>
       {/* Controls */}
@@ -112,6 +208,18 @@ export function CompareSelector({ manuscripts }: CompareSelectorProps) {
             }`}
           >
             Translation
+          </button>
+          <button
+            onClick={() => setViewMode("diff")}
+            disabled={!bothHaveTranslations}
+            title={bothHaveTranslations ? undefined : "Both manuscripts need translations to compare"}
+            className={`px-4 py-1.5 font-medium transition-colors disabled:opacity-40 ${
+              viewMode === "diff"
+                ? "bg-primary-700 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Diff
           </button>
           <button
             onClick={() => setViewMode("original")}
@@ -148,12 +256,28 @@ export function CompareSelector({ manuscripts }: CompareSelectorProps) {
             Panel 2
           </button>
         </div>
+
+        {viewMode === "diff" && bothHaveTranslations && (
+          <p className="text-xs text-gray-500">
+            <span className="rounded bg-green-100 px-1 text-green-700">green</span> = unique to this panel
+            {" · "}
+            <span className="rounded bg-red-100 px-1 text-red-700 line-through">red</span> = not in this panel
+          </p>
+        )}
       </div>
 
       {/* Desktop: side by side */}
       <div className="hidden gap-4 md:grid md:grid-cols-2">
-        <Panel data={left} side="left" />
-        <Panel data={right} side="right" />
+        <Panel
+          data={left}
+          side="left"
+          diffSegments={diffResult?.segmentsA}
+        />
+        <Panel
+          data={right}
+          side="right"
+          diffSegments={diffResult?.segmentsB}
+        />
       </div>
 
       {/* Mobile: tabs */}
@@ -161,6 +285,11 @@ export function CompareSelector({ manuscripts }: CompareSelectorProps) {
         <Panel
           data={mobilePanel === "left" ? left : right}
           side={mobilePanel}
+          diffSegments={
+            mobilePanel === "left"
+              ? diffResult?.segmentsA
+              : diffResult?.segmentsB
+          }
         />
       </div>
     </div>

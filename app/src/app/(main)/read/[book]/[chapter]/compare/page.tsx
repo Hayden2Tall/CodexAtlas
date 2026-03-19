@@ -38,6 +38,15 @@ interface VersionRow {
   translation_method: string;
   confidence_score: number | null;
   status: string;
+  evidence_record_id: string | null;
+}
+
+interface EvidenceRow {
+  id: string;
+  metadata: {
+    translation_notes?: string;
+    key_decisions?: string[];
+  } | null;
 }
 
 async function loadCompareData(bookDecoded: string, chapterNum: number) {
@@ -71,11 +80,29 @@ async function loadCompareData(bookDecoded: string, chapterNum: number) {
   const { data: versions } = versionIds.length
     ? await admin
         .from("translation_versions")
-        .select("id, translation_id, version_number, translated_text, translation_method, confidence_score, status")
+        .select("id, translation_id, version_number, translated_text, translation_method, confidence_score, status, evidence_record_id")
         .in("id", versionIds)
         .eq("status", "published")
         .returns<VersionRow[]>()
     : { data: [] as VersionRow[] };
+
+  // Fetch evidence records for translation notes and key decisions
+  const evidenceIds = (versions ?? [])
+    .map((v) => v.evidence_record_id)
+    .filter(Boolean) as string[];
+
+  const { data: evidenceRows } = evidenceIds.length
+    ? await admin
+        .from("evidence_records")
+        .select("id, metadata")
+        .in("id", evidenceIds)
+        .returns<EvidenceRow[]>()
+    : { data: [] as EvidenceRow[] };
+
+  const evidenceById = new Map<string, EvidenceRow>();
+  for (const e of evidenceRows ?? []) {
+    evidenceById.set(e.id, e);
+  }
 
   const versionByTranslation = new Map<string, VersionRow>();
   for (const v of versions ?? []) {
@@ -111,6 +138,12 @@ async function loadCompareData(bookDecoded: string, chapterNum: number) {
         translatedText: tv?.version.translated_text ?? null,
         translationMethod: tv?.version.translation_method ?? null,
         confidenceScore: tv?.version.confidence_score ?? null,
+        translationNotes: tv?.version.evidence_record_id
+          ? (evidenceById.get(tv.version.evidence_record_id)?.metadata?.translation_notes ?? null)
+          : null,
+        keyDecisions: tv?.version.evidence_record_id
+          ? (evidenceById.get(tv.version.evidence_record_id)?.metadata?.key_decisions ?? [])
+          : [],
       };
     });
 }
@@ -173,6 +206,8 @@ export default async function ComparePage({ params }: PageProps) {
     translatedText: m.translatedText,
     translationMethod: m.translationMethod,
     confidenceScore: m.confidenceScore,
+    translationNotes: m.translationNotes,
+    keyDecisions: m.keyDecisions,
   }));
 
   return (
