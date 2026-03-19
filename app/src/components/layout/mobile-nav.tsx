@@ -15,6 +15,7 @@ interface MobileNavProps {
 const navLinks = [
   { href: "/read", label: "Read" },
   { href: "/manuscripts", label: "Manuscripts" },
+  { href: "/insights", label: "Insights" },
   { href: "/visualize", label: "Visualize" },
   { href: "/search", label: "Search" },
   { href: "/admin", label: "Admin" },

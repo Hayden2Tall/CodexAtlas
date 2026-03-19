@@ -11,8 +11,11 @@ interface ModelPricing {
 }
 
 const MODEL_PRICING: Record<string, ModelPricing> = {
+  "claude-sonnet-4-6": { inputPerMillion: 3.0, outputPerMillion: 15.0 },
+  "claude-opus-4-6": { inputPerMillion: 15.0, outputPerMillion: 75.0 },
+  "claude-haiku-4-5-20251001": { inputPerMillion: 0.8, outputPerMillion: 4.0 },
+  // Legacy IDs kept for historical cost records
   "claude-sonnet-4-20250514": { inputPerMillion: 3.3, outputPerMillion: 16.5 },
-  "claude-haiku-4-5-20251001": { inputPerMillion: 1.0, outputPerMillion: 5.0 },
   "claude-3-5-sonnet-20241022": { inputPerMillion: 3.0, outputPerMillion: 15.0 },
 };
 

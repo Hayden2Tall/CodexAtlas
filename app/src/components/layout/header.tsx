@@ -11,12 +11,13 @@ import type { User } from "@supabase/supabase-js";
 const navLinks = [
   { href: "/read", label: "Read" },
   { href: "/manuscripts", label: "Manuscripts" },
+  { href: "/insights", label: "Insights" },
   { href: "/visualize", label: "Visualize" },
   { href: "/search", label: "Search" },
   { href: "/admin", label: "Admin" },
 ] as const;
 
-const ROOT_PATHS = ["/", "/read", "/manuscripts", "/visualize", "/search", "/admin"];
+const ROOT_PATHS = ["/", "/read", "/manuscripts", "/insights", "/visualize", "/search", "/admin"];
 
 export function Header() {
   const [user, setUser] = useState<User | null>(null);

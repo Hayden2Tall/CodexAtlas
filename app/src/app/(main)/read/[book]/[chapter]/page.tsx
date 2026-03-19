@@ -12,6 +12,7 @@ import { PassageSummary } from "@/components/scripture/passage-summary";
 import { ChapterNav } from "./chapter-nav";
 import { ShareButton } from "@/components/ui/share-button";
 import { ChapterAdminBar } from "./chapter-admin-bar";
+import { ChapterSummary } from "@/components/scripture/chapter-summary";
 
 interface PageProps {
   params: Promise<{ book: string; chapter: string }>;
@@ -161,6 +162,27 @@ async function loadChapterData(bookDecoded: string, chapterNum: number) {
   return results;
 }
 
+interface ChapterSummaryContent {
+  overview: string;
+  theological_themes: string[];
+  manuscript_notes: string;
+  scholarly_significance: string;
+}
+
+async function loadCachedChapterSummary(
+  bookDecoded: string,
+  chapterNum: number
+): Promise<ChapterSummaryContent | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("ai_summaries")
+    .select("content")
+    .eq("level", "chapter")
+    .eq("scope_key", `${bookDecoded} ${chapterNum}`)
+    .single();
+  return (data?.content as ChapterSummaryContent | null) ?? null;
+}
+
 async function loadChapterVariants(bookDecoded: string, chapterNum: number) {
   const admin = createAdminClient();
   const refPattern = `${bookDecoded} ${chapterNum}%`;
@@ -239,10 +261,11 @@ export default async function ChapterPage({ params }: PageProps) {
 
   if (!bookDecoded || isNaN(chapterNum)) notFound();
 
-  const [results, availableChapters, chapterVariants] = await Promise.all([
+  const [results, availableChapters, chapterVariants, cachedChapterSummary] = await Promise.all([
     loadChapterData(bookDecoded, chapterNum),
     loadAvailableChapters(bookDecoded),
     loadChapterVariants(bookDecoded, chapterNum),
+    loadCachedChapterSummary(bookDecoded, chapterNum),
   ]);
 
   const variantsByRef = new Map<string, typeof chapterVariants>();
@@ -329,6 +352,14 @@ export default async function ChapterPage({ params }: PageProps) {
             : []
         }
         totalManuscripts={results.length}
+      />
+
+      {/* Chapter overview */}
+      <ChapterSummary
+        book={bookDecoded}
+        chapter={chapterNum}
+        cachedSummary={cachedChapterSummary}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* Manuscript passages */}
