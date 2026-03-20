@@ -76,8 +76,8 @@ export default async function InsightsPage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-gray-900">Corpus Insights</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-gray-100">Corpus Insights</h1>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           AI-synthesized analysis across all manuscripts, books, and chapters in CodexAtlas.
         </p>
       </div>
@@ -85,7 +85,7 @@ export default async function InsightsPage() {
       {/* Grand Assessment */}
       <section className="mb-12">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-serif text-xl font-semibold text-gray-800">
+          <h2 className="font-serif text-xl font-semibold text-gray-800 dark:text-gray-200">
             Grand Unified Assessment
           </h2>
           {isAdmin && (
@@ -98,9 +98,9 @@ export default async function InsightsPage() {
         </div>
 
         {grandAssessment ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-6">
+          <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-900/10 p-6">
             <div className="mb-3 flex items-center gap-2">
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 ring-1 ring-inset ring-amber-300">
+              <span className="rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-300 dark:ring-amber-700">
                 {grandRow?.model}
               </span>
               {grandRow?.generated_at && (
@@ -111,37 +111,37 @@ export default async function InsightsPage() {
               )}
             </div>
 
-            <p className="mb-4 text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+            <p className="mb-4 text-sm leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-line">
               {grandAssessment.narrative}
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {grandAssessment.confidence_trends && (
                 <div>
-                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Confidence Trends
                   </h3>
-                  <p className="text-xs leading-relaxed text-gray-600">
+                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                     {grandAssessment.confidence_trends}
                   </p>
                 </div>
               )}
               {grandAssessment.variant_patterns && (
                 <div>
-                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Variant Patterns
                   </h3>
-                  <p className="text-xs leading-relaxed text-gray-600">
+                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                     {grandAssessment.variant_patterns}
                   </p>
                 </div>
               )}
               {grandAssessment.cross_manuscript_insights && (
                 <div className="sm:col-span-2">
-                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     Cross-Manuscript Insights
                   </h3>
-                  <p className="text-xs leading-relaxed text-gray-600">
+                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                     {grandAssessment.cross_manuscript_insights}
                   </p>
                 </div>
@@ -153,12 +153,12 @@ export default async function InsightsPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {grandAssessment.areas_of_certainty?.length > 0 && (
                   <div>
-                    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-green-700">
+                    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
                       Areas of Certainty
                     </h3>
                     <ul className="space-y-1">
                       {grandAssessment.areas_of_certainty.map((item, i) => (
-                        <li key={i} className="flex gap-1.5 text-xs text-gray-600">
+                        <li key={i} className="flex gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                           <span className="mt-0.5 shrink-0 text-green-500">·</span>
                           {item}
                         </li>
@@ -168,12 +168,12 @@ export default async function InsightsPage() {
                 )}
                 {grandAssessment.areas_of_uncertainty?.length > 0 && (
                   <div>
-                    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                       Areas of Uncertainty
                     </h3>
                     <ul className="space-y-1">
                       {grandAssessment.areas_of_uncertainty.map((item, i) => (
-                        <li key={i} className="flex gap-1.5 text-xs text-gray-600">
+                        <li key={i} className="flex gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                           <span className="mt-0.5 shrink-0 text-amber-500">·</span>
                           {item}
                         </li>
@@ -185,8 +185,8 @@ export default async function InsightsPage() {
             )}
           </div>
         ) : (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-8 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               No grand assessment yet.
               {isAdmin
                 ? " Use the button above to generate one."
@@ -198,14 +198,14 @@ export default async function InsightsPage() {
 
       {/* Book Summaries */}
       <section>
-        <h2 className="mb-4 font-serif text-xl font-semibold text-gray-800">
+        <h2 className="mb-4 font-serif text-xl font-semibold text-gray-800 dark:text-gray-200">
           Book Summaries
           <span className="ml-2 text-sm font-normal text-gray-400">({books.length})</span>
         </h2>
 
         {books.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-8 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               No book summaries yet. Generate them from individual book pages.
             </p>
             <Link
@@ -222,12 +222,12 @@ export default async function InsightsPage() {
               return (
                 <div
                   key={row.scope_key}
-                  className="rounded-xl border border-gray-200 bg-white p-5"
+                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5"
                 >
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <Link
                       href={`/read/${encodeURIComponent(row.scope_key)}/1`}
-                      className="font-serif text-base font-semibold text-gray-900 hover:text-primary-700"
+                      className="font-serif text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-700 dark:hover:text-primary-400"
                     >
                       {row.scope_key}
                     </Link>
@@ -236,14 +236,14 @@ export default async function InsightsPage() {
                     </span>
                   </div>
 
-                  <p className="mb-3 text-sm leading-relaxed text-gray-600">{content.overview}</p>
+                  <p className="mb-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{content.overview}</p>
 
                   {content.theological_themes?.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {content.theological_themes.slice(0, 5).map((theme) => (
                         <span
                           key={theme}
-                          className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600"
+                          className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400"
                         >
                           {theme}
                         </span>

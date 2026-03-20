@@ -58,14 +58,14 @@ export function CrossManuscriptSummary({
   if (!summary && !isAuthenticated) return null;
 
   return (
-    <div className="mb-8 rounded-xl border border-purple-100 bg-purple-50/40 px-5 py-4">
+    <div className="mb-8 rounded-xl border border-purple-100 dark:border-purple-800/50 bg-purple-50/40 dark:bg-purple-900/10 px-5 py-4">
       {summary ? (
         <details
           className="group"
           open={expanded}
           onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
         >
-          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-purple-800 hover:text-purple-900">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-purple-800 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-200">
             <svg
               className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
               fill="none"
@@ -76,14 +76,14 @@ export function CrossManuscriptSummary({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
             Cross-manuscript comparison
-            <span className="ml-1 rounded-full bg-purple-100 px-1.5 py-0 text-[9px] font-semibold uppercase text-purple-600 ring-1 ring-inset ring-purple-300">
+            <span className="ml-1 rounded-full bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0 text-[9px] font-semibold uppercase text-purple-600 dark:text-purple-400 ring-1 ring-inset ring-purple-300 dark:ring-purple-700">
               {summary.manuscripts_compared.length} manuscripts
             </span>
             {isAuthenticated && (
               <button
                 onClick={(e) => { e.preventDefault(); handleGenerate(true); }}
                 disabled={generating}
-                className="ml-auto text-xs text-purple-500 hover:text-purple-800 disabled:opacity-50"
+                className="ml-auto text-xs text-purple-500 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 disabled:opacity-50"
                 title="Regenerate cross-manuscript comparison"
               >
                 {generating ? "Regenerating…" : "Regenerate"}
@@ -92,25 +92,25 @@ export function CrossManuscriptSummary({
           </summary>
 
           <div className="mt-3 space-y-3">
-            <p className="text-sm leading-relaxed text-gray-700">{summary.comparative_overview}</p>
+            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{summary.comparative_overview}</p>
 
             {summary.areas_of_agreement && (
-              <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Agreement:</span>{" "}
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Agreement:</span>{" "}
                 {summary.areas_of_agreement}
               </p>
             )}
 
             {summary.notable_divergences && (
-              <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Divergences:</span>{" "}
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Divergences:</span>{" "}
                 {summary.notable_divergences}
               </p>
             )}
 
             {summary.textual_implications && (
-              <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Implications:</span>{" "}
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Implications:</span>{" "}
                 {summary.textual_implications}
               </p>
             )}
@@ -120,7 +120,7 @@ export function CrossManuscriptSummary({
                 {summary.manuscripts_compared.map((ms) => (
                   <span
                     key={ms}
-                    className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200"
+                    className="rounded-full bg-white dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700"
                   >
                     {ms}
                   </span>
@@ -134,7 +134,7 @@ export function CrossManuscriptSummary({
           <button
             onClick={() => handleGenerate()}
             disabled={generating}
-            className="flex items-center gap-1.5 text-sm font-medium text-purple-700 hover:text-purple-900 disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm font-medium text-purple-700 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-200 disabled:opacity-50"
           >
             {generating ? (
               <>

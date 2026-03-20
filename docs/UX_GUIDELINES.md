@@ -673,6 +673,92 @@ Dark mode is supported from launch. It is not an afterthought.
 - Confidence badge colors are lightened (see dark mode column above) to maintain legibility
 - Manuscript images are displayed at original colors (no filter); the surrounding UI adapts
 
+### 7.5 Dark Mode Implementation Standards
+
+**Every new UI component MUST ship with correct dark mode.** Dark mode is not a follow-up task.
+
+#### Technical setup (Tailwind v4)
+
+```css
+/* globals.css — after @import "tailwindcss" */
+@custom-variant dark (&:is(.dark *));
+```
+
+The `.dark` class is toggled on `<html>` by the ThemeToggle component. An anti-FOUC inline `<script>` in `<head>` applies it synchronously before React hydrates.
+
+#### Mapping rules
+
+Every light-mode utility must have a `dark:` counterpart on the same element:
+
+| Light | Dark |
+|---|---|
+| `bg-white` | `dark:bg-gray-900` |
+| `bg-gray-50` | `dark:bg-gray-800/50` |
+| `bg-gray-100` | `dark:bg-gray-800` |
+| `border-gray-200` | `dark:border-gray-700` |
+| `border-gray-100` | `dark:border-gray-800` |
+| `text-gray-900` | `dark:text-gray-100` |
+| `text-gray-800` | `dark:text-gray-200` |
+| `text-gray-700` | `dark:text-gray-300` |
+| `text-gray-600` | `dark:text-gray-400` |
+| `text-gray-500` | `dark:text-gray-400` |
+| `text-gray-400` | `dark:text-gray-500` |
+| `text-primary-700` | `dark:text-primary-400` |
+| `bg-primary-50` | `dark:bg-primary-900/50` |
+| `text-primary-700` on badge | `dark:text-primary-300` |
+| `bg-amber-50` / `border-amber-200` | `dark:bg-amber-900/10` / `dark:border-amber-800/50` |
+| `bg-blue-50` / `border-blue-100` | `dark:bg-blue-900/10` / `dark:border-blue-800/50` |
+| `placeholder-gray-400` | `dark:placeholder-gray-500` |
+
+#### Form elements
+
+Form inputs (`input`, `select`, `textarea`) get global dark defaults in `globals.css`:
+```css
+input, select, textarea {
+  @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+}
+```
+Individual inputs also need `dark:border-gray-600` if they have explicit border classes.
+
+#### Tab navigation pattern
+
+```tsx
+className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
+  active
+    ? "border-primary-700 text-primary-700 dark:border-primary-400 dark:text-primary-400"
+    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-300"
+}`}
+```
+
+#### Card / panel pattern
+
+```tsx
+// Standard white card
+className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5"
+
+// Muted / gray panel
+className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4"
+
+// Blue info panel (AI summaries)
+className="rounded-xl border border-blue-100 dark:border-blue-800/50 bg-blue-50/40 dark:bg-blue-900/10 p-5"
+
+// Amber warning panel
+className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/10 px-4 py-3"
+```
+
+#### PR checklist — dark mode
+
+Before merging any PR that adds or changes UI:
+
+- [ ] Opened the page in dark mode (toggle via user dropdown)
+- [ ] No white/light backgrounds visible in dark mode
+- [ ] No dark text on dark backgrounds, no light text on light backgrounds
+- [ ] All inputs/selects/textareas readable in dark mode
+- [ ] Badges, pills, and status indicators have readable dark variants
+- [ ] Progress bars use `dark:bg-gray-700` for the track
+- [ ] Borders are `dark:border-gray-700` or `dark:border-gray-800` (never invisible)
+- [ ] Confirm/dialog cards are `dark:bg-gray-800` not `dark:bg-white`
+
 ---
 
 ## 8. Typography
@@ -1114,7 +1200,7 @@ Use this checklist when building new features to ensure compliance with these gu
 - [ ] Method badge with correct icon and label
 - [ ] All touch targets ≥ 44×44px
 - [ ] Layout functional at 320px viewport width
-- [ ] Dark mode tested and correct
+- [ ] Dark mode tested: no white panels, no illegible text, inputs readable (see §7.5)
 - [ ] Color is never the only indicator for any information
 - [ ] Keyboard navigation functional (Tab, Escape, Arrow keys)
 - [ ] Screen reader announces all interactive elements correctly

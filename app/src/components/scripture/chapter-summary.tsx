@@ -53,14 +53,14 @@ export function ChapterSummary({
   if (!summary && !isAuthenticated) return null;
 
   return (
-    <div className="mb-8 rounded-xl border border-blue-100 bg-blue-50/40 px-5 py-4">
+    <div className="mb-8 rounded-xl border border-blue-100 dark:border-blue-800/50 bg-blue-50/40 dark:bg-blue-900/10 px-5 py-4">
       {summary ? (
         <details
           className="group"
           open={expanded}
           onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
         >
-          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-blue-800 hover:text-blue-900">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-blue-800 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200">
             <svg
               className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
               fill="none"
@@ -71,14 +71,14 @@ export function ChapterSummary({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
             Chapter overview
-            <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 ring-1 ring-inset ring-blue-300">
+            <span className="ml-1 rounded-full bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 dark:text-blue-400 ring-1 ring-inset ring-blue-300 dark:ring-blue-700">
               AI Summary
             </span>
             {isAuthenticated && (
               <button
                 onClick={(e) => { e.preventDefault(); handleGenerate(true); }}
                 disabled={generating}
-                className="ml-auto text-xs text-blue-500 hover:text-blue-800 disabled:opacity-50"
+                className="ml-auto text-xs text-blue-500 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 disabled:opacity-50"
                 title="Regenerate chapter overview"
               >
                 {generating ? "Regenerating…" : "Regenerate"}
@@ -87,18 +87,18 @@ export function ChapterSummary({
           </summary>
 
           <div className="mt-3 space-y-3">
-            <p className="text-sm leading-relaxed text-gray-700">{summary.overview}</p>
+            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{summary.overview}</p>
 
             {summary.manuscript_notes && (
-              <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Manuscript notes:</span>{" "}
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Manuscript notes:</span>{" "}
                 {summary.manuscript_notes}
               </p>
             )}
 
             {summary.scholarly_significance && (
-              <p className="text-xs leading-relaxed text-gray-600">
-                <span className="font-semibold text-gray-700">Significance:</span>{" "}
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Significance:</span>{" "}
                 {summary.scholarly_significance}
               </p>
             )}
@@ -108,7 +108,7 @@ export function ChapterSummary({
                 {summary.theological_themes.map((theme) => (
                   <span
                     key={theme}
-                    className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200"
+                    className="rounded-full bg-white dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700"
                   >
                     {theme}
                   </span>
@@ -122,7 +122,7 @@ export function ChapterSummary({
           <button
             onClick={() => handleGenerate()}
             disabled={generating}
-            className="flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 disabled:opacity-50"
           >
             {generating ? (
               <>

@@ -54,6 +54,7 @@
   /* Prevent iOS auto-zoom on input focus */
   input, select, textarea {
     font-size: 16px;
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
   }
   @media (min-width: 768px) {
     input, select, textarea {

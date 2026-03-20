@@ -57,13 +57,13 @@ export function ManuscriptList({ manuscripts }: ManuscriptListProps) {
             placeholder="Search manuscripts by title…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 py-2.5 pl-10 pr-4 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           />
         </div>
         <select
           value={languageFilter}
           onChange={(e) => setLanguageFilter(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
         >
           <option value="">All Languages</option>
           {presentLanguages.map((code) => (
@@ -76,9 +76,9 @@ export function ManuscriptList({ manuscripts }: ManuscriptListProps) {
 
       {/* Results */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 py-16 text-center">
           <svg
-            className="mb-4 h-12 w-12 text-gray-300"
+            className="mb-4 h-12 w-12 text-gray-300 dark:text-gray-600"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
@@ -90,10 +90,10 @@ export function ManuscriptList({ manuscripts }: ManuscriptListProps) {
               d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
             />
           </svg>
-          <p className="text-lg font-medium text-gray-500">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">
             No manuscripts found
           </p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             {search || languageFilter
               ? "Try adjusting your filters."
               : "Add a manuscript to get started."}
@@ -119,23 +119,23 @@ function ManuscriptCard({ manuscript }: { manuscript: Manuscript }) {
   return (
     <Link
       href={`/manuscripts/${manuscript.id}`}
-      className="group flex flex-col rounded-xl border border-gray-200 bg-white p-5 transition-all hover:border-primary-300 hover:shadow-md"
+      className="group flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 transition-all hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md"
     >
-      <h3 className="font-serif text-lg font-semibold text-primary-900 group-hover:text-primary-700">
+      <h3 className="font-serif text-lg font-semibold text-primary-900 dark:text-primary-300 group-hover:text-primary-700 dark:group-hover:text-primary-200">
         {manuscript.title}
       </h3>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
+        <span className="inline-flex items-center rounded-full bg-primary-50 dark:bg-primary-900/50 px-2.5 py-0.5 text-xs font-medium text-primary-700 dark:text-primary-300">
           {getLanguageName(manuscript.original_language)}
         </span>
-        <span className="text-xs text-gray-500">{dateStr}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{dateStr}</span>
       </div>
 
       {manuscript.archive_location && (
-        <p className="mt-3 flex items-center gap-1.5 text-sm text-gray-600">
+        <p className="mt-3 flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
           <svg
-            className="h-3.5 w-3.5 shrink-0 text-gray-400"
+            className="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={2}
@@ -157,7 +157,7 @@ function ManuscriptCard({ manuscript }: { manuscript: Manuscript }) {
       )}
 
       {manuscript.description && (
-        <p className="mt-2 line-clamp-2 text-sm text-gray-500">
+        <p className="mt-2 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
           {manuscript.description}
         </p>
       )}

@@ -73,8 +73,8 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
 
   if (!hasContent) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 px-8 py-16 text-center">
-        <p className="text-gray-500">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-8 py-16 text-center">
+        <p className="text-gray-500 dark:text-gray-400">
           No passages have been imported yet. Use the{" "}
           <Link href="/admin" className="text-primary-700 underline">
             Admin panel
@@ -88,7 +88,7 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
   return (
     <div className="space-y-6">
       {/* Category tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-gray-800">
         <nav className="-mb-px flex flex-wrap gap-x-6 gap-y-1">
           {visibleTabs.map((tab) => (
             <button
@@ -99,16 +99,16 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
               }}
               className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
                 activeTab === tab
-                  ? "border-primary-700 text-primary-700"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  ? "border-primary-700 text-primary-700 dark:border-primary-400 dark:text-primary-400"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-300"
               }`}
             >
               {TAB_LABELS[tab]}
               <span
                 className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
                   activeTab === tab
-                    ? "bg-primary-100 text-primary-700"
-                    : "bg-gray-100 text-gray-500"
+                    ? "bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 {tab === "all" ? books.length : (countByCategory[tab] ?? 0)}
@@ -126,7 +126,7 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`Search ${TAB_LABELS[activeTab].toLowerCase()}…`}
-            className="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="w-full max-w-sm rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         )}
         {isAuthenticated && unsummarizedVisible.length > 0 && (
@@ -136,7 +136,7 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
 
       {/* Results summary when filtered */}
       {(searchQuery.trim() || activeTab !== "all") && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
           Showing {visible.length} work{visible.length !== 1 ? "s" : ""}
           {searchQuery.trim() ? ` matching "${searchQuery}"` : ""}
           {summarizedBooks.size > 0 && (
@@ -147,7 +147,7 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
 
       {/* Book grid */}
       {visible.length === 0 ? (
-        <div className="py-12 text-center text-gray-500 text-sm">
+        <div className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
           No works found{searchQuery ? ` matching "${searchQuery}"` : ""}.
         </div>
       ) : (
@@ -167,11 +167,11 @@ export function BrowserClient({ books, summarizedBooks, isAuthenticated }: Props
 
 function BookCard({ book, isSummarized }: { book: BookEntry; isSummarized: boolean }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 transition-shadow hover:shadow-md">
       <div className="mb-3 flex items-start justify-between">
         <Link
           href={`/read/${encodeURIComponent(book.displayName)}`}
-          className="font-serif text-base font-semibold text-gray-900 leading-snug hover:text-primary-700"
+          className="font-serif text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug hover:text-primary-700 dark:hover:text-primary-400"
         >
           {book.displayName}
         </Link>
@@ -179,7 +179,7 @@ function BookCard({ book, isSummarized }: { book: BookEntry; isSummarized: boole
           {isSummarized && (
             <span title="Book summary available" className="h-2 w-2 rounded-full bg-blue-400" />
           )}
-          <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
+          <span className="rounded-full bg-primary-50 dark:bg-primary-900/50 px-2 py-0.5 text-xs font-medium text-primary-700 dark:text-primary-300">
             {book.manuscriptCount} ms{book.manuscriptCount !== 1 ? "s" : ""}
           </span>
         </div>
@@ -189,7 +189,7 @@ function BookCard({ book, isSummarized }: { book: BookEntry; isSummarized: boole
           <Link
             key={ch}
             href={`/read/${encodeURIComponent(book.displayName)}/${ch}`}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-primary-700"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-primary-50 dark:hover:bg-primary-900/50 hover:text-primary-700 dark:hover:text-primary-300"
           >
             {ch}
           </Link>
@@ -250,11 +250,11 @@ function BulkBookSummaryTrigger({ books }: { books: string[] }) {
 
   if (phase === "confirming") {
     return (
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
-        <p className="font-medium text-blue-900">
+      <div className="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-3 text-sm">
+        <p className="font-medium text-blue-900 dark:text-blue-300">
           Generate summaries for {books.length} unsummarized book{books.length !== 1 ? "s" : ""}?
         </p>
-        <p className="mt-0.5 text-xs text-blue-700">
+        <p className="mt-0.5 text-xs text-blue-700 dark:text-blue-400">
           Estimated cost: ~${estimatedCost.toFixed(2)} (Sonnet 4.6). Books without chapter summaries will be skipped — generate chapter summaries first from each book page.
         </p>
         <div className="mt-2 flex gap-2">
@@ -266,7 +266,7 @@ function BulkBookSummaryTrigger({ books }: { books: string[] }) {
           </button>
           <button
             onClick={() => setPhase("idle")}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             Cancel
           </button>
@@ -280,10 +280,10 @@ function BulkBookSummaryTrigger({ books }: { books: string[] }) {
     const pct = progress.total > 0 ? Math.round((processed / progress.total) * 100) : 0;
     return (
       <div className="min-w-[240px] space-y-1.5">
-        <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
+        <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           {processed}/{progress.total}
           {progress.skipped > 0 && <span className="ml-1 text-amber-600">· {progress.skipped} skipped</span>}
           {progress.failed > 0 && <span className="ml-1 text-red-500">· {progress.failed} failed</span>}
@@ -306,7 +306,7 @@ function BulkBookSummaryTrigger({ books }: { books: string[] }) {
   return (
     <button
       onClick={() => setPhase("confirming")}
-      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+      className="flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
     >
       <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />

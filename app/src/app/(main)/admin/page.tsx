@@ -16,8 +16,8 @@ export default async function AdminPage() {
   if (!user) {
     return (
       <div className="py-20 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Sign in required</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sign in required</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           You must be signed in to access the admin dashboard.
         </p>
       </div>
@@ -33,8 +33,8 @@ export default async function AdminPage() {
   if (!profile || !["admin", "editor", "contributor"].includes(profile.role)) {
     return (
       <div className="py-20 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Access denied</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Access denied</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           Contributor role or above required. Current role:{" "}
           <span className="font-mono text-sm">{profile?.role ?? "none"}</span>
         </p>

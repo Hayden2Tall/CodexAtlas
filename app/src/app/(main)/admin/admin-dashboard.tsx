@@ -83,8 +83,8 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Agent task management, content pipeline, and cost monitoring.
         </p>
       </div>
@@ -98,32 +98,32 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
       </div>
 
       {/* Cost overview */}
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
-        <h2 className="text-sm font-semibold text-gray-700">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
           Agent Cost Summary
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
-            <p className="text-xs text-gray-500">Total Cost</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Total Cost</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               ${totalCost.toFixed(4)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Tokens In</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Tokens In</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {formatTokens(totalTokensIn)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Tokens Out</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Tokens Out</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {formatTokens(totalTokensOut)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Active Tasks</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Active Tasks</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {activeTasks.length}
             </p>
           </div>
@@ -131,13 +131,13 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
 
         {/* Cost breakdown by type */}
         {Object.keys(costByType).length > 0 && (
-          <div className="mt-4 border-t border-gray-100 pt-3">
-            <p className="text-xs font-medium text-gray-500">Cost by Type</p>
+          <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-3">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Cost by Type</p>
             <div className="mt-1.5 flex flex-wrap gap-3">
               {Object.entries(costByType)
                 .sort(([, a], [, b]) => b - a)
                 .map(([type, cost]) => (
-                  <span key={type} className="text-xs text-gray-600">
+                  <span key={type} className="text-xs text-gray-600 dark:text-gray-400">
                     <span className="font-medium">{TYPE_LABELS[type] ?? type}:</span>{" "}
                     ${cost.toFixed(4)}
                   </span>
@@ -148,7 +148,7 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
       </div>
 
       {/* Tab navigation */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-gray-800">
         <nav className="-mb-px flex gap-6">
           {tabs.map((tab) => (
             <button
@@ -156,8 +156,8 @@ export function AdminDashboard({ stats, initialTasks, manuscripts, passagesForVa
               onClick={() => setActiveTab(tab.id)}
               className={`border-b-2 pb-2 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? "border-primary-700 text-primary-700"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  ? "border-primary-700 text-primary-700 dark:border-primary-400 dark:text-primary-400"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:text-gray-300"
               }`}
             >
               {tab.label}
@@ -204,9 +204,9 @@ const TYPE_LABELS: Record<string, string> = {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   );
 }
