@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
+import { logAiActivity } from "@/lib/utils/log-ai-activity";
 
 export const maxDuration = 30;
 
@@ -161,6 +162,8 @@ Call submit_passage_summary with your analysis.`;
     }
 
     const parsed = toolBlock.input as PassageSummaryInput;
+
+    logAiActivity({ userId: user.id, route: "/api/summaries/passage", model: aiModel, tokensIn, tokensOut, costUsd: cost, context: { passage_id } });
 
     const aiSummary = {
       summary: parsed.summary ?? "",

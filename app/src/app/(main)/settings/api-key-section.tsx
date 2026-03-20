@@ -94,6 +94,17 @@ export function ApiKeySection({ role, hasVaultKey, requestedAt }: Props) {
           Your Anthropic account is billed directly — CodexAtlas never charges you.
         </p>
 
+        <div className="mb-4 rounded-lg bg-gray-50 px-4 py-3 text-xs text-gray-600">
+          <p className="mb-1.5 font-semibold text-gray-700">Don&apos;t have an Anthropic API key?</p>
+          <ol className="list-decimal space-y-1 pl-4">
+            <li>Go to <span className="font-mono text-gray-800">console.anthropic.com</span> and sign up or log in</li>
+            <li>Navigate to <span className="font-semibold">API Keys</span> in the left sidebar</li>
+            <li>Click <span className="font-semibold">Create Key</span>, give it a name, and copy it</li>
+            <li>Your key will start with <span className="font-mono text-gray-800">sk-ant-</span> — paste it below</li>
+          </ol>
+          <p className="mt-1.5 text-gray-400">You will be billed directly by Anthropic. CodexAtlas never charges you.</p>
+        </div>
+
         {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
         {success && <p className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-700">{success}</p>}
 

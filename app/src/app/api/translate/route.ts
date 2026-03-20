@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
+import { logAiActivity } from "@/lib/utils/log-ai-activity";
 import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 import {
   TRANSLATION_SYSTEM_PROMPT,
@@ -253,6 +254,8 @@ export async function POST(request: NextRequest) {
     }
 
     const parsed = toolUseBlock.input as TranslationToolInput;
+
+    logAiActivity({ userId: user.id, route: "/api/translate", model: AI_MODEL, tokensIn: tokensInput, tokensOut: tokensOutput, costUsd, context: { passage_id, target_language } });
 
     if (!parsed.translated_text?.trim()) {
       return NextResponse.json(

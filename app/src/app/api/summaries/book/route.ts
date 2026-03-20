@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
+import { logAiActivity } from "@/lib/utils/log-ai-activity";
 
 export const maxDuration = 45;
 
@@ -211,6 +212,8 @@ Call submit_book_summary with your synthesis.`;
     }
 
     const parsed = toolBlock.input as BookSummaryContent;
+
+    logAiActivity({ userId: user.id, route: "/api/summaries/book", model: AI_MODEL, tokensIn, tokensOut, costUsd: cost, context: { book } });
 
     const { error: upsertErr } = await admin.from("ai_summaries").upsert(
       {

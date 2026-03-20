@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ApiKeySection } from "./api-key-section";
+import { UsageSection } from "./usage-section";
 
 export const metadata: Metadata = {
   title: "Settings — CodexAtlas",
@@ -85,6 +86,9 @@ export default async function SettingsPage() {
         hasVaultKey={hasVaultKey}
         requestedAt={profile.contributor_requested_at}
       />
+
+      {/* AI usage */}
+      <UsageSection />
     </div>
   );
 }

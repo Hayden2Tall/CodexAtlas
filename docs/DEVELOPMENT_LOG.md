@@ -39,6 +39,36 @@ Newest entries appear first.
 
 ---
 
+### 2026-03-20 — Phase 6.6: AI Activity Log + Per-User Cost Tracking + Contributor API Key Guidance
+
+**Type:** milestone
+**Author:** Development Agent
+**Status:** accepted
+
+**Context:**
+Two gaps existed after Phase 5 shipped: (1) every inline AI call (summaries, translate) was completely invisible — no log, no cost attribution, no per-user breakdown. Only batch jobs via the admin panel wrote to `agent_tasks`. (2) Contributors approved for the platform had no in-app guidance on how to obtain an Anthropic API key.
+
+**Decision:**
+1. **`ai_activity_log` table (migration 032)** — `id, user_id, route, model, tokens_in, tokens_out, cost_usd, context JSONB, created_at`. Indexed on `user_id` and `created_at DESC`.
+2. **`logAiActivity()` helper** — fire-and-forget Supabase insert via admin client. Never throws; logs insert failures to console only so a log write can never fail a user-facing request.
+3. **7 AI routes instrumented** — `/api/translate`, `/api/summaries/passage`, `/api/summaries/chapter`, `/api/summaries/manuscript`, `/api/summaries/cross-manuscript`, `/api/summaries/book`, `/api/summaries/grand`. Each logs after a successful AI response with route-specific context (passage_id, book+chapter, manuscript_id).
+4. **Admin "AI Activity" tab** — `GET /api/admin/activity` (admin/editor only, last 500 entries, joins `users.display_name`). `ActivityLogPanel` component: per-user cost breakdown + full sortable log table.
+5. **Settings "AI Usage" section** — `GET /api/settings/usage` (any authenticated user, own records only). `UsageSection` component: aggregate totals (cost, tokens in/out) + call history table. Visible to all roles.
+6. **Contributor API key guidance** — numbered step-by-step block added to the contributor section of `api-key-section.tsx`: go to `console.anthropic.com` → sign up → API Keys → Create Key → paste `sk-ant-` key.
+
+**Rationale:**
+With two active contributors now on the platform, cost visibility became immediately practical rather than theoretical. The fire-and-forget pattern keeps the log write off the critical path — a failed insert never degrades the AI task that triggered it. Per-user scoping at the API level (not RLS) keeps the implementation simple while still being safe.
+
+**Consequences:**
+- Migration 032 must be applied in Supabase before deployment (no app-breaking risk if missed — routes will log insert failures silently but otherwise work normally)
+- Batch agent routes (`/api/agent/*`) are intentionally not duplicated — they already write to `agent_tasks`
+- `agent_tasks` cost summary in the admin dashboard is not yet unified with `ai_activity_log` — two separate cost views exist
+
+**Related Documents:**
+ROADMAP.md §6.6
+
+---
+
 ### 2026-03-19 — Sprint 4.4: Force-Regenerate, Cross-Manuscript Summary, Contextual Variant Detection
 
 **Type:** milestone

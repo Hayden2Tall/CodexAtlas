@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
+import { logAiActivity } from "@/lib/utils/log-ai-activity";
 
 export const maxDuration = 45;
 
@@ -269,6 +270,8 @@ Call submit_cross_manuscript_summary with your comparative analysis. Focus on wh
     }
 
     const parsed = toolBlock.input as CrossManuscriptContent;
+
+    logAiActivity({ userId: user.id, route: "/api/summaries/cross-manuscript", model: AI_MODEL, tokensIn, tokensOut, costUsd: cost, context: { book, chapter } });
 
     const { data: existingRow } = await admin
       .from("ai_summaries")

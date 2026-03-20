@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
+import { logAiActivity } from "@/lib/utils/log-ai-activity";
 import type { UserRole, User } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -217,6 +218,8 @@ Call submit_grand_assessment with your comprehensive synthesis. This is the auth
     }
 
     const parsed = toolBlock.input as GrandAssessmentContent;
+
+    logAiActivity({ userId: user.id, route: "/api/summaries/grand", model: AI_MODEL, tokensIn, tokensOut, costUsd: cost });
 
     const { data: existing } = await admin
       .from("ai_summaries")

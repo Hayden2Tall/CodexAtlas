@@ -1,6 +1,6 @@
 # CodexAtlas — Development Roadmap
 
-> **Last Updated:** 2026-03-19
+> **Last Updated:** 2026-03-20
 > **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.1b–4.3 complete · Phase 5 complete
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
@@ -477,6 +477,21 @@ Do not build until Phase 5 is live and stable and there is clear demand.
 - WCAG 2.1 AA audit and remediation
 - RTL text support for Hebrew, Arabic, Syriac passages
 - Multi-language interface (English first, then community)
+
+### 6.6 AI Activity Log + Per-User Cost Tracking — Complete (2026-03-20)
+
+**Problem:** `agent_tasks` only covers batch jobs submitted via the admin panel. Every inline AI call (passage summaries, chapter summaries, manuscript summaries, cross-manuscript comparisons, translations triggered from the chapter/manuscript pages) is invisible — no log entry, no cost attribution, no per-user breakdown.
+
+- [x] Migration 032 — `ai_activity_log(id, user_id, route, model, tokens_in, tokens_out, cost_usd, context jsonb, created_at)`
+- [x] `lib/utils/log-ai-activity.ts` — fire-and-forget helper; never throws; failures logged to console only
+- [x] 7 AI routes instrumented: `/api/translate`, `/api/summaries/passage`, `/api/summaries/chapter`, `/api/summaries/manuscript`, `/api/summaries/cross-manuscript`, `/api/summaries/book`, `/api/summaries/grand`
+- [x] `GET /api/admin/activity` — admin/editor only; returns last 500 entries with user display_name join
+- [x] `GET /api/settings/usage` — authenticated; returns current user's last 100 entries + aggregate totals
+- [x] Admin "AI Activity" tab — per-user cost breakdown + full log table
+- [x] Settings "AI Usage" section — every authenticated user sees their own call history + totals
+- [x] Anthropic API key sign-up guidance added to contributor section in settings
+
+**Scope note:** Covers the 7 inline AI routes. Batch agent routes (`/api/agent/*`) write to `agent_tasks` and are not duplicated here.
 
 ---
 
