@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { BOOK_ORDER, parseReference } from "@/lib/utils/book-order";
 import { BookSummaryPanel } from "./book-summary-panel";
+import { BookAdminPanel } from "./book-admin-panel";
 
 interface PageProps {
   params: Promise<{ book: string }>;
@@ -96,6 +97,18 @@ export default async function BookOverviewPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthenticated = !!user;
 
+  const ADMIN_ROLES = ["admin", "editor", "contributor"];
+  let userRole: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single<{ role: string }>();
+    userRole = profile?.role ?? null;
+  }
+  const isAdmin = !!userRole && ADMIN_ROLES.includes(userRole);
+
   const cachedSummary = bookSummaryRow?.content
     ? (bookSummaryRow.content as unknown as BookSummaryContent)
     : null;
@@ -130,6 +143,9 @@ export default async function BookOverviewPage({ params }: PageProps) {
           Read chapter 1 &rarr;
         </Link>
       </div>
+
+      {/* Admin panel */}
+      {isAdmin && <BookAdminPanel book={bookDecoded} />}
 
       {/* Summary panel */}
       <BookSummaryPanel

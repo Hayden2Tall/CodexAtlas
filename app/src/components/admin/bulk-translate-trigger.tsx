@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface Passage {
   id: string;
@@ -24,6 +25,7 @@ const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portugu
 type Phase = "idle" | "confirming" | "running" | "done";
 
 export function BulkTranslateTrigger({ passages, label = "", size = "md" }: BulkTranslateTriggerProps) {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [language, setLanguage] = useState("English");
   const [currentRef, setCurrentRef] = useState("");
@@ -97,6 +99,7 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
 
     setCurrentRef("");
     setPhase("done");
+    router.refresh();
   }
 
   function reset() {
@@ -174,12 +177,20 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
             Failed: {failedRefs.slice(0, 3).join(", ")}{failedRefs.length > 3 ? ` +${failedRefs.length - 3} more` : ""}
           </p>
         )}
-        <button
-          onClick={reset}
-          className="text-xs text-primary-600 hover:underline"
-        >
-          Reset
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={reset}
+            className="text-xs text-primary-600 hover:underline"
+          >
+            Reset
+          </button>
+          <button
+            onClick={() => router.refresh()}
+            className="text-xs text-gray-500 hover:underline"
+          >
+            Refresh page
+          </button>
+        </div>
       </div>
     );
   }
