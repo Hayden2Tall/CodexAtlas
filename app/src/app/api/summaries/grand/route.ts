@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
         `[${bs.scope_key}]`,
         content.overview ?? "",
         content.manuscript_tradition ? `Manuscript tradition: ${content.manuscript_tradition}` : "",
-        content.theological_themes?.length
+        Array.isArray(content.theological_themes) && content.theological_themes.length > 0
           ? `Themes: ${content.theological_themes.join(", ")}`
           : "",
       ]

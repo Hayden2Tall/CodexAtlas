@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       const block = [
         `[${cs.scope_key}]`,
         content.overview ?? "",
-        content.theological_themes?.length
+        Array.isArray(content.theological_themes) && content.theological_themes.length > 0
           ? `Themes: ${content.theological_themes.join(", ")}`
           : "",
       ]
