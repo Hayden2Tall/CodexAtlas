@@ -1,7 +1,7 @@
 # CodexAtlas — Development Roadmap
 
 > **Last Updated:** 2026-03-20
-> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.1b–4.3 complete · Phase 5 complete
+> **Status:** Phase 2 complete · Phases 3.1–3.4 complete · Phase 3.9–3.9d complete · Phase 4 Sprints 4.1–4.1b–4.3 complete · Phase 5 complete · Phase 7 designed (deferred)
 > **Companion Documents:** [PROJECT_CONSTITUTION.md](./PROJECT_CONSTITUTION.md) · [MASTER_PLAN.md](./MASTER_PLAN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [SECURITY_MODEL.md](./SECURITY_MODEL.md)
 
 ---
@@ -495,7 +495,101 @@ Do not build until Phase 5 is live and stable and there is clear demand.
 
 ---
 
-## 7. Success Milestones
+## 7. Phase 7 — Sacred Texts Corpus Expansion (Future / Major Version Uplift)
+
+**Do not begin until:** biblical corpus pipelines are mature, the UI layer is stable, and there is a clear reason to expand scope beyond the Judeo-Christian tradition.
+
+**Goal:** Transform CodexAtlas from a biblical manuscript platform into a broad sacred texts research engine covering multiple world traditions. This is a major version uplift — it touches the schema, the reference parser, the browser category system, the ingestion pipeline, and the admin tooling.
+
+---
+
+### 7.1 Architectural Prerequisites
+
+Before importing any new corpus, these foundations must be in place:
+
+- [ ] **Reference format abstraction** — `parseReference()` and `BOOK_ORDER` are biblical-only. A `ReferenceFormat` type is needed to describe how each corpus organizes its text (book/chapter/verse, tractate/folio/side, surah/ayah, spell number, shloka, etc.). The ingestion pipeline must handle all formats without assuming chapter/verse.
+- [ ] **Category system extension** — `BrowserCategory` currently covers `ot | nt | deuterocanon | ethiopian | patristic | other`. New top-level categories needed: `talmud | quran | vedic | egyptian | buddhist | zoroastrian | other_sacred`.
+- [ ] **Corpus metadata schema** — each corpus needs a `tradition`, `canon_status`, and `reference_format` field in the source registry so the UI can label and filter correctly.
+- [ ] **Source registry versioning** — existing preprocessors should declare a schema version so future preprocessors can be written to a stable interface.
+
+---
+
+### 7.2 High-Priority Corpus Candidates
+
+These have high-quality, openly licensed machine-readable sources and clear manuscript comparison value:
+
+**Jewish / Rabbinic**
+- [ ] **Babylonian Talmud** — Sefaria open data dump (GitHub: `Sefaria/Sefaria-Export`); Hebrew/Aramaic; structured JSON; tractate/folio/side format. Rich parallel text opportunity (Vilna edition vs. Cairo Genizah fragments vs. MSS in the British Library).
+- [ ] **Jerusalem (Palestinian) Talmud** — also on Sefaria; less complete but significant for comparison with Babylonian.
+- [ ] **Midrash collections** — Sefaria exports cover Midrash Rabbah and others; lower priority but low-effort once Talmud pipeline exists.
+
+**Islamic**
+- [ ] **Quran** — multiple excellent open sources: Tanzil project (tanzil.net, free download), corpus.quran.com (morphologically annotated, API), Quran.com API. Arabic text is canonically standardized; manuscript comparison applies to physical manuscript traditions (Samarqand Quran ~8th c., Blue Quran ~9th c., Topkapi manuscript). Reference format: surah (1–114) / ayah.
+- [ ] **Hadith collections** (Bukhari, Muslim, etc.) — Sunnah.com has open data; lower priority.
+
+**Hindu / Sanskrit**
+- [ ] **Puranas** (18 major texts) — GRETIL (Göttingen Register of Electronic Texts in Indian Languages) and Digital Corpus of Sanskrit (DCS). Sanskrit; chapter/shloka format. Large corpus — stage by individual Purana.
+- [ ] **Upanishads** — GRETIL; shorter texts, high scholarly significance.
+- [ ] **Bhagavad Gita** — GRETIL; single well-known text; good entry point for the Sanskrit pipeline.
+
+**Egyptian**
+- [ ] **Book of the Dead** — not a single text but a genre (~200 spells, compiled differently per papyrus). Primary sources: Book of the Dead Project (Universität Bonn), Thesaurus Linguae Aegyptiae (TLA), Wikisource (Papyrus Ani, Papyrus Hunefer, etc.). Reference format: spell number. Requires hieroglyphic/transliteration handling — most complex import on this list.
+
+**Buddhist**
+- [ ] **Pali Canon (Tipitaka)** — SuttaCentral (suttacentral.net) provides full Pali text + English translations as open-source data. Reference format varies by basket/collection/sutta number.
+- [ ] **Dhammapada** — short, well-attested, good entry point.
+
+**Zoroastrian**
+- [ ] **Avesta** — TITUS (Thesaurus Indogermanischer Text- und Sprachmaterialien) has digitized texts. Smaller corpus, highly specialized.
+
+**Gnostic / Apocryphal (adjacent to existing corpus)**
+- [ ] **Nag Hammadi Library** — Coptic; directly extends existing Coptic pipeline. Texts include Gospel of Thomas, Gospel of Philip, etc. Sources: The Gnostic Society Library, COPTOT project.
+- [ ] **Apostolic Fathers** — partially covered by OGL/First1KGreek already; extend systematically.
+
+---
+
+### 7.3 Ingestion Pipeline Work
+
+For each new corpus family, a preprocessor script is needed following the existing pattern (`scripts/preprocess-*.mjs`):
+
+- [ ] **Sefaria exporter** — reads Sefaria JSON export format; handles tractate/folio/side reference scheme
+- [ ] **Tanzil/Quran importer** — reads Tanzil XML or corpus.quran.com JSON; handles surah/ayah reference scheme
+- [ ] **GRETIL importer** — reads GRETIL plain text or TEI XML; handles Sanskrit shloka references
+- [ ] **SuttaCentral importer** — reads SC JSON export; handles Pali sutta reference format
+- [ ] **TLA/Book of the Dead importer** — reads TEI or project-specific XML; handles spell reference format
+
+Each importer must:
+1. Declare `reference_format` in the source registry entry
+2. Normalize references to a consistent internal format the UI can parse
+3. Store tradition/canon metadata in `manuscripts.metadata`
+
+---
+
+### 7.4 UI / UX Work
+
+- [ ] Browser category tabs updated for new traditions
+- [ ] Reference display adapted per format (folios vs. chapters vs. spells)
+- [ ] Cross-tradition search and comparison (e.g. compare Talmudic passage to NT parallel)
+- [ ] Tradition filter on variants, summaries, and insights pages
+- [ ] Landing page updated to reflect multi-tradition scope
+
+---
+
+### 7.5 Scope Decision Checklist (Pre-Flight)
+
+Before starting Phase 7, answer these:
+
+- [ ] Is the platform name / branding still appropriate for a multi-tradition scope? ("CodexAtlas" skews Christian-manuscript)
+- [ ] Is the PROJECT_CONSTITUTION.md scope statement still accurate?
+- [ ] Do any of the new corpora have licensing constraints that differ from existing CC sources?
+- [ ] Is there a scholar or domain expert to validate quality of the new pipeline outputs?
+- [ ] Should each tradition be a separate import project or all under one umbrella?
+
+**Status:** Deferred — research complete, architecture prerequisites identified, no implementation work until Phase 6 items are stable and this is actively prioritized.
+
+---
+
+## 8. Success Milestones
 
 | Milestone | Target | Phase |
 |---|---|---|
