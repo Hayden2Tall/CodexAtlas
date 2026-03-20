@@ -166,10 +166,10 @@ export default async function ReadPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-gray-900">
+        <h1 className="font-serif text-3xl font-bold text-primary-900 dark:text-primary-200">
           Manuscript Library
         </h1>
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           Browse scripture, patristic texts, and ancient manuscripts by book and chapter.
         </p>
       </div>

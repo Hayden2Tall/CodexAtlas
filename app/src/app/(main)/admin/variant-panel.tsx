@@ -134,11 +134,11 @@ export function VariantPanel({ passages }: Props) {
       : selectedIds.length >= 2;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
         Variant Detection
       </h2>
-      <p className="mt-1 text-xs text-gray-500">
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         Compare passages across manuscripts to identify textual variants using
         AI analysis.
       </p>
@@ -149,8 +149,8 @@ export function VariantPanel({ passages }: Props) {
           onClick={() => setMode("reference")}
           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
             mode === "reference"
-              ? "bg-primary-100 text-primary-700"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              ? "bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-400"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
           By Reference
@@ -159,8 +159,8 @@ export function VariantPanel({ passages }: Props) {
           onClick={() => setMode("select")}
           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
             mode === "select"
-              ? "bg-primary-100 text-primary-700"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              ? "bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-400"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
           Select Passages
@@ -170,7 +170,7 @@ export function VariantPanel({ passages }: Props) {
       {/* By reference */}
       {mode === "reference" && (
         <div className="mt-3">
-          <label className="block text-xs font-medium text-gray-600">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             Passage Reference
           </label>
           <div className="mt-1 flex gap-2">
@@ -178,7 +178,7 @@ export function VariantPanel({ passages }: Props) {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               disabled={isDetecting}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+              className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm"
             >
               <option value="">Select a reference...</option>
               {uniqueRefs.map((ref) => {
@@ -203,10 +203,10 @@ export function VariantPanel({ passages }: Props) {
       {/* Select passages */}
       {mode === "select" && (
         <div className="mt-3">
-          <label className="block text-xs font-medium text-gray-600">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             Select 2+ passages to compare
           </label>
-          <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 p-2">
+          <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 p-2">
             {passages.length === 0 ? (
               <p className="py-4 text-center text-xs text-gray-400">
                 No passages available
@@ -216,7 +216,7 @@ export function VariantPanel({ passages }: Props) {
                 {passages.map((p) => (
                   <label
                     key={p.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-gray-50"
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
                     <input
                       type="checkbox"
@@ -225,7 +225,7 @@ export function VariantPanel({ passages }: Props) {
                       disabled={isDetecting}
                       className="h-3.5 w-3.5 rounded border-gray-300 text-primary-700"
                     />
-                    <span className="font-medium text-gray-700">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
                       {p.reference}
                     </span>
                     <span className="text-gray-400">
@@ -272,7 +272,7 @@ export function VariantPanel({ passages }: Props) {
 
       {/* Cost info */}
       {costInfo && (
-        <div className="mt-4 flex gap-4 text-xs text-gray-500">
+        <div className="mt-4 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
           <span>
             Detection cost: ${costInfo.estimated_cost_usd.toFixed(4)}
           </span>
@@ -287,7 +287,7 @@ export function VariantPanel({ passages }: Props) {
       {variants.length > 0 && (
         <div className="mt-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {variants.length} variant{variants.length !== 1 ? "s" : ""}{" "}
               detected
             </p>
@@ -311,10 +311,10 @@ export function VariantPanel({ passages }: Props) {
             {variants.map((v, i) => (
               <div
                 key={`${v.passage_reference}-${i}`}
-                className="rounded-md border border-gray-100 bg-gray-50 p-3"
+                className="rounded-md border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                     {v.passage_reference}
                   </span>
                   <span
@@ -323,7 +323,7 @@ export function VariantPanel({ passages }: Props) {
                     {v.significance}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-gray-600">{v.description}</p>
+                <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{v.description}</p>
 
                 <div className="mt-2 space-y-1">
                   {v.readings.map((r, ri) => (
@@ -331,10 +331,10 @@ export function VariantPanel({ passages }: Props) {
                       key={`${r.manuscript_id}-${ri}`}
                       className="flex gap-2 text-xs"
                     >
-                      <span className="shrink-0 font-medium text-gray-500">
+                      <span className="shrink-0 font-medium text-gray-500 dark:text-gray-400">
                         {r.manuscript_title}:
                       </span>
-                      <span className="font-mono text-gray-800">
+                      <span className="font-mono text-gray-800 dark:text-gray-200">
                         {r.reading_text}
                       </span>
                     </div>
@@ -342,7 +342,7 @@ export function VariantPanel({ passages }: Props) {
                 </div>
 
                 {v.analysis && (
-                  <p className="mt-2 text-xs italic text-gray-500">
+                  <p className="mt-2 text-xs italic text-gray-500 dark:text-gray-400">
                     {v.analysis}
                   </p>
                 )}

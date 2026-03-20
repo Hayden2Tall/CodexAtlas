@@ -288,11 +288,11 @@ export function FullImportPanel({ manuscripts }: Props) {
   ).length;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
         Full Manuscript Import
       </h2>
-      <p className="mt-1 text-xs text-gray-500">
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         Scan a manuscript&apos;s complete table of contents, select sections, and
         import full original-language text for each one.
       </p>
@@ -307,7 +307,7 @@ export function FullImportPanel({ manuscripts }: Props) {
             setSections([]);
           }}
           disabled={phase === "importing" || phase === "loading-toc"}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
         >
           <option value="">Select a manuscript...</option>
           {manuscripts.map((m) => (
@@ -350,7 +350,7 @@ export function FullImportPanel({ manuscripts }: Props) {
           <div className="mt-4 space-y-3">
             {/* Summary bar */}
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
                 <span className="font-medium">{sections.length}</span> sections
                 found
                 {sections.some((s) => s.already_imported) && (
@@ -360,7 +360,7 @@ export function FullImportPanel({ manuscripts }: Props) {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span>TOC cost: ${tocCost.toFixed(4)}</span>
                 {estimatedImportCost > 0 && phase === "selecting" && (
                   <span>
@@ -375,14 +375,14 @@ export function FullImportPanel({ manuscripts }: Props) {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={selectAll}
-                  className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
+                  className="rounded border border-gray-200 dark:border-gray-600 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   Select all new
                 </button>
                 {sections.some((s) => s.already_imported) && (
                   <button
                     onClick={selectAllIncludingImported}
-                    className="rounded border border-amber-200 px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-50"
+                    className="rounded border border-amber-200 dark:border-amber-700 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                     title="Re-imports will overwrite existing text with a fresh fetch"
                   >
                     Select all + re-import
@@ -390,7 +390,7 @@ export function FullImportPanel({ manuscripts }: Props) {
                 )}
                 <button
                   onClick={selectNone}
-                  className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
+                  className="rounded border border-gray-200 dark:border-gray-600 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   Select none
                 </button>
@@ -406,18 +406,18 @@ export function FullImportPanel({ manuscripts }: Props) {
             )}
 
             {/* Section list */}
-            <div className="max-h-80 overflow-y-auto rounded-md border border-gray-100">
+            <div className="max-h-80 overflow-y-auto rounded-md border border-gray-100 dark:border-gray-700">
               {sections.map((s) => {
                 const result = results.get(s.reference);
                 const isChecked = selected.has(s.reference);
                 const isExpanded = expandedChain === s.reference;
                 return (
-                  <div key={s.reference} className="border-b border-gray-50">
+                  <div key={s.reference} className="border-b border-gray-50 dark:border-gray-800">
                     <label
                       className={`flex items-center gap-3 px-3 py-2 text-sm ${
                         s.already_imported
-                          ? "bg-gray-50 text-gray-400"
-                          : "hover:bg-gray-50"
+                          ? "bg-gray-50 dark:bg-gray-800/50 text-gray-400"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800/30"
                       }`}
                     >
                       <input
@@ -431,11 +431,11 @@ export function FullImportPanel({ manuscripts }: Props) {
                         className="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
                       />
                       <div className="flex-1 min-w-0">
-                        <span className="font-medium text-gray-800">
+                        <span className="font-medium text-gray-800 dark:text-gray-200">
                           {s.reference}
                         </span>
                         {s.description && (
-                          <span className="ml-2 text-xs text-gray-500 truncate">
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 truncate">
                             — {s.description}
                           </span>
                         )}
@@ -506,8 +506,8 @@ export function FullImportPanel({ manuscripts }: Props) {
                       </div>
                     </label>
                     {isExpanded && result?.sourceChain && (
-                      <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5 text-xs">
-                        <div className="font-medium text-gray-600 mb-1.5">
+                      <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-xs">
+                        <div className="font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                           Source chain for {s.reference}:
                         </div>
                         <div className="space-y-1">
@@ -520,10 +520,10 @@ export function FullImportPanel({ manuscripts }: Props) {
                               }`}>
                                 {step.result === "success" ? "✓" : step.result === "not_applicable" ? "—" : "✗"}
                               </span>
-                              <span className="font-medium text-gray-700 min-w-[110px]">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 min-w-[110px]">
                                 {step.source}
                               </span>
-                              <span className="text-gray-500 flex-1">
+                              <span className="text-gray-500 dark:text-gray-400 flex-1">
                                 {step.reason}
                                 {step.ms ? ` (${step.ms}ms)` : ""}
                               </span>
@@ -531,7 +531,7 @@ export function FullImportPanel({ manuscripts }: Props) {
                           ))}
                         </div>
                         {result.sourceLabel && (
-                          <div className="mt-2 pt-1.5 border-t border-gray-200 text-gray-500">
+                          <div className="mt-2 pt-1.5 border-t border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
                             <span className="font-medium">Used:</span> {result.sourceLabel}
                           </div>
                         )}
@@ -545,7 +545,7 @@ export function FullImportPanel({ manuscripts }: Props) {
             {/* Import progress */}
             {(phase === "importing" || phase === "complete") && (
               <div className="space-y-2">
-                <div className="h-2 rounded-full bg-gray-100">
+                <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-700">
                   <div
                     className="h-2 rounded-full bg-primary-600 transition-all duration-300"
                     style={{
@@ -558,7 +558,7 @@ export function FullImportPanel({ manuscripts }: Props) {
                     }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span>
                     {completedCount} done, {skippedCount} skipped
                     {failedCount > 0 && `, ${failedCount} failed`}

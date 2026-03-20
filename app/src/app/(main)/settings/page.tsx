@@ -50,7 +50,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl py-12 px-4">
-      <h1 className="mb-8 font-serif text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+      <h1 className="mb-8 font-serif text-3xl font-bold text-primary-900 dark:text-primary-200">Settings</h1>
 
       {/* Account */}
       <section className="mb-8 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">

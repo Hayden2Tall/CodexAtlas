@@ -76,7 +76,7 @@ export default async function InsightsPage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-gray-100">Corpus Insights</h1>
+        <h1 className="font-serif text-3xl font-bold text-primary-900 dark:text-primary-200">Corpus Insights</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           AI-synthesized analysis across all manuscripts, books, and chapters in CodexAtlas.
         </p>

@@ -137,24 +137,24 @@ export function OcrPanel({ manuscripts }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
         OCR Processing
       </h2>
-      <p className="mt-1 text-xs text-gray-500">
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         Upload a manuscript image and extract text using Claude Vision.
       </p>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-xs font-medium text-gray-600">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             Manuscript
           </label>
           <select
             value={selectedManuscript}
             onChange={(e) => setSelectedManuscript(e.target.value)}
             disabled={isProcessing}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm"
           >
             <option value="">Select a manuscript...</option>
             {manuscripts.map((m) => (
@@ -165,7 +165,7 @@ export function OcrPanel({ manuscripts }: Props) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             Page/Folio Reference
           </label>
           <input
@@ -174,7 +174,7 @@ export function OcrPanel({ manuscripts }: Props) {
             onChange={(e) => setPageReference(e.target.value)}
             placeholder="e.g., Folio 12r"
             disabled={isProcessing}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm placeholder-gray-400"
+            className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 px-3 py-1.5 text-sm placeholder-gray-400"
           />
         </div>
       </div>
@@ -218,12 +218,12 @@ export function OcrPanel({ manuscripts }: Props) {
 
       {/* Image preview */}
       {imagePreview && (
-        <div className="mt-4 overflow-hidden rounded-md border border-gray-200">
+        <div className="mt-4 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imagePreview}
             alt="Manuscript page"
-            className="max-h-64 w-full object-contain bg-gray-50"
+            className="max-h-64 w-full object-contain bg-gray-50 dark:bg-gray-800"
           />
         </div>
       )}
@@ -237,7 +237,7 @@ export function OcrPanel({ manuscripts }: Props) {
 
       {/* Cost info */}
       {costInfo && (
-        <div className="mt-4 flex gap-4 text-xs text-gray-500">
+        <div className="mt-4 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
           <span>OCR cost: ${costInfo.estimated_cost_usd.toFixed(4)}</span>
           <span>
             Tokens: {formatTokens(costInfo.tokens_input)} in /{" "}
@@ -251,10 +251,10 @@ export function OcrPanel({ manuscripts }: Props) {
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 OCR Results
               </p>
-              <div className="mt-0.5 flex gap-3 text-xs text-gray-500">
+              <div className="mt-0.5 flex gap-3 text-xs text-gray-500 dark:text-gray-400">
                 <span>
                   Language: {getLanguageName(result.language_detected)}
                 </span>
@@ -277,8 +277,8 @@ export function OcrPanel({ manuscripts }: Props) {
           </div>
 
           {result.quality_assessment && (
-            <div className="rounded-md bg-blue-50 p-2">
-              <p className="text-xs text-blue-700">
+            <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-2">
+              <p className="text-xs text-blue-700 dark:text-blue-400">
                 <span className="font-medium">Quality:</span>{" "}
                 {result.quality_assessment}
               </p>
@@ -290,10 +290,10 @@ export function OcrPanel({ manuscripts }: Props) {
             {result.passages.map((p, i) => (
               <div
                 key={`${p.reference}-${i}`}
-                className="rounded-md border border-gray-100 bg-gray-50 p-3"
+                className="rounded-md border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3"
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-gray-700">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
                     {p.reference}
                   </p>
                   <span
@@ -308,11 +308,11 @@ export function OcrPanel({ manuscripts }: Props) {
                     {Math.round(p.confidence * 100)}%
                   </span>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap font-mono text-xs text-gray-800">
+                <p className="mt-1 whitespace-pre-wrap font-mono text-xs text-gray-800 dark:text-gray-200">
                   {p.original_text}
                 </p>
                 {p.notes && (
-                  <p className="mt-1 text-xs italic text-gray-500">
+                  <p className="mt-1 text-xs italic text-gray-500 dark:text-gray-400">
                     {p.notes}
                   </p>
                 )}
@@ -322,10 +322,10 @@ export function OcrPanel({ manuscripts }: Props) {
 
           {/* Full transcription */}
           <details className="group">
-            <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-700">
+            <summary className="cursor-pointer text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               Full Transcription
             </summary>
-            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-gray-50 p-3 font-mono text-xs text-gray-700">
+            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-gray-50 dark:bg-gray-800 p-3 font-mono text-xs text-gray-700 dark:text-gray-300">
               {result.full_transcription}
             </pre>
           </details>

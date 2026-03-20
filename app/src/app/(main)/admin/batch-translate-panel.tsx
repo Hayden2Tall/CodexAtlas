@@ -330,16 +330,16 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
     : 0;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700">Batch Translation</h2>
-      <p className="mt-1 text-xs text-gray-500">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Batch Translation</h2>
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         Select a manuscript and target language, review passages, then translate.
       </p>
 
       {/* Resume banner — shown when a previous batch was interrupted */}
       {savedBatch && phase === "idle" && (
-        <div className="mt-3 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-          <p className="text-xs text-amber-800">
+        <div className="mt-3 flex items-center justify-between rounded-md border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/10 px-3 py-2">
+          <p className="text-xs text-amber-800 dark:text-amber-300">
             A batch was interrupted. Resume it to continue translating remaining passages.
           </p>
           <div className="flex gap-2 ml-3 shrink-0">
@@ -349,7 +349,7 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
                 setSavedBatch(null);
                 handleScan(savedBatch.manuscriptId, savedBatch.targetLanguage);
               }}
-              className="rounded border border-amber-400 bg-white px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-50"
+              className="rounded border border-amber-400 bg-white dark:bg-gray-800 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-gray-700"
             >
               Resume
             </button>
@@ -369,12 +369,12 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
       {/* Controls */}
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs font-medium text-gray-600">Manuscript</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Manuscript</label>
           <select
             value={selectedMs}
             onChange={(e) => { setSelectedMs(e.target.value); setPhase("idle"); setAllPassages([]); setResults(new Map()); }}
             disabled={phase === "running" || phase === "scanning"}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm"
           >
             <option value="">All manuscripts</option>
             {manuscripts.map((m) => (
@@ -384,12 +384,12 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600">Target language</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Target language</label>
           <select
             value={targetLanguage}
             onChange={(e) => setTargetLanguage(e.target.value)}
             disabled={phase === "running" || phase === "scanning"}
-            className="mt-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+            className="mt-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm"
           >
             <option>English</option>
             <option>Spanish</option>
@@ -420,16 +420,16 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
       </div>
 
       {statusMessage && phase !== "selecting" && (
-        <p className="mt-3 text-sm text-gray-600">{statusMessage}</p>
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">{statusMessage}</p>
       )}
 
       {/* Passage selection phase */}
       {(phase === "selecting" || phase === "running" || phase === "done") && allPassages.length > 0 && (
         <div className="mt-4 space-y-3">
           {scanStats && (
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
-                <span className="font-medium text-gray-700">{scanStats.total}</span> passages found
+                <span className="font-medium text-gray-700 dark:text-gray-300">{scanStats.total}</span> passages found
                 {scanStats.translated > 0 && (
                   <span className="ml-1">
                     — <span className="text-green-600">{scanStats.translated} already translated</span>
@@ -443,28 +443,28 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
           {/* Selection controls */}
           {phase === "selecting" && (
             <div className="flex gap-2 flex-wrap">
-              <button onClick={selectAllUntranslated} className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50">
+              <button onClick={selectAllUntranslated} className="rounded border border-gray-200 dark:border-gray-600 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
                 Select untranslated
               </button>
-              <button onClick={selectAll} className="rounded border border-amber-200 px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-50" title="Will overwrite existing translations">
+              <button onClick={selectAll} className="rounded border border-amber-200 dark:border-amber-700 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20" title="Will overwrite existing translations">
                 Select all (incl. re-translate)
               </button>
-              <button onClick={selectNone} className="rounded border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50">
+              <button onClick={selectNone} className="rounded border border-gray-200 dark:border-gray-600 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
                 Select none
               </button>
             </div>
           )}
 
           {/* Passage list */}
-          <div className="max-h-60 overflow-y-auto rounded-md border border-gray-100">
+          <div className="max-h-60 overflow-y-auto rounded-md border border-gray-100 dark:border-gray-700">
             {allPassages.map((p) => {
               const result = results.get(p.id);
               const isChecked = selectedPassageIds.has(p.id);
               return (
                 <label
                   key={p.id}
-                  className={`flex items-center gap-3 border-b border-gray-50 px-3 py-1.5 text-sm ${
-                    p.is_translated ? "bg-green-50/40" : "hover:bg-gray-50"
+                  className={`flex items-center gap-3 border-b border-gray-50 dark:border-gray-800 px-3 py-1.5 text-sm ${
+                    p.is_translated ? "bg-green-50/40 dark:bg-green-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                 >
                   <input
@@ -474,7 +474,7 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
                     disabled={phase === "running"}
                     className="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
                   />
-                  <span className="flex-1 min-w-0 truncate font-medium text-gray-800">
+                  <span className="flex-1 min-w-0 truncate font-medium text-gray-800 dark:text-gray-200">
                     {p.reference}
                   </span>
                   <span className="shrink-0">
@@ -500,10 +500,10 @@ export function BatchTranslatePanel({ manuscripts, onTaskCreated, onTaskUpdated 
           {/* Progress */}
           {(phase === "running" || (phase === "done" && results.size > 0)) && (
             <div className="space-y-1.5">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                 <div className="h-full rounded-full bg-primary-600 transition-all duration-300" style={{ width: `${progressPct}%` }} />
               </div>
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>
                   {successCount} done{failCount > 0 && `, ${failCount} failed`} / {results.size}
                   {statusMessage && ` — ${statusMessage}`}

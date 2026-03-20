@@ -185,11 +185,11 @@ export function DiscoveryPanel() {
   );
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
         Manuscript Discovery
       </h2>
-      <p className="mt-1 text-xs text-gray-500">
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         Use AI to find manuscripts. Add them to your library, then use Full
         Manuscript Import below to scan and import their complete content.
       </p>
@@ -203,14 +203,14 @@ export function DiscoveryPanel() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !isSearching && handleSearch()}
             placeholder="e.g., Early Greek New Testament manuscripts"
-            className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 px-3 py-1.5 text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             disabled={isSearching}
           />
           <select
             value={maxResults}
             onChange={(e) => setMaxResults(Number(e.target.value))}
             disabled={isSearching}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 px-2 py-1.5 text-sm"
           >
             <option value={3}>3 results</option>
             <option value={5}>5 results</option>
@@ -232,7 +232,7 @@ export function DiscoveryPanel() {
             <button
               key={eq}
               onClick={() => setQuery(eq)}
-              className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-500 hover:border-primary-300 hover:text-primary-600 transition-colors"
+              className="rounded-full border border-gray-200 dark:border-gray-600 px-2.5 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:border-primary-300 hover:text-primary-600 dark:hover:border-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               {eq}
             </button>
@@ -249,7 +249,7 @@ export function DiscoveryPanel() {
 
       {/* Cost info */}
       {costInfo && (
-        <div className="mt-4 flex gap-4 text-xs text-gray-500">
+        <div className="mt-4 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
           <span>Discovery cost: ${costInfo.estimated_cost_usd.toFixed(4)}</span>
           <span>
             Tokens: {formatTokens(costInfo.tokens_input)} in /{" "}
@@ -262,7 +262,7 @@ export function DiscoveryPanel() {
       {manuscripts.length > 0 && (
         <div className="mt-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Found {manuscripts.length} manuscript
               {manuscripts.length !== 1 ? "s" : ""}
               {manuscripts.some((m) => m.already_exists) && (
@@ -282,7 +282,7 @@ export function DiscoveryPanel() {
             )}
           </div>
 
-          <div className="divide-y divide-gray-100 rounded-md border border-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800 rounded-md border border-gray-100 dark:border-gray-700 dark:bg-gray-900">
             {manuscripts.map((ms, idx) => {
               const result = ingestResults.get(ms.title);
               const isExpanded = expandedIdx === idx;
@@ -306,7 +306,7 @@ export function DiscoveryPanel() {
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-gray-900">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {ms.title}
                         </h3>
                         {ms.already_exists && (
@@ -315,7 +315,7 @@ export function DiscoveryPanel() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <span>{getLanguageName(ms.original_language)}</span>
                         <span>
                           {formatDate(
@@ -331,7 +331,7 @@ export function DiscoveryPanel() {
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-gray-600 line-clamp-2">
+                      <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
                         {ms.description}
                       </p>
                     </div>
@@ -370,13 +370,13 @@ export function DiscoveryPanel() {
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
+                    <div className="mt-3 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
                       {ms.historical_context && (
                         <div>
-                          <p className="text-xs font-medium text-gray-500">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                             Historical Context
                           </p>
-                          <p className="mt-0.5 text-xs text-gray-700">
+                          <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-300">
                             {ms.historical_context}
                           </p>
                         </div>
@@ -385,20 +385,20 @@ export function DiscoveryPanel() {
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         {ms.archive_location && (
                           <div>
-                            <span className="font-medium text-gray-500">
+                            <span className="font-medium text-gray-500 dark:text-gray-400">
                               Archive:{" "}
                             </span>
-                            <span className="text-gray-700">
+                            <span className="text-gray-700 dark:text-gray-300">
                               {ms.archive_location}
                             </span>
                           </div>
                         )}
                         {ms.archive_identifier && (
                           <div>
-                            <span className="font-medium text-gray-500">
+                            <span className="font-medium text-gray-500 dark:text-gray-400">
                               Identifier:{" "}
                             </span>
-                            <span className="text-gray-700">
+                            <span className="text-gray-700 dark:text-gray-300">
                               {ms.archive_identifier}
                             </span>
                           </div>
@@ -406,11 +406,11 @@ export function DiscoveryPanel() {
                       </div>
 
                       {ms.confidence_notes && (
-                        <div className="rounded-md bg-blue-50 p-2">
-                          <p className="text-xs font-medium text-blue-700">
+                        <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-2">
+                          <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
                             Confidence Notes
                           </p>
-                          <p className="mt-0.5 text-xs text-blue-600">
+                          <p className="mt-0.5 text-xs text-blue-600 dark:text-blue-400">
                             {ms.confidence_notes}
                           </p>
                         </div>
@@ -418,23 +418,23 @@ export function DiscoveryPanel() {
 
                       {ms.suggested_passages.length > 0 && (
                         <div>
-                          <p className="text-xs font-medium text-gray-500">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                             Suggested Passages
                           </p>
                           <div className="mt-1 space-y-1.5">
                             {ms.suggested_passages.map((p, pi) => (
                               <div
                                 key={`${p.reference}-${pi}`}
-                                className="rounded-md border border-gray-100 bg-gray-50 p-2"
+                                className="rounded-md border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2"
                               >
-                                <p className="text-xs font-medium text-gray-700">
+                                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
                                   {p.reference}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {p.description}
                                 </p>
                                 {p.original_text && (
-                                  <p className="mt-1 font-mono text-xs text-gray-600 line-clamp-3">
+                                  <p className="mt-1 font-mono text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
                                     {p.original_text}
                                   </p>
                                 )}

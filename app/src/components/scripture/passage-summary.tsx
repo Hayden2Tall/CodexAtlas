@@ -47,48 +47,48 @@ export function PassageSummary({ passageId, cachedSummary, isAuthenticated }: Pa
   if (!summary && !isAuthenticated) return null;
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3">
+    <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3">
       {summary ? (
         <details
           className="group"
           open={expanded}
           onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
         >
-          <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-primary-700">
+          <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-700 dark:hover:text-primary-400">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
             </svg>
             About this passage
-            <span className="ml-1 rounded-full bg-blue-50 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 ring-1 ring-inset ring-blue-200">
+            <span className="ml-1 rounded-full bg-blue-50 dark:bg-blue-900/50 px-1.5 py-0 text-[9px] font-semibold uppercase text-blue-600 dark:text-blue-400 ring-1 ring-inset ring-blue-200 dark:ring-blue-700">
               AI Summary
             </span>
             {isAuthenticated && (
               <button
                 onClick={(e) => { e.preventDefault(); handleGenerate(true); }}
                 disabled={generating}
-                className="ml-auto text-[10px] text-gray-400 hover:text-primary-600 disabled:opacity-50"
+                className="ml-auto text-[10px] text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50"
                 title="Regenerate summary"
               >
                 {generating ? "Regenerating…" : "Regenerate"}
               </button>
             )}
           </summary>
-          <div className="mt-2 space-y-2 rounded-lg bg-gray-50 p-3">
-            <p className="text-sm leading-relaxed text-gray-700">{summary.summary}</p>
+          <div className="mt-2 space-y-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
+            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{summary.summary}</p>
             {summary.historical_context && (
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                 <span className="font-semibold">Context:</span> {summary.historical_context}
               </p>
             )}
             {summary.significance && (
-              <p className="text-xs leading-relaxed text-gray-600">
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                 <span className="font-semibold">Significance:</span> {summary.significance}
               </p>
             )}
             {Array.isArray(summary.key_themes) && summary.key_themes.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {summary.key_themes.map((theme) => (
-                  <span key={theme} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200">
+                  <span key={theme} className="rounded-full bg-white dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700">
                     {theme}
                   </span>
                 ))}

@@ -390,8 +390,12 @@ export default async function ChapterPage({ params }: PageProps) {
             Scripture Browser
           </Link>
           <span className="mx-2">/</span>
+          <Link href={`/read/${encodeURIComponent(bookDecoded)}`} className="hover:text-primary-600 dark:hover:text-primary-400">
+            {bookDecoded}
+          </Link>
+          <span className="mx-2">/</span>
           <span className="text-gray-900 dark:text-gray-100">
-            {bookDecoded} {chapterNum}
+            Chapter {chapterNum}
           </span>
         </nav>
 

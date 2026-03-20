@@ -84,15 +84,15 @@ export function UsersPanel() {
   return (
     <div className="space-y-4">
       {/* Filter tabs */}
-      <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+      <div className="flex gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setFilter(t.key)}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               filter === t.key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
           >
             {t.label}
@@ -110,28 +110,28 @@ export function UsersPanel() {
       )}
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-gray-400">Loading users...</p>
+        <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading users...</p>
       ) : filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-400">No users in this category.</p>
+        <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No users in this category.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">User</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Joined</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">API key</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500">Actions</th>
+              <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">User</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Joined</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">API key</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {filtered.map((u) => {
                 const isActing = actionLoading?.startsWith(u.id);
                 return (
-                  <tr key={u.id} className="hover:bg-gray-50/50">
+                  <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-3">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
                         {u.display_name ?? "(no name)"}
                       </span>
                       {u.contributor_requested_at && (
@@ -156,7 +156,7 @@ export function UsersPanel() {
                       {u.api_key_vault_id ? (
                         <span className="text-xs text-green-600">Stored</span>
                       ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -173,7 +173,7 @@ export function UsersPanel() {
                             <button
                               onClick={() => changeRole(u.id, "reader")}
                               disabled={isActing}
-                              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                              className="rounded-md border border-gray-300 dark:border-gray-600 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
                             >
                               Reject
                             </button>
@@ -184,7 +184,7 @@ export function UsersPanel() {
                             value={u.role}
                             onChange={(e) => changeRole(u.id, e.target.value)}
                             disabled={isActing}
-                            className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 disabled:opacity-50"
+                            className="rounded-md border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 px-2 py-1 text-xs text-gray-600 disabled:opacity-50"
                           >
                             <option value="reader">reader</option>
                             <option value="reviewer">reviewer</option>

@@ -59,17 +59,17 @@ export async function GET(request: NextRequest) {
       aliases.map((alias) =>
         admin
           .from("passages")
-          .select("id, reference, manuscript_id")
+          .select("id, reference, manuscript_id, metadata")
           .ilike("reference", `${alias} %`)
           .not("original_text", "is", null)
       )
     );
 
     // Deduplicate passages (same id can appear via multiple alias queries)
-    const passageMap = new Map<string, { id: string; reference: string; manuscript_id: string }>();
+    const passageMap = new Map<string, { id: string; reference: string; manuscript_id: string; metadata: Record<string, unknown> | null }>();
     for (const { data } of passageResults) {
       for (const p of data ?? []) {
-        passageMap.set(p.id, p);
+        passageMap.set(p.id, p as { id: string; reference: string; manuscript_id: string; metadata: Record<string, unknown> | null });
       }
     }
     const allPassages = [...passageMap.values()];
@@ -123,8 +123,24 @@ export async function GET(request: NextRequest) {
       }).filter(Boolean)
     );
 
+    // Find translated passage IDs
+    const allPassageIds = allPassages.map((p) => p.id);
+    const { data: translationRows } = await admin
+      .from("translations")
+      .select("passage_id")
+      .in("passage_id", allPassageIds)
+      .not("current_version_id", "is", null);
+
+    const translatedIds = new Set((translationRows ?? []).map((r) => r.passage_id as string));
+
     // Build response
     const passages = allPassages.map((p) => ({ id: p.id, reference: p.reference }));
+    const untranslated_passages = allPassages
+      .filter((p) => !translatedIds.has(p.id))
+      .map((p) => ({ id: p.id, reference: p.reference }));
+    const unsummarized_passages = allPassages
+      .filter((p) => !(p.metadata as Record<string, unknown> | null)?.ai_summary)
+      .map((p) => ({ id: p.id, reference: p.reference }));
 
     const manuscripts = (manuscriptRows ?? []).map((ms) => ({
       id: ms.id,
@@ -141,7 +157,7 @@ export async function GET(request: NextRequest) {
         has_cross_manuscript: crossSummarizedChapters.has(num),
       }));
 
-    return NextResponse.json({ passages, manuscripts, chapters });
+    return NextResponse.json({ passages, manuscripts, chapters, untranslated_passages, unsummarized_passages });
   } catch (err) {
     console.error("[admin/book-data] error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -76,27 +76,27 @@ export function ActivityLogPanel() {
     <div className="space-y-6">
       {/* Summary row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
-          <p className="text-xs font-medium text-gray-500">Total (last 500)</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">${totalCost.toFixed(4)}</p>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Total (last 500)</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">${totalCost.toFixed(4)}</p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
-          <p className="text-xs font-medium text-gray-500">Calls</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{entries.length}</p>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Calls</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{entries.length}</p>
         </div>
       </div>
 
       {/* Per-user breakdown */}
       {Object.keys(byUser).length > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Cost by User</h3>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cost by User</h3>
           <div className="space-y-1.5">
             {Object.values(byUser)
               .sort((a, b) => b.cost - a.cost)
               .map((u) => (
                 <div key={u.name} className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-gray-700">{u.name}</span>
-                  <span className="text-gray-500">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{u.name}</span>
+                  <span className="text-gray-500 dark:text-gray-400">
                     {u.count} calls · ${u.cost.toFixed(4)}
                   </span>
                 </div>
@@ -106,35 +106,35 @@ export function ActivityLogPanel() {
       )}
 
       {/* Log table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-100 text-xs">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800 text-xs">
+          <thead className="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">Time</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">User</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">Route</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-500">Model</th>
-              <th className="px-3 py-2 text-right font-semibold text-gray-500">In</th>
-              <th className="px-3 py-2 text-right font-semibold text-gray-500">Out</th>
-              <th className="px-3 py-2 text-right font-semibold text-gray-500">Cost</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">Time</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">User</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">Route</th>
+              <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">Model</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400">In</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400">Out</th>
+              <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400">Cost</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
             {entries.map((e) => (
-              <tr key={e.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-3 py-2 text-gray-500">{formatTime(e.created_at)}</td>
-                <td className="px-3 py-2 font-medium text-gray-700">
+              <tr key={e.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="whitespace-nowrap px-3 py-2 text-gray-500 dark:text-gray-400">{formatTime(e.created_at)}</td>
+                <td className="px-3 py-2 font-medium text-gray-700 dark:text-gray-300">
                   {e.users?.display_name ?? e.user_id.slice(0, 8)}
                 </td>
-                <td className="px-3 py-2 text-gray-600">
+                <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
                   {ROUTE_LABELS[e.route] ?? e.route}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-gray-500">
+                <td className="whitespace-nowrap px-3 py-2 text-gray-500 dark:text-gray-400">
                   {e.model.replace("claude-", "").replace("-20251001", "")}
                 </td>
-                <td className="px-3 py-2 text-right text-gray-500">{formatTokens(e.tokens_in)}</td>
-                <td className="px-3 py-2 text-right text-gray-500">{formatTokens(e.tokens_out)}</td>
-                <td className="px-3 py-2 text-right font-medium text-gray-700">
+                <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{formatTokens(e.tokens_in)}</td>
+                <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{formatTokens(e.tokens_out)}</td>
+                <td className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">
                   ${Number(e.cost_usd).toFixed(4)}
                 </td>
               </tr>

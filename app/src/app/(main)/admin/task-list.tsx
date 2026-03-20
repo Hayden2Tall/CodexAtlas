@@ -25,9 +25,9 @@ const TYPE_LABELS: Record<string, string> = {
 export function TaskList({ tasks }: Props) {
   if (tasks.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
-        <h2 className="text-sm font-semibold text-gray-700">Agent Tasks</h2>
-        <p className="mt-3 text-sm text-gray-500">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Agent Tasks</h2>
+        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
           No agent tasks yet. Start a batch translation above to create the
           first one.
         </p>
@@ -36,15 +36,15 @@ export function TaskList({ tasks }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-gray-700">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
         Agent Tasks ({tasks.length})
       </h2>
 
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-xs font-medium text-gray-500">
+            <tr className="border-b border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400">
               <th className="pb-2 pr-4">Type</th>
               <th className="pb-2 pr-4">Status</th>
               <th className="pb-2 pr-4">Progress</th>
@@ -69,10 +69,10 @@ export function TaskList({ tasks }: Props) {
               return (
                 <tr
                   key={task.id}
-                  className="border-b border-gray-100 last:border-0"
+                  className="border-b border-gray-100 dark:border-gray-800 last:border-0"
                 >
                   <td className="py-2 pr-4">
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-gray-900 dark:text-gray-200">
                       {TYPE_LABELS[task.task_type] ?? task.task_type}
                     </span>
                     {lang && (
@@ -90,7 +90,7 @@ export function TaskList({ tasks }: Props) {
                       {task.status}
                     </span>
                   </td>
-                  <td className="py-2 pr-4 text-xs text-gray-600">
+                  <td className="py-2 pr-4 text-xs text-gray-600 dark:text-gray-400">
                     {task.total_items != null ? (
                       <span>
                         {task.completed_items}/{task.total_items}
@@ -110,12 +110,12 @@ export function TaskList({ tasks }: Props) {
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="py-2 pr-4 text-xs tabular-nums text-gray-600">
+                  <td className="py-2 pr-4 text-xs tabular-nums text-gray-600 dark:text-gray-400">
                     {task.tokens_input > 0
                       ? `${formatTokens(task.tokens_input)} / ${formatTokens(task.tokens_output)}`
                       : "—"}
                   </td>
-                  <td className="py-2 pr-4 text-xs tabular-nums text-gray-600">
+                  <td className="py-2 pr-4 text-xs tabular-nums text-gray-600 dark:text-gray-400">
                     {Number(task.estimated_cost_usd) > 0
                       ? `$${Number(task.estimated_cost_usd).toFixed(4)}`
                       : "—"}

@@ -47,11 +47,11 @@ export function SourceRegistryPanel() {
   const loadedCount = sources.filter((s) => s.status === "loaded").length;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
-      <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-4">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Source Registry</h2>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Source Registry</h2>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             Pre-cataloged open-access corpora — {loadedCount}/{sources.length} loaded,{" "}
             {totalRows.toLocaleString()} total rows
           </p>
@@ -60,7 +60,7 @@ export function SourceRegistryPanel() {
           type="button"
           onClick={loadStatus}
           disabled={loading}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+          className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
         >
           {loading ? "Loading…" : "Refresh"}
         </button>
@@ -75,7 +75,7 @@ export function SourceRegistryPanel() {
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-gray-500">
+            <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 text-left text-gray-500 dark:text-gray-400">
               <th className="px-4 py-2 font-medium">Source</th>
               <th className="px-4 py-2 font-medium">Lang</th>
               <th className="px-4 py-2 font-medium">Coverage</th>
@@ -86,40 +86,40 @@ export function SourceRegistryPanel() {
               <th className="px-4 py-2 font-medium">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
             {sources.map((s) => (
-              <tr key={s.id} className="hover:bg-gray-50/30">
+              <tr key={s.id} className="hover:bg-gray-50/30 dark:hover:bg-gray-800/30">
                 <td className="px-4 py-2.5">
-                  <p className="font-medium text-gray-800">{s.displayName}</p>
-                  <p className="text-[10px] text-gray-400 font-mono">{s.sourceId}</p>
+                  <p className="font-medium text-gray-800 dark:text-gray-200">{s.displayName}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">{s.sourceId}</p>
                 </td>
-                <td className="px-4 py-2.5 font-mono text-gray-600">{s.language}</td>
-                <td className="px-4 py-2.5 capitalize text-gray-600">{s.coverage}</td>
-                <td className="px-4 py-2.5 text-gray-500">{s.license}</td>
+                <td className="px-4 py-2.5 font-mono text-gray-600 dark:text-gray-400">{s.language}</td>
+                <td className="px-4 py-2.5 capitalize text-gray-600 dark:text-gray-400">{s.coverage}</td>
+                <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">{s.license}</td>
                 <td className="px-4 py-2.5">
                   <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
                     s.transcriptionMethod === "scholarly_transcription"
-                      ? "bg-green-50 text-green-700"
-                      : "bg-blue-50 text-blue-700"
+                      ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                      : "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
                   }`}>
                     {s.transcriptionMethod === "scholarly_transcription" ? "Scholarly" : "Edition"}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 font-mono text-gray-700">
+                <td className="px-4 py-2.5 font-mono text-gray-700 dark:text-gray-300">
                   {s.rowCount > 0 ? s.rowCount.toLocaleString() : "—"}
                 </td>
-                <td className="px-4 py-2.5 text-gray-500">
+                <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">
                   {s.lastImported
                     ? new Date(s.lastImported).toLocaleDateString()
                     : "—"}
                 </td>
                 <td className="px-4 py-2.5">
                   {s.status === "loaded" ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 ring-1 ring-inset ring-green-200">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-200 dark:ring-green-700">
                       Loaded
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-700">
                       Not imported
                     </span>
                   )}
@@ -128,7 +128,7 @@ export function SourceRegistryPanel() {
             ))}
             {sources.length === 0 && !loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                   No data. Click Refresh to load status.
                 </td>
               </tr>

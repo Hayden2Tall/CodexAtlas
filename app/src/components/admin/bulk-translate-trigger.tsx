@@ -114,11 +114,11 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
 
   if (phase === "confirming") {
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
-        <p className="text-amber-900 font-medium">
+      <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm">
+        <p className="text-amber-900 dark:text-amber-200 font-medium">
           Translate {passages.length} passage{passages.length !== 1 ? "s" : ""}{label ? ` ${label}` : ""} to {language}?
         </p>
-        <p className="mt-1 text-amber-700 text-xs">
+        <p className="mt-1 text-amber-700 dark:text-amber-400 text-xs">
           Estimated cost: ~${estimatedCost.toFixed(2)}. Each passage will call the AI translation API.
         </p>
         <div className="mt-2 flex gap-2">
@@ -130,7 +130,7 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
           </button>
           <button
             onClick={() => setPhase("idle")}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             Cancel
           </button>
@@ -143,10 +143,10 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
     const pct = progress.total > 0 ? Math.round(((progress.done + progress.failed) / progress.total) * 100) : 0;
     return (
       <div className="space-y-2 w-full">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div className="h-full rounded-full bg-primary-600 transition-all duration-300" style={{ width: `${pct}%` }} />
         </div>
-        <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <span>
             {progress.done + progress.failed} / {progress.total}
             {progress.failed > 0 && <span className="ml-1 text-red-500">· {progress.failed} failed</span>}
@@ -166,7 +166,7 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
   if (phase === "done") {
     return (
       <div className="space-y-1 text-xs">
-        <p className="text-green-700 font-medium">
+        <p className="text-green-700 dark:text-green-400 font-medium">
           {progress.done} passage{progress.done !== 1 ? "s" : ""} translated.
           {progress.failed > 0 && (
             <span className="ml-1 text-red-600">{progress.failed} failed.</span>
@@ -201,7 +201,7 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
       <select
         value={language}
         onChange={(e) => setLanguage(e.target.value)}
-        className={`rounded-md border border-gray-300 bg-white text-gray-700 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 ${isSmall ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"}`}
+        className={`rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-100 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 ${isSmall ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"}`}
       >
         {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
       </select>
@@ -210,7 +210,7 @@ export function BulkTranslateTrigger({ passages, label = "", size = "md" }: Bulk
         disabled={passages.length === 0}
         className={`whitespace-nowrap rounded-md font-medium transition-colors disabled:opacity-50 ${
           needsConfirm
-            ? "border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+            ? "border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40"
             : "bg-primary-700 text-white hover:bg-primary-800"
         } ${isSmall ? "px-2.5 py-1 text-xs" : "px-4 py-1.5 text-sm"}`}
       >

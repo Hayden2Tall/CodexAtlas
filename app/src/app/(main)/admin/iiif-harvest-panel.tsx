@@ -113,10 +113,10 @@ export function IiifHarvestPanel() {
   }, [institutionId, dryRun]);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
-      <div className="border-b border-gray-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-gray-900">IIIF Harvest</h2>
-        <p className="mt-0.5 text-xs text-gray-500">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="border-b border-gray-100 dark:border-gray-800 px-5 py-4">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">IIIF Harvest</h2>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           Import manuscript metadata records from IIIF institutions.
         </p>
       </div>
@@ -124,14 +124,14 @@ export function IiifHarvestPanel() {
       <div className="space-y-4 p-5">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Institution
             </label>
             <select
               value={institutionId}
               onChange={(e) => setInstitutionId(e.target.value)}
               disabled={isRunning}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
             >
               {INSTITUTIONS.map((inst) => (
                 <option key={inst.id} value={inst.id}>
@@ -141,7 +141,7 @@ export function IiifHarvestPanel() {
             </select>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"
               checked={dryRun}
@@ -153,7 +153,7 @@ export function IiifHarvestPanel() {
           </label>
         </div>
 
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Estimated ~{selectedInstitution.approximateCount.toLocaleString()} manifests.
           Batch size: {BATCH_SIZE}. Processed in batches to avoid Vercel timeout.
         </p>
@@ -165,21 +165,21 @@ export function IiifHarvestPanel() {
         )}
 
         {statusLine && (
-          <p className="text-xs text-gray-500">{statusLine}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{statusLine}</p>
         )}
 
         {stats && (
           <div className="grid grid-cols-4 gap-3">
             {(
               [
-                { label: "Created", value: stats.created, color: "text-green-700" },
-                { label: "Updated", value: stats.updated, color: "text-blue-700" },
-                { label: "Skipped", value: stats.skipped, color: "text-gray-600" },
-                { label: "Errors", value: stats.errors, color: "text-red-600" },
+                { label: "Created", value: stats.created, color: "text-green-700 dark:text-green-400" },
+                { label: "Updated", value: stats.updated, color: "text-blue-700 dark:text-blue-400" },
+                { label: "Skipped", value: stats.skipped, color: "text-gray-600 dark:text-gray-400" },
+                { label: "Errors", value: stats.errors, color: "text-red-600 dark:text-red-400" },
               ] as const
             ).map(({ label, value, color }) => (
-              <div key={label} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                <p className="text-[10px] font-medium text-gray-500">{label}</p>
+              <div key={label} className="rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{label}</p>
                 <p className={`text-lg font-semibold ${color}`}>{value}</p>
               </div>
             ))}

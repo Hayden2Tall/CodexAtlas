@@ -26,6 +26,8 @@ interface BookData {
   passages: Passage[];
   manuscripts: Manuscript[];
   chapters: Chapter[];
+  untranslated_passages: Passage[];
+  unsummarized_passages: Passage[];
 }
 
 interface BatchState {
@@ -50,7 +52,7 @@ function BatchProgress({
 
   if (state.phase === "done") {
     return (
-      <p className="text-xs text-green-700">
+      <p className="text-xs text-green-700 dark:text-green-400">
         Done — {state.done} succeeded{state.failed > 0 ? `, ${state.failed} failed` : ""}.
       </p>
     );
@@ -59,13 +61,13 @@ function BatchProgress({
   const pct = state.total > 0 ? Math.round(((state.done + state.failed) / state.total) * 100) : 0;
   return (
     <div className="space-y-1">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
         <div
           className="h-full rounded-full bg-primary-600 transition-all duration-300"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>
           {state.done + state.failed} / {state.total}
           {state.failed > 0 && <span className="ml-1 text-red-500">· {state.failed} failed</span>}
@@ -118,10 +120,13 @@ export function BookAdminPanel({ book }: { book: string }) {
   const [chapterState, setChapterState] = useState<BatchState>(IDLE);
   const [manuscriptState, setManuscriptState] = useState<BatchState>(IDLE);
   const [crossState, setCrossState] = useState<BatchState>(IDLE);
+  const [passageSummaryState, setPassageSummaryState] = useState<BatchState>(IDLE);
+  const [translateMode, setTranslateMode] = useState<"missing" | "all" | null>(null);
 
   const cancelChapter = useRef(false);
   const cancelManuscript = useRef(false);
   const cancelCross = useRef(false);
+  const cancelPassageSummary = useRef(false);
 
   async function loadData() {
     setLoading(true);
@@ -185,6 +190,26 @@ export function BookAdminPanel({ book }: { book: string }) {
     );
   }
 
+  function startPassageSummaries(force: boolean) {
+    if (!data || passageSummaryState.phase === "running") return;
+    const targets = force ? data.passages : data.unsummarized_passages;
+    if (targets.length === 0) return;
+    runBatch(
+      targets.map((p) => ({
+        label: p.reference,
+        doFetch: () =>
+          fetch("/api/summaries/passage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ passage_id: p.id, ...(force && { force: true }) }),
+          }),
+      })),
+      setPassageSummaryState,
+      cancelPassageSummary,
+      () => router.refresh()
+    );
+  }
+
   function startCrossManuscript(force: boolean) {
     if (!data || crossState.phase === "running") return;
     const eligible = data.chapters.filter((c) => c.manuscript_count >= 2);
@@ -210,27 +235,29 @@ export function BookAdminPanel({ book }: { book: string }) {
   const unsummarizedManuscripts = data?.manuscripts.filter((m) => !m.has_summary).length ?? 0;
   const eligibleCross = data?.chapters.filter((c) => c.manuscript_count >= 2) ?? [];
   const uncomparedCross = eligibleCross.filter((c) => !c.has_cross_manuscript).length;
+  const untranslatedCount = data?.untranslated_passages.length ?? 0;
+  const unsummarizedPassagesCount = data?.unsummarized_passages.length ?? 0;
 
   return (
-    <section className="mb-6 rounded-xl border border-dashed border-amber-300 bg-amber-50">
+    <section className="mb-6 rounded-xl border border-dashed border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10">
       <button
         onClick={toggle}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="text-sm font-semibold text-amber-800">Admin — Book Operations</span>
-        <span className="text-xs text-amber-600">{open ? "▲ collapse" : "▼ expand"}</span>
+        <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Admin — Book Operations</span>
+        <span className="text-xs text-amber-600 dark:text-amber-400">{open ? "▲ collapse" : "▼ expand"}</span>
       </button>
 
       {open && (
-        <div className="border-t border-amber-200 px-4 py-4 space-y-6">
-          {loading && <p className="text-xs text-gray-500">Loading book data…</p>}
+        <div className="border-t border-amber-200 dark:border-amber-800/50 px-4 py-4 space-y-6">
+          {loading && <p className="text-xs text-gray-500 dark:text-gray-400">Loading book data…</p>}
           {fetchError && <p className="text-xs text-red-600">{fetchError}</p>}
 
           {data && (
             <>
               {/* Stats row */}
-              <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                <span>{data.passages.length} passages</span>
+              <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <span>{data.passages.length} passages ({untranslatedCount} untranslated)</span>
                 <span>{data.manuscripts.length} manuscripts</span>
                 <span>{data.chapters.length} chapters</span>
                 <span>{eligibleCross.length} chapters eligible for cross-manuscript</span>
@@ -238,22 +265,89 @@ export function BookAdminPanel({ book }: { book: string }) {
 
               {/* 1. Translate passages */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Translate all passages
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Translate passages
                 </h3>
-                <BulkTranslateTrigger
-                  passages={data.passages}
-                  label={`across all chapters of ${book}`}
-                  size="sm"
-                />
+                {translateMode === null ? (
+                  <div className="flex gap-2 flex-wrap">
+                    {untranslatedCount > 0 && (
+                      <button
+                        onClick={() => setTranslateMode("missing")}
+                        className="rounded-md bg-primary-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-800"
+                      >
+                        Translate missing ({untranslatedCount})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setTranslateMode("all")}
+                      className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      Retranslate all ({data.passages.length})
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {translateMode === "missing"
+                          ? `Translating ${untranslatedCount} missing passages`
+                          : `Retranslating all ${data.passages.length} passages`}
+                      </span>
+                      <button
+                        onClick={() => setTranslateMode(null)}
+                        className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        ✕ back
+                      </button>
+                    </div>
+                    <BulkTranslateTrigger
+                      key={translateMode}
+                      passages={translateMode === "missing" ? data.untranslated_passages : data.passages}
+                      label={translateMode === "missing" ? `(missing) in ${book}` : `across all chapters of ${book}`}
+                      size="sm"
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* 2. Chapter summaries */}
+              {/* 2. Passage summaries */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Passage summaries
+                </h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {unsummarizedPassagesCount} of {data.passages.length} passages need summaries.
+                </p>
+                <BatchProgress
+                  state={passageSummaryState}
+                  onCancel={() => { cancelPassageSummary.current = true; }}
+                />
+                {passageSummaryState.phase !== "running" && (
+                  <div className="flex gap-2">
+                    {unsummarizedPassagesCount > 0 && (
+                      <button
+                        onClick={() => startPassageSummaries(false)}
+                        className="rounded-md bg-primary-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-800"
+                      >
+                        Generate missing ({unsummarizedPassagesCount})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => startPassageSummaries(true)}
+                      className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      Regenerate all ({data.passages.length})
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Chapter summaries */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Chapter summaries
                 </h3>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
                   {unsummarizedChapters} of {data.chapters.length} chapters need summaries.
                 </p>
                 <BatchProgress
@@ -272,7 +366,7 @@ export function BookAdminPanel({ book }: { book: string }) {
                     )}
                     <button
                       onClick={() => startChapterSummaries(true)}
-                      className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                      className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Regenerate all ({data.chapters.length})
                     </button>
@@ -280,12 +374,12 @@ export function BookAdminPanel({ book }: { book: string }) {
                 )}
               </div>
 
-              {/* 3. Manuscript summaries */}
+              {/* 4. Manuscript summaries */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Manuscript summaries
                 </h3>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
                   {unsummarizedManuscripts} of {data.manuscripts.length} manuscripts need summaries.
                 </p>
                 <BatchProgress
@@ -304,7 +398,7 @@ export function BookAdminPanel({ book }: { book: string }) {
                     )}
                     <button
                       onClick={() => startManuscriptSummaries(true)}
-                      className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                      className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Regenerate all ({data.manuscripts.length})
                     </button>
@@ -312,18 +406,18 @@ export function BookAdminPanel({ book }: { book: string }) {
                 )}
               </div>
 
-              {/* 4. Cross-manuscript comparisons */}
+              {/* 5. Cross-manuscript comparisons */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Cross-manuscript comparisons
                 </h3>
                 {eligibleCross.length === 0 ? (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     No chapters have 2+ manuscripts — cross-manuscript comparison not available.
                   </p>
                 ) : (
                   <>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
                       {uncomparedCross} of {eligibleCross.length} eligible chapters need comparisons.
                     </p>
                     <BatchProgress
@@ -342,7 +436,7 @@ export function BookAdminPanel({ book }: { book: string }) {
                         )}
                         <button
                           onClick={() => startCrossManuscript(true)}
-                          className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                          className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                         >
                           Regenerate all ({eligibleCross.length})
                         </button>

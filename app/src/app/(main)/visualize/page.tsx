@@ -46,10 +46,10 @@ export default function VisualizePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-10">
-        <h1 className="font-serif text-3xl font-bold text-primary-900">
+        <h1 className="font-serif text-3xl font-bold text-primary-900 dark:text-primary-200">
           Visualize
         </h1>
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           Interactive visualizations of manuscript data — explore manuscripts across time,
           geography, and textual tradition.
         </p>
@@ -60,18 +60,18 @@ export default function VisualizePage() {
           <Link
             key={viz.href}
             href={viz.href}
-            className="group flex flex-col rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-lg"
+            className="group flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 transition-shadow hover:shadow-lg"
           >
-            <div className="mb-4 text-primary-600 transition-colors group-hover:text-primary-700">
+            <div className="mb-4 text-primary-600 dark:text-primary-400 transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300">
               {viz.icon}
             </div>
-            <h2 className="font-serif text-lg font-semibold text-gray-900 group-hover:text-primary-700">
+            <h2 className="font-serif text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300">
               {viz.title}
             </h2>
-            <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600">
+            <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
               {viz.description}
             </p>
-            <span className="mt-4 text-sm font-medium text-primary-700 group-hover:underline">
+            <span className="mt-4 text-sm font-medium text-primary-700 dark:text-primary-400 group-hover:underline">
               Explore &rarr;
             </span>
           </Link>
