@@ -5,7 +5,7 @@ import { estimateCostUsd } from "@/lib/utils/ai-cost";
 import { getAnthropicApiKey } from "@/lib/utils/contributor-api-key";
 import { logAiActivity } from "@/lib/utils/log-ai-activity";
 
-export const maxDuration = 45;
+export const maxDuration = 120;
 
 const AI_MODEL = "claude-sonnet-4-6";
 
