@@ -10,6 +10,7 @@ import type {
   EvidenceRecord,
   Review,
 } from "@/lib/types";
+import { ApiKeyError } from "@/components/ui/api-key-error";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { MethodBadge } from "@/components/ui/method-badge";
 import { VersionIndicator } from "@/components/ui/version-indicator";
@@ -173,8 +174,8 @@ export function TranslationWorkspace({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+        <div className="rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/10 px-4 py-3">
+          <ApiKeyError message={error} className="text-sm text-red-700 dark:text-red-400" />
         </div>
       )}
 

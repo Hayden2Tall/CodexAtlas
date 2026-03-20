@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ApiKeyError } from "@/components/ui/api-key-error";
 
 interface Props {
   hasExisting: boolean;
@@ -55,7 +56,7 @@ export function GrandAssessmentPanel({ hasExisting }: Props) {
           </>
         )}
       </button>
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <ApiKeyError message={error} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { ApiKeyError } from "@/components/ui/api-key-error";
 
 interface PassageSummaryData {
   summary: string;
@@ -120,7 +121,7 @@ export function PassageSummary({ passageId, cachedSummary, isAuthenticated }: Pa
               </>
             )}
           </button>
-          {error && <span className="text-xs text-red-600">{error}</span>}
+          {error && <ApiKeyError message={error} />}
         </div>
       ) : null}
     </div>

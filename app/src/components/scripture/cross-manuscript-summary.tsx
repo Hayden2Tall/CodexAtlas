@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { ApiKeyError } from "@/components/ui/api-key-error";
 
 interface CrossManuscriptContent {
   comparative_overview: string;
@@ -153,7 +154,7 @@ export function CrossManuscriptSummary({
               </>
             )}
           </button>
-          {error && <span className="text-xs text-red-600">{error}</span>}
+          {error && <ApiKeyError message={error} />}
         </div>
       ) : null}
     </div>

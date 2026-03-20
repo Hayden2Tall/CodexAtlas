@@ -27,8 +27,8 @@ async function getContributorUser() {
     .eq("id", user.id)
     .single<{ role: string }>();
 
-  if (!profile || profile.role !== "contributor") {
-    return { error: "Only contributors can manage API keys", status: 403 as const, user: null, supabase: null };
+  if (!profile || !["contributor", "editor"].includes(profile.role)) {
+    return { error: "Only contributors and editors can manage API keys", status: 403 as const, user: null, supabase: null };
   }
 
   return { user, supabase, error: null, status: null };

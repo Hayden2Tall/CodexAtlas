@@ -11,22 +11,23 @@ export async function getAnthropicApiKey(
   userId: string,
   role: string,
 ): Promise<{ key: string } | { error: string; status: number }> {
-  if (role !== "contributor") {
-    return { key: process.env.ANTHROPIC_API_KEY! };
+  if (role === "contributor" || role === "editor") {
+    const admin = createAdminClient();
+    const { data } = await admin.rpc("get_contributor_api_key", {
+      p_user_id: userId,
+    });
+
+    if (data) return { key: data as string };
+
+    // Contributors must have their own key; editors fall back to platform key
+    if (role === "contributor") {
+      return {
+        error:
+          "No Anthropic API key found. Add your key in Settings to use AI features as a contributor.",
+        status: 402,
+      };
+    }
   }
 
-  const admin = createAdminClient();
-  const { data, error } = await admin.rpc("get_contributor_api_key", {
-    p_user_id: userId,
-  });
-
-  if (error || !data) {
-    return {
-      error:
-        "No Anthropic API key found. Add your key in Settings to use AI features as a contributor.",
-      status: 402,
-    };
-  }
-
-  return { key: data as string };
+  return { key: process.env.ANTHROPIC_API_KEY! };
 }
