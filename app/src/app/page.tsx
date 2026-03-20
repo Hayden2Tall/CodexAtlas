@@ -150,19 +150,19 @@ export default async function Home() {
   const hasContent = stats.manuscripts > 0;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-950">
       <Header />
 
       <main className="flex-1">
         {/* Hero */}
         <section className="mx-auto max-w-4xl px-4 py-20 md:py-28 text-center">
           <Logo size={56} className="mx-auto mb-6" />
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 font-serif leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 font-serif leading-tight">
             Ancient Manuscripts,
             <br />
-            <span className="text-primary-700">Transparent Research</span>
+            <span className="text-primary-700 dark:text-primary-300">Transparent Research</span>
           </h1>
-          <p className="mt-6 text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
             Discover, analyze, translate, and compare ancient religious
             manuscripts. Every AI translation includes its evidence chain.
             Nothing is hidden.
@@ -176,7 +176,7 @@ export default async function Home() {
             </Link>
             <Link
               href="/manuscripts"
-              className="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:border-gray-400 transition-colors"
+              className="px-8 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:border-gray-400 dark:hover:border-gray-600 transition-colors"
             >
               Explore Manuscripts
             </Link>
@@ -185,7 +185,7 @@ export default async function Home() {
 
         {/* Stats bar */}
         {hasContent && (
-          <section className="border-y border-gray-100 bg-primary-50/30">
+          <section className="border-y border-gray-100 dark:border-gray-800 bg-primary-50/30 dark:bg-gray-900/50">
             <div className="mx-auto max-w-4xl px-4 py-8">
               <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
                 <StatBlock label="Manuscripts" value={stats.manuscripts} />
@@ -198,7 +198,7 @@ export default async function Home() {
         )}
 
         {/* Feature cards */}
-        <section className="border-b border-gray-100 bg-gray-50">
+        <section className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
           <div className="mx-auto max-w-5xl px-4 py-16">
             <div className="grid md:grid-cols-3 gap-8">
               <FeatureCard
@@ -231,14 +231,14 @@ export default async function Home() {
 
         {/* Featured manuscripts */}
         {featured.length > 0 && (
-          <section className="border-b border-gray-100">
+          <section className="border-b border-gray-100 dark:border-gray-800">
             <div className="mx-auto max-w-5xl px-4 py-16">
               <div className="mb-8 flex items-end justify-between">
                 <div>
-                  <h2 className="font-serif text-2xl font-bold text-gray-900">
+                  <h2 className="font-serif text-2xl font-bold text-gray-900 dark:text-gray-100">
                     Featured Manuscripts
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Recently added to the corpus
                   </p>
                 </div>
@@ -254,13 +254,13 @@ export default async function Home() {
                   <Link
                     key={ms.id}
                     href={`/manuscripts/${ms.id}`}
-                    className="group rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
+                    className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 transition-shadow hover:shadow-md"
                   >
-                    <h3 className="font-serif text-lg font-semibold text-gray-900 group-hover:text-primary-700">
+                    <h3 className="font-serif text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300">
                       {ms.title}
                     </h3>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                      <span className="rounded-full bg-primary-50 px-2 py-0.5 font-medium text-primary-700">
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="rounded-full bg-primary-50 dark:bg-primary-900/50 px-2 py-0.5 font-medium text-primary-700 dark:text-primary-300">
                         {ms.original_language.toUpperCase()}
                       </span>
                       {(ms.estimated_date_start || ms.estimated_date_end) && (
@@ -268,7 +268,7 @@ export default async function Home() {
                       )}
                     </div>
                     {ms.description && (
-                      <p className="mt-3 line-clamp-2 text-sm text-gray-600">
+                      <p className="mt-3 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
                         {ms.description}
                       </p>
                     )}
@@ -281,13 +281,13 @@ export default async function Home() {
 
         {/* Recent translations */}
         {recent.length > 0 && (
-          <section className="border-b border-gray-100 bg-gray-50">
+          <section className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
             <div className="mx-auto max-w-5xl px-4 py-16">
               <div className="mb-8">
-                <h2 className="font-serif text-2xl font-bold text-gray-900">
+                <h2 className="font-serif text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Recent Translations
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Latest published translations with evidence chains
                 </p>
               </div>
@@ -296,24 +296,24 @@ export default async function Home() {
                   <Link
                     key={t.id}
                     href={`/manuscripts/${t.manuscript_id}/passages/${t.passage_id}/translate`}
-                    className="group flex gap-4 rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
+                    className="group flex gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-shadow hover:shadow-md"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-gray-900 group-hover:text-primary-700">
+                        <span className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300">
                           {t.passage_reference}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           {t.manuscript_title}
                         </span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+                      <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
                         {t.snippet}{t.snippet.length >= 180 ? "..." : ""}
                       </p>
                     </div>
                     {t.confidence_score != null && (
                       <div className="shrink-0 self-center">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 dark:bg-primary-900/50 px-2.5 py-0.5 text-xs font-medium text-primary-700 dark:text-primary-300">
                           {Math.round(t.confidence_score * 100)}%
                         </span>
                       </div>
@@ -326,13 +326,13 @@ export default async function Home() {
         )}
 
         {/* Discovery paths */}
-        <section className="border-b border-gray-100">
+        <section className="border-b border-gray-100 dark:border-gray-800">
           <div className="mx-auto max-w-5xl px-4 py-16">
             <div className="mb-8 text-center">
-              <h2 className="font-serif text-2xl font-bold text-gray-900">
+              <h2 className="font-serif text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Discover
               </h2>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Guided paths into the world of ancient manuscripts
               </p>
             </div>
@@ -341,17 +341,17 @@ export default async function Home() {
                 <Link
                   key={path.title}
                   href={path.href}
-                  className="group rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
+                  className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 transition-shadow hover:shadow-md"
                 >
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       {path.icon}
                     </svg>
                   </div>
-                  <h3 className="font-semibold text-gray-900 group-hover:text-primary-700">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300">
                     {path.title}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-600">
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     {path.description}
                   </p>
                 </Link>
@@ -362,10 +362,10 @@ export default async function Home() {
       </main>
 
       {/* Disclaimer */}
-      <section className="border-t border-gray-100 bg-gray-50">
+      <section className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
         <div className="mx-auto max-w-3xl px-4 py-8 text-center">
-          <p className="text-xs text-gray-500 leading-relaxed">
-            <span className="font-medium text-gray-600">Personal project — not affiliated with any academic or religious institution.</span>{" "}
+          <p className="text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
+            <span className="font-medium text-gray-600 dark:text-gray-400">Personal project — not affiliated with any academic or religious institution.</span>{" "}
             AI translations are generated by Anthropic&apos;s Claude and are provided for exploratory purposes only. Accuracy is not guaranteed.
             All content should be independently verified against primary sources.
             Practice discernment — no translation on this site should be treated as authoritative or definitive.
@@ -373,7 +373,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+      <footer className="border-t border-gray-200 dark:border-gray-800 py-8 text-center text-sm text-gray-500 dark:text-gray-500">
         <p>CodexAtlas — Open Research Platform for Ancient Manuscripts</p>
         <p className="mt-1">
           Open source &middot;{" "}
@@ -392,8 +392,8 @@ export default async function Home() {
 function StatBlock({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <div className="text-2xl font-bold text-primary-700">{value.toLocaleString()}</div>
-      <div className="mt-0.5 text-xs font-medium text-gray-500">{label}</div>
+      <div className="text-2xl font-bold text-primary-700 dark:text-primary-300">{value.toLocaleString()}</div>
+      <div className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">{label}</div>
     </div>
   );
 }
@@ -424,8 +424,8 @@ function FeatureCard({
           {icon}
         </svg>
       </div>
-      <h3 className="mt-4 font-semibold text-gray-900">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600">{description}</p>
+      <h3 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{description}</p>
     </div>
   );
 }

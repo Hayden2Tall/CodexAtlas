@@ -50,31 +50,31 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl py-12 px-4">
-      <h1 className="mb-8 font-serif text-3xl font-bold text-gray-900">Settings</h1>
+      <h1 className="mb-8 font-serif text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
 
       {/* Account */}
-      <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-base font-semibold text-gray-900">Account</h2>
+      <section className="mb-8 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">Account</h2>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Display name</span>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Display name</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {profile.display_name ?? user.email}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Email</span>
-            <span className="text-sm font-medium text-gray-900">{user.email}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Email</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.email}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Role</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Role</span>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-semibold text-primary-700">
+              <span className="rounded-full bg-primary-50 dark:bg-primary-900/50 px-2.5 py-0.5 text-xs font-semibold text-primary-700 dark:text-primary-300">
                 {profile.role}
               </span>
             </div>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
             {ROLE_DESCRIPTIONS[profile.role] ?? ""}
           </p>
         </div>

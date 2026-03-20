@@ -38,10 +38,10 @@ export default async function ManuscriptsPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-primary-900">
+          <h1 className="font-serif text-3xl font-bold text-primary-900 dark:text-primary-200">
             Manuscripts
           </h1>
-          <p className="mt-1 text-gray-600">
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             Browse and explore ancient manuscript records.
           </p>
         </div>

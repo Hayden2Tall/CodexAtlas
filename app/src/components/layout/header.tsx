@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MobileNav } from "./mobile-nav";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle, ThemeToggleIcon } from "./theme-toggle";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
@@ -72,13 +73,13 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-30 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
         <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 py-3">
           {/* Left: hamburger + back (mobile) + logo */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
-              className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
               aria-label="Open menu"
             >
               <svg
@@ -99,7 +100,7 @@ export function Header() {
             {!isRootPage && (
               <button
                 onClick={() => router.back()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
                 aria-label="Go back"
               >
                 <svg
@@ -120,7 +121,7 @@ export function Header() {
 
             <Link href="/" className="flex items-center gap-2.5">
               <Logo size={30} />
-              <span className="font-serif text-xl font-bold text-primary-700">
+              <span className="font-serif text-xl font-bold text-primary-700 dark:text-primary-300">
                 CodexAtlas
               </span>
             </Link>
@@ -136,8 +137,8 @@ export function Header() {
                   href={link.href}
                   className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-primary-50 text-primary-700"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-primary-700"
+                      ? "bg-primary-50 dark:bg-gray-800 text-primary-700 dark:text-primary-300"
+                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-primary-700 dark:hover:text-primary-300"
                   }`}
                 >
                   {link.label}
@@ -152,7 +153,7 @@ export function Header() {
               <div ref={dropdownRef} className="relative">
                 <button
                   onClick={() => setDropdownOpen((prev) => !prev)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700 hover:bg-primary-200 transition-colors"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900 text-sm font-semibold text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
                   aria-label="User menu"
                   aria-expanded={dropdownOpen}
                 >
@@ -160,22 +161,23 @@ export function Header() {
                 </button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                    <div className="border-b border-gray-100 px-4 py-2">
-                      <p className="truncate text-sm text-gray-700">
+                  <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-1 shadow-lg">
+                    <div className="border-b border-gray-100 dark:border-gray-800 px-4 py-2">
+                      <p className="truncate text-sm text-gray-700 dark:text-gray-400">
                         {user.email}
                       </p>
                     </div>
                     <Link
                       href="/settings"
                       onClick={() => setDropdownOpen(false)}
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Settings
                     </Link>
+                    <ThemeToggle />
                     <button
                       onClick={handleSignOut}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Sign Out
                     </button>
@@ -183,12 +185,15 @@ export function Header() {
                 )}
               </div>
             ) : (
-              <Link
-                href="/auth/login"
-                className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-medium text-white hover:bg-primary-800 transition-colors"
-              >
-                Sign In
-              </Link>
+              <div className="flex items-center gap-2">
+                <ThemeToggleIcon />
+                <Link
+                  href="/auth/login"
+                  className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-medium text-white hover:bg-primary-800 transition-colors"
+                >
+                  Sign In
+                </Link>
+              </div>
             )}
           </div>
         </div>

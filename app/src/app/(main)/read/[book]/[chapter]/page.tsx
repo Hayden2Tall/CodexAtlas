@@ -385,12 +385,12 @@ export default async function ChapterPage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl">
       {/* Breadcrumb + Navigator */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <nav className="text-sm text-gray-500">
-          <Link href="/read" className="hover:text-primary-600">
+        <nav className="text-sm text-gray-500 dark:text-gray-400">
+          <Link href="/read" className="hover:text-primary-600 dark:hover:text-primary-400">
             Scripture Browser
           </Link>
           <span className="mx-2">/</span>
-          <span className="text-gray-900">
+          <span className="text-gray-900 dark:text-gray-100">
             {bookDecoded} {chapterNum}
           </span>
         </nav>
@@ -405,10 +405,10 @@ export default async function ChapterPage({ params }: PageProps) {
       {/* Chapter heading */}
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-gray-900">
+          <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-gray-100">
             {bookDecoded} {chapterNum}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {manuscriptGroups.length} manuscript{manuscriptGroups.length !== 1 ? "s" : ""} contain
             this passage
           </p>
@@ -455,22 +455,22 @@ export default async function ChapterPage({ params }: PageProps) {
         {manuscriptGroups.map((group) => (
           <article
             key={group.manuscript.id}
-            className="rounded-xl border border-gray-200 bg-white overflow-hidden"
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden"
           >
             {/* Manuscript header */}
-            <div className="border-b border-gray-100 bg-gray-50/50 px-5 py-3">
+            <div className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 px-5 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   href={`/manuscripts/${group.manuscript.id}`}
-                  className="font-medium text-gray-900 hover:text-primary-700"
+                  className="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-700 dark:hover:text-primary-300"
                 >
                   {group.manuscript.title}
                 </Link>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
                   {group.manuscript.original_language.toUpperCase()}
                 </span>
                 {(group.manuscript.estimated_date_start || group.manuscript.estimated_date_end) && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     {formatDateRange(
                       group.manuscript.estimated_date_start,
                       group.manuscript.estimated_date_end,
@@ -478,19 +478,19 @@ export default async function ChapterPage({ params }: PageProps) {
                   </span>
                 )}
                 {group.passages.length > 1 && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     &middot; {group.passages.length} verses
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {group.passages.map((r) => (
                 <div key={r.passage.id} className="p-5">
                   {/* Verse reference — only shown when manuscript has multiple passages */}
                   {group.passages.length > 1 && (
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                       {r.passage.reference}
                     </p>
                   )}
@@ -498,7 +498,7 @@ export default async function ChapterPage({ params }: PageProps) {
                   {/* Translation (primary reading content) */}
                   {r.translation ? (
                     <div className="mb-4">
-                      <p className="font-serif text-lg leading-relaxed text-gray-800">
+                      <p className="font-serif text-lg leading-relaxed text-gray-800 dark:text-gray-200">
                         {r.translation.translated_text}
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -506,24 +506,24 @@ export default async function ChapterPage({ params }: PageProps) {
                         {r.translation.confidence_score != null && (
                           <ConfidenceBadge score={r.translation.confidence_score} />
                         )}
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           v{r.translation.version_number} &middot;{" "}
                           {r.translation.target_language}
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <p className="mb-4 text-sm italic text-gray-400">
+                    <p className="mb-4 text-sm italic text-gray-400 dark:text-gray-500">
                       No published translation yet
                     </p>
                   )}
 
                   {/* Original text (collapsed by default via details) */}
                   <details className="group">
-                    <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-primary-700">
+                    <summary className="cursor-pointer text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-700 dark:hover:text-primary-400">
                       View original text ({r.manuscript.original_language})
                     </summary>
-                    <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-gray-50 p-4 font-mono text-sm leading-relaxed text-gray-700" dir={["heb", "ara", "syc"].includes(r.manuscript.original_language) ? "rtl" : "ltr"}>
+                    <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-gray-50 dark:bg-gray-800 p-4 font-mono text-sm leading-relaxed text-gray-700 dark:text-gray-300" dir={["heb", "ara", "syc"].includes(r.manuscript.original_language) ? "rtl" : "ltr"}>
                       {r.passage.original_text}
                     </pre>
                   </details>
@@ -540,7 +540,7 @@ export default async function ChapterPage({ params }: PageProps) {
                   />
 
                   {/* Variant indicator + link to full translation page */}
-                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 dark:border-gray-800 pt-3">
                     <Link
                       href={`/manuscripts/${r.manuscript.id}/passages/${r.passage.id}/translate`}
                       className="text-xs font-medium text-primary-700 hover:underline"

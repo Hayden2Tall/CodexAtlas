@@ -116,19 +116,19 @@ export default async function BookOverviewPage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-3xl">
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-gray-500">
-        <Link href="/read" className="hover:text-primary-600">
+      <nav className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+        <Link href="/read" className="hover:text-primary-600 dark:hover:text-primary-400">
           Scripture Browser
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-900">{bookDecoded}</span>
+        <span className="text-gray-900 dark:text-gray-100">{bookDecoded}</span>
       </nav>
 
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-gray-900">{bookDecoded}</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-gray-100">{bookDecoded}</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {sortedChapters.length} chapter{sortedChapters.length !== 1 ? "s" : ""}
             {" · "}
             {manuscripts.size} manuscript{manuscripts.size !== 1 ? "s" : ""}
@@ -138,7 +138,7 @@ export default async function BookOverviewPage({ params }: PageProps) {
         </div>
         <Link
           href={`/read/${encodeURIComponent(bookDecoded)}/1`}
-          className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
         >
           Read chapter 1 &rarr;
         </Link>
@@ -160,7 +160,7 @@ export default async function BookOverviewPage({ params }: PageProps) {
 
       {/* Chapter grid */}
       <div className="mt-8">
-        <h2 className="mb-3 font-serif text-lg font-semibold text-gray-800">Chapters</h2>
+        <h2 className="mb-3 font-serif text-lg font-semibold text-gray-800 dark:text-gray-200">Chapters</h2>
         <div className="flex flex-wrap gap-2">
           {sortedChapters.map((ch) => {
             const hasSummary = summarizedChapters.has(ch);
@@ -171,8 +171,8 @@ export default async function BookOverviewPage({ params }: PageProps) {
                 title={hasSummary ? "Chapter summary available" : undefined}
                 className={`relative flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors ${
                   hasSummary
-                    ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    : "border-gray-200 bg-white text-gray-700 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700"
+                    ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-800 hover:border-primary-200 dark:hover:border-primary-800 hover:text-primary-700 dark:hover:text-primary-300"
                 }`}
               >
                 {ch}
@@ -183,7 +183,7 @@ export default async function BookOverviewPage({ params }: PageProps) {
             );
           })}
         </div>
-        <p className="mt-3 text-xs text-gray-400">
+        <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
           Blue chapters have AI summaries. Click any chapter to read.
         </p>
       </div>

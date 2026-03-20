@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   /* Primary - deep blue (trust, scholarship) */
   --color-primary-50: #eff6ff;
@@ -40,7 +42,7 @@
 
 @layer base {
   body {
-    @apply bg-white text-gray-900 antialiased;
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased;
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
   }
